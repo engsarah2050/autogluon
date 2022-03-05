@@ -30,8 +30,13 @@ class KNNModel(AbstractModel):
                 from sklearnex import patch_sklearn
                 patch_sklearn("knn_classifier")
                 patch_sklearn("knn_regressor")
+<<<<<<< HEAD
                 # daal backend for KNN seems to be 20-40x+ faster than native sklearn with no downsides.
                 logger.log(15, '\tUsing daal4py KNN backend...')
+=======
+                # sklearnex backend for KNN seems to be 20-40x+ faster than native sklearn with no downsides.
+                logger.log(15, '\tUsing sklearnex KNN backend...')
+>>>>>>> upstream/master
             except:
                 pass
         try:

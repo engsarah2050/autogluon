@@ -43,7 +43,11 @@ extras_require = {
         'fastai>=2.3.1,<2.6',
     ],
     'skex': [
+<<<<<<< HEAD
         'scikit-learn-intelex<=2021.3',
+=======
+        'scikit-learn-intelex>=2021.5,<2021.6',
+>>>>>>> upstream/master
     ],
     'vowpalwabbit': [
         'vowpalwabbit>=8.10,<8.11'

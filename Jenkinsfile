@@ -347,7 +347,11 @@ stage("Build Tutorials") {
         ${setup_torch_gpu}
         export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
         export AG_DOCS=1
+<<<<<<< HEAD
         export AUTOMM_DISABLE_PROGRESS_BAR=1 # Disable progress bar in AutoMMPredictor
+=======
+        export AUTOMM_TUTORIAL_MODE=1 # Disable progress bar in AutoMMPredictor
+>>>>>>> upstream/master
 
         git clean -fx
         bash docs/build_pip_install.sh
@@ -375,7 +379,11 @@ stage("Build Tutorials") {
         ${setup_mxnet_gpu}
         export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
         export AG_DOCS=1
+<<<<<<< HEAD
         export AUTOMM_DISABLE_PROGRESS_BAR=1 # Disable progress bar in AutoMMPredictor
+=======
+        export AUTOMM_TUTORIAL_MODE=1 # Disable progress bar in AutoMMPredictor
+>>>>>>> upstream/master
 
         git clean -fx
         bash docs/build_pip_install.sh
@@ -401,7 +409,11 @@ stage("Build Tutorials") {
         conda activate autogluon-tutorial-cloud_fit_deploy-v3
         conda list
         export AG_DOCS=1
+<<<<<<< HEAD
         export AUTOMM_DISABLE_PROGRESS_BAR=1 # Disable progress bar in AutoMMPredictor
+=======
+        export AUTOMM_TUTORIAL_MODE=1 # Disable progress bar in AutoMMPredictor
+>>>>>>> upstream/master
 
         git clean -fx
         bash docs/build_pip_install.sh

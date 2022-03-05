@@ -11,20 +11,37 @@ def list_text_presets(verbose=False):
     simple_presets = {
         "default": {
             "model.hf_text.checkpoint_name": "google/electra-base-discriminator",
+<<<<<<< HEAD
+=======
+            "optimization.lr_decay": 0.9,
+>>>>>>> upstream/master
         },
         "medium_quality_faster_train": {
             "model.hf_text.checkpoint_name": "google/electra-small-discriminator",
             "optimization.learning_rate": 4e-4,
+<<<<<<< HEAD
+=======
+            "optimization.lr_decay": 0.9,
+>>>>>>> upstream/master
         },
         "high_quality": {
             "model.hf_text.checkpoint_name": "google/electra-base-discriminator",
         },
         "best_quality": {
             "model.hf_text.checkpoint_name": "microsoft/deberta-v3-base",
+<<<<<<< HEAD
+=======
+            "optimization.lr_decay": 0.9,
+>>>>>>> upstream/master
             "env.per_gpu_batch_size": 2,
         },
         "multilingual": {
             "model.hf_text.checkpoint_name": "microsoft/mdeberta-v3-base",
+<<<<<<< HEAD
+=======
+            "optimization.top_k": 1,
+            "optimization.lr_decay": 0.9,
+>>>>>>> upstream/master
             "env.precision": 'bf16',
             "env.per_gpu_batch_size": 4,
         },

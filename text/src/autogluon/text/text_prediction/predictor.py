@@ -25,7 +25,11 @@ class TextPredictor:
             backend=PYTORCH,
             verbosity=3,
             warn_if_exist=True,
+<<<<<<< HEAD
             enable_progress_bar: bool = None
+=======
+            enable_progress_bar: bool = None,
+>>>>>>> upstream/master
     ):
         """
         Parameters
@@ -65,10 +69,13 @@ class TextPredictor:
             where `L` ranges from 0 to 50 (Note: higher values of `L` correspond to fewer print statements, opposite of verbosity levels)
         warn_if_exist : bool, default = True
             Whether to raise warning if the specified path already exists.
+<<<<<<< HEAD
         enable_progress_bar
             Whether to show progress bar. It will be True by default and will also be disabled
             if the environment variable os.environ["AUTOMM_DISABLE_PROGRESS_BAR"] is set.
 
+=======
+>>>>>>> upstream/master
         """
         self.verbosity = verbosity
         if backend == PYTORCH:
@@ -89,6 +96,7 @@ class TextPredictor:
         )
         self._backend = backend
 
+<<<<<<< HEAD
         if enable_progress_bar is None:
             if os.environ.get('AUTOMM_DISABLE_PROGRESS_BAR'):
                 self._enable_progress_bar = False
@@ -97,6 +105,8 @@ class TextPredictor:
         else:
             self._enable_progress_bar = enable_progress_bar
 
+=======
+>>>>>>> upstream/master
     @property
     def results(self):
         if self._backend == MXNET:

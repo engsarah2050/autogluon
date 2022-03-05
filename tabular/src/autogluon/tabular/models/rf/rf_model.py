@@ -32,12 +32,27 @@ class RFModel(AbstractModel):
             from .rf_quantile import RandomForestQuantileRegressor
             return RandomForestQuantileRegressor
         if self.params_aux.get('use_daal', False):
+<<<<<<< HEAD
             # Disabled by default because it appears to degrade performance
             try:
                 # TODO: Use sklearnex instead once a suitable toggle option is provided that won't impact future models
                 # FIXME: DAAL OOB score is broken, returns biased predictions. Without this optimization, can't compute Efficient OOF.
                 from daal4py.sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
                 logger.log(15, '\tUsing daal4py RF backend...')
+=======
+            # Disabled by default because OOB score does not yet work properly
+            try:
+                # FIXME: sklearnex OOB score is broken, returns biased predictions. Without this optimization, can't compute Efficient OOF.
+                #  Refer to https://github.com/intel/scikit-learn-intelex/issues/933
+                #  Current workaround: Forcibly set oob_score=True during fit to compute OOB during train time.
+                #  Downsides:
+                #    1. Slows down training slightly by forcing computation of OOB even if OOB is not needed (such as in medium_quality)
+                #    2. Makes computing the correct pred_time_val difficult, as the time is instead added to the fit_time,
+                #       and we would need to waste extra time to compute the proper pred_time_val post-fit.
+                #       Therefore with sklearnex enabled, pred_time_val is incorrect.
+                from sklearnex.ensemble import RandomForestClassifier, RandomForestRegressor
+                logger.log(15, '\tUsing sklearnex RF backend...')
+>>>>>>> upstream/master
                 self._daal = True
             except:
                 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
@@ -159,6 +174,11 @@ class RFModel(AbstractModel):
         if self._daal:
             if params.get('warm_start', False):
                 params['warm_start'] = False
+<<<<<<< HEAD
+=======
+            # FIXME: This is inefficent but sklearnex doesn't support computing oob_score after training
+            params['oob_score'] = True
+>>>>>>> upstream/master
 
         model = model_cls(**params)
 
@@ -202,7 +222,14 @@ class RFModel(AbstractModel):
                 for j in range(len(n_estimator_increments)):
                     if n_estimator_increments[j] > n_estimators_ideal:
                         n_estimator_increments[j] = n_estimators_ideal
+<<<<<<< HEAD
 
+=======
+        if self._daal and model.criterion != 'entropy':
+            # TODO: entropy is not accelerated by sklearnex, need to not set estimators_ to None to avoid crash
+            # This reduces memory usage / disk usage.
+            model.estimators_ = None
+>>>>>>> upstream/master
         self.model = model
         self.params_trained['n_estimators'] = self.model.n_estimators
 
@@ -241,13 +268,22 @@ class RFModel(AbstractModel):
 
     # FIXME: Unknown if this works with quantile regression
     def _get_oof_pred_proba(self, X, y, **kwargs):
+<<<<<<< HEAD
         if self._daal:
             raise AssertionError('DAAL forest backend does not support out-of-bag predictions.')
+=======
+>>>>>>> upstream/master
         if not self.model.bootstrap:
             raise ValueError('Forest models must set `bootstrap=True` to compute out-of-fold predictions via out-of-bag predictions.')
 
         oob_is_not_set = getattr(self.model, "oob_decision_function_", None) is None and getattr(self.model, "oob_prediction_", None) is None
 
+<<<<<<< HEAD
+=======
+        if oob_is_not_set and self._daal:
+            raise AssertionError('DAAL forest backend does not support out-of-bag predictions.')
+
+>>>>>>> upstream/master
         # TODO: This can also be done via setting `oob_score=True` in model params,
         #  but getting the correct `pred_time_val` that way is not easy, since we can't time the internal call.
         if oob_is_not_set and self._model_supports_oob_pred_proba():
