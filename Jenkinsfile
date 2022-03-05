@@ -67,6 +67,13 @@ install_forecasting = """
     python3 -m pip install --upgrade -e forecasting/
 """
 
+install_DeepInsight_auto = """
+    python3 -m pip install --upgrade -e DeepInsight_auto/
+"""
+install_DeepInsight_auto_all = """
+    python3 -m pip install --upgrade -e DeepInsight_auto/[all]
+"""
+
 install_autogluon = """
     python3 -m pip install --upgrade -e autogluon/
 """
@@ -185,9 +192,10 @@ stage("Unit Test") {
           # Python 3.7 bug workaround: https://github.com/python/typing/issues/573
           python3 -m pip uninstall -y typing
           ${install_mxnet}
-          ${install_tabular_to_image_all}
+          ${install_DeepInsight_auto_all}
           ${install_extra}
           ${install_vision}
+          ${install_tabular_to_image}
 
 
           cd tabular_to_image/
@@ -279,6 +287,35 @@ stage("Unit Test") {
       }
     }
   },
+'DeepInsight_auto': {
+    node('linux-gpu') {
+      ws('workspace/autogluon-DeepInsight_auto-py3-v3') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          checkout scm
+          VISIBLE_GPU=env.EXECUTOR_NUMBER.toInteger() % 8
+          sh """#!/bin/bash
+          set -ex
+          conda remove --name autogluon-DeepInsight_auto-py3-v3 --all -y
+          conda env update -n autogluon-DeepInsight_auto-py3-v3 -f docs/build_gpu.yml
+          conda activate autogluon-DeepInsight_auto-py3-v3
+          conda list
+          ${setup_mxnet_gpu}
+          export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
+          ${install_core_all}
+          ${install_features}
+          # Python 3.7 bug workaround: https://github.com/python/typing/issues/573
+          python3 -m pip uninstall -y typing
+          
+          ${install_tabular_to_image_all}
+          ${install_DeepInsight_auto}
+          
+          cd DeepInsight_auto/
+          python3 -m pytest --junitxml=results.xml --runslow tests
+          """
+        }
+      }
+    }
+  },   
   'install': {
     node('linux-cpu') {
       ws('workspace/autogluon-install-py3-v3') {
@@ -305,6 +342,7 @@ stage("Unit Test") {
           ${install_vision}
           ${install_forecasting}
           ${install_tabular_to_image_all}
+          ${install_DeepInsight_auto_all}
           ${install_autogluon}
           """
         }
@@ -537,6 +575,8 @@ stage("Build Docs") {
         unstash 'text'
         unstash 'cloud_fit_deploy'
         unstash 'forecasting'
+        unstash 'DeepInsight_auto'
+       
 
         sh """#!/bin/bash
         set -ex
@@ -554,6 +594,7 @@ stage("Build Docs") {
         ${install_features}
         ${install_tabular_all}
         ${install_tabular_to_image_all}
+        ${install_DeepInsight_auto_all}
         ${install_text}
         ${install_vision}
         ${install_forecasting}
