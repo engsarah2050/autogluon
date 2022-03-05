@@ -47,6 +47,13 @@ install_tabular = """
 install_tabular_all = """
     python3 -m pip install --upgrade -e tabular/[all,tests]
 """
+install_tabular_to_image = """
+    python3 -m pip install --upgrade -e tabular_to_image/
+"""
+
+install_tabular_to_image_all = """
+    python3 -m pip install --upgrade -e tabular_to_image/[all]
+"""
 
 install_text = """
     python3 -m pip install --upgrade -e text/
@@ -158,6 +165,39 @@ stage("Unit Test") {
       }
     }
   },
+  'tabular_to_image': {
+    node('linux-gpu') {
+      ws('workspace/autogluon-tabular_to_image-py3-v3') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          checkout scm
+          VISIBLE_GPU=env.EXECUTOR_NUMBER.toInteger() % 8
+          sh """#!/bin/bash
+          set -ex
+          conda env update -n autogluon-tabular_to_image-py3-v3 -f docs/build.yml
+          conda activate autogluon-tabular_to_image-py3-v3
+          conda list
+          ${setup_pip_venv}
+          ${setup_mxnet_gpu}
+          export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
+
+          ${install_core_all}
+          ${install_features}
+          # Python 3.7 bug workaround: https://github.com/python/typing/issues/573
+          python3 -m pip uninstall -y typing
+          ${install_mxnet}
+          ${install_tabular_to_image_all}
+          ${install_extra}
+          ${install_vision}
+
+
+          cd tabular_to_image/
+          python3 -m pytest --junitxml=results.xml --runslow tests
+          ${cleanup_venv}
+          """
+        }
+      }
+    }
+  },  
   'text': {
     node('linux-gpu') {
       ws('workspace/autogluon-text-py3-v3') {
@@ -264,6 +304,7 @@ stage("Unit Test") {
           ${install_text}
           ${install_vision}
           ${install_forecasting}
+          ${install_tabular_to_image_all}
           ${install_autogluon}
           """
         }
@@ -347,11 +388,8 @@ stage("Build Tutorials") {
         ${setup_torch_gpu}
         export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
         export AG_DOCS=1
-<<<<<<< HEAD
         export AUTOMM_DISABLE_PROGRESS_BAR=1 # Disable progress bar in AutoMMPredictor
-=======
         export AUTOMM_TUTORIAL_MODE=1 # Disable progress bar in AutoMMPredictor
->>>>>>> upstream/master
 
         git clean -fx
         bash docs/build_pip_install.sh
@@ -379,11 +417,9 @@ stage("Build Tutorials") {
         ${setup_mxnet_gpu}
         export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
         export AG_DOCS=1
-<<<<<<< HEAD
-        export AUTOMM_DISABLE_PROGRESS_BAR=1 # Disable progress bar in AutoMMPredictor
-=======
+
         export AUTOMM_TUTORIAL_MODE=1 # Disable progress bar in AutoMMPredictor
->>>>>>> upstream/master
+
 
         git clean -fx
         bash docs/build_pip_install.sh
@@ -409,11 +445,9 @@ stage("Build Tutorials") {
         conda activate autogluon-tutorial-cloud_fit_deploy-v3
         conda list
         export AG_DOCS=1
-<<<<<<< HEAD
-        export AUTOMM_DISABLE_PROGRESS_BAR=1 # Disable progress bar in AutoMMPredictor
-=======
+
         export AUTOMM_TUTORIAL_MODE=1 # Disable progress bar in AutoMMPredictor
->>>>>>> upstream/master
+
 
         git clean -fx
         bash docs/build_pip_install.sh
@@ -499,6 +533,7 @@ stage("Build Docs") {
         unstash 'image_prediction'
         unstash 'object_detection'
         unstash 'tabular'
+        unstash 'tabular_to_image'
         unstash 'text'
         unstash 'cloud_fit_deploy'
         unstash 'forecasting'
@@ -518,6 +553,7 @@ stage("Build Docs") {
         ${install_core_all}
         ${install_features}
         ${install_tabular_all}
+        ${install_tabular_to_image_all}
         ${install_text}
         ${install_vision}
         ${install_forecasting}
