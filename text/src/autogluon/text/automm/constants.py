@@ -69,4 +69,10 @@ AUTOMM = "automm"
 
 # environment variables
 AUTOMM_TUTORIAL_MODE = "AUTOMM_TUTORIAL_MODE"
+<<<<<<< HEAD
+>>>>>>> upstream/master
+=======
+
+# error try
+GET_ITEM_ERROR_RETRY = 50
 >>>>>>> upstream/master
