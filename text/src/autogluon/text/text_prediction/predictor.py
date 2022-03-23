@@ -26,9 +26,12 @@ class TextPredictor:
             verbosity=3,
             warn_if_exist=True,
 <<<<<<< HEAD
+<<<<<<< HEAD
             enable_progress_bar: bool = None
 =======
             enable_progress_bar: bool = None,
+>>>>>>> upstream/master
+=======
 >>>>>>> upstream/master
     ):
         """
