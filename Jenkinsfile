@@ -191,11 +191,12 @@ stage("Unit Test") {
           ${install_features}
           # Python 3.7 bug workaround: https://github.com/python/typing/issues/573
           python3 -m pip uninstall -y typing
+          ${install_tabular_to_image_all}
           ${install_mxnet}
           ${install_DeepInsight_auto_all}
           ${install_extra}
           ${install_vision}
-          ${install_tabular_to_image}
+          
 
 
           cd tabular_to_image/
@@ -250,9 +251,10 @@ stage("Unit Test") {
           conda list
           ${setup_torch_gpu}
           export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
-
+          ${install_tabular_to_image_all} 
           ${install_core_all}
           ${install_vision}
+          
 
           # Python 3.7 bug workaround: https://github.com/python/typing/issues/573
           python3 -m pip uninstall -y typing
@@ -309,7 +311,7 @@ stage("Unit Test") {
           python3 -m pip uninstall -y typing
           
           ${install_tabular_to_image_all}
-          ${install_DeepInsight_auto}
+          ${install_DeepInsight_auto_all}
           
           cd DeepInsight_auto/
           python3 -m pytest --junitxml=results.xml --runslow tests
