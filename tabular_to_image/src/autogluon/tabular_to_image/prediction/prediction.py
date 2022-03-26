@@ -36,8 +36,7 @@ class ImagePredictions:
         imageShape = kwargs.get('imageShape', None)
         label_column = kwargs.get('label_column', None)
         self._Utils_pro: Utils_pro = Utils_pro_type(label_column=label_column,image_shape=imageShape, **Utils_pro_kwargs)
-          '''   X_train_img=X_train_img ,X_val_img=X_val_img,X_test_img=X_test_img,
-                                        y_train=y_train,y_val=y_val,y_test=y_test, '''                              
+        #X_train_img=X_train_img ,X_val_img=X_val_img,X_test_img=X_test_img,y_train=y_train,y_val=y_val,y_test=y_test, '''                              
         self._Utils_pro_type = type(self._Utils_pro)
         
         
