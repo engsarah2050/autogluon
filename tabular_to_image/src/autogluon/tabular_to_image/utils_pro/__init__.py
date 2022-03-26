@@ -1,1 +1,1 @@
-from autogluon.tabular_to_image.utils_pro.utils_pro import Utils_pro
+from tabular_to_image.src.autogluon.tabular_to_image.utils_pro.utils_tool import Utils_pro
