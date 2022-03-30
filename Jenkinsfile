@@ -185,6 +185,7 @@ stage("Unit Test") {
           conda list
           ${setup_pip_venv}
           ${setup_mxnet_gpu}
+          ${setup_torch_gpu}
           export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
 
           ${install_core_all}
