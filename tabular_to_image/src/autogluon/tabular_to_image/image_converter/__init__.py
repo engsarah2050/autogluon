@@ -1,0 +1,1 @@
+from autogluon.tabular_to_image.image_converter.converter import Image_converter

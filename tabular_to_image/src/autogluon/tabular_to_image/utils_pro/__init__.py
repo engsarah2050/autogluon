@@ -1,1 +1,0 @@
-from autogluon.tabular_to_image.utils_pro.utils_tool import Utils_pro

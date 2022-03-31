@@ -33,7 +33,7 @@ from matplotlib import pyplot as plt
 import matplotlib.ticker as ticker
 #from sklearn.model_selection import StratifiedKFol
 from sklearn.manifold import TSNE
-class Utils_pro:
+class Image_converter:
     def __init__(self, label_column,image_shape):
       #self.train_dataset=train_dataset
       self.label_column=label_column
