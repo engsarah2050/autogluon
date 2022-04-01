@@ -478,7 +478,12 @@ class AutoMMPredictor:
             max_time=time_limit,
             save_path=save_path,
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+            ckpt_path=self._ckpt_path,
+            resume=self._resume,
+>>>>>>> upstream/master
             enable_progress_bar=self._enable_progress_bar,
 >>>>>>> upstream/master
         )
@@ -500,7 +505,12 @@ class AutoMMPredictor:
             max_time: timedelta,
             save_path: str,
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+            ckpt_path: str,
+            resume: bool,
+>>>>>>> upstream/master
             enable_progress_bar: bool,
 >>>>>>> upstream/master
     ):
@@ -643,7 +653,7 @@ class AutoMMPredictor:
             trainer.fit(
                 task,
                 datamodule=train_dm,
-                ckpt_path=self._ckpt_path,  # this is to resume training that was broken accidentally
+                ckpt_path=ckpt_path if resume else None,  # this is to resume training that was broken accidentally
             )
 
         if trainer.global_rank == 0:
@@ -657,7 +667,7 @@ class AutoMMPredictor:
             #  If the checkpoints are really large (e.g., super-giant backbones), this operation can take a lot of
             #  CPU memory and may potentially trigger memory issue. Consider to optimize that using the
             #  offload strategy.
-            all_state_dicts, ckpt_template = gather_top_k_ckpts(
+            all_state_dicts = gather_top_k_ckpts(
                 ckpt_dir=save_path,
                 ckpt_paths=best_k_models_path,
             )
@@ -696,8 +706,6 @@ class AutoMMPredictor:
                     for i in range(1, len(all_state_dicts)):
                         cand_avg_state_dict = average_checkpoints(
                             all_state_dicts=ingredients + [all_state_dicts[i]],
-                            out_path=top_k_avg_ckpt_path,
-                            ckpt_template=ckpt_template
                         )
                         self._model = self._load_state_dict(
                             model=self._model,
@@ -718,7 +726,6 @@ class AutoMMPredictor:
             avg_state_dict = average_checkpoints(
                 all_state_dicts=ingredients,
                 out_path=top_k_avg_ckpt_path,
-                ckpt_template=ckpt_template
             )
             self._model = self._load_state_dict(
                 model=model,
