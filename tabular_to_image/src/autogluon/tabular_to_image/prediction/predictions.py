@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 import copy
+from tabular_to_image.src.autogluon.tabular_to_image import image_converter
 import torch
 #device = torch.device("cuda") #device = 'cuda'
 import torchvision.transforms as transforms
@@ -22,8 +23,8 @@ class ImagePredictions:
     
     def init(self,label_column,imageShape,**kwargs):
         self._validate_init_kwargs(kwargs)
-        Utils_pro_type = kwargs.pop('Utils_pro_type', Utils_pro)
-        Utils_pro_kwargs = kwargs.pop('Utils_pro_kwargs', dict())
+        Image_converter_type = kwargs.pop('Image_converter_type',Image_converter)
+        image_converter_kwargs = kwargs.pop('image_converter_kwargs', dict())
               
         ''' X_train_img = kwargs.get('X_train_img', None)
         X_val_img = kwargs.get('X_val_img', None)
@@ -35,11 +36,10 @@ class ImagePredictions:
         
         imageShape = kwargs.get('imageShape', None)
         label_column = kwargs.get('label_column', None)
-        self._Utils_pro: Utils_pro = Utils_pro_type(label_column=label_column,image_shape=imageShape, **Utils_pro_kwargs)
-        #X_train_img=X_train_img ,X_val_img=X_val_img,X_test_img=X_test_img,y_train=y_train,y_val=y_val,y_test=y_test, '''                              
-        self._Utils_pro_type = type(self._Utils_pro)
         
-        
+        self._Image_converter: Image_converter =Image_converter_type(label_column=label_column,image_shape=imageShape, **image_converter_kwargs)   
+        self._Image_converter_type = type(self._Image_converter)
+                
         
         ModelsZoo_type = kwargs.pop('ModelsZoo_type', ModelsZoo)
         ModelsZoo_kwargs = kwargs.pop('ModelsZoo_kwargs', dict())
@@ -49,7 +49,7 @@ class ImagePredictions:
         pretrained = kwargs.get('pretrained', None)
               
         self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=imageShape ,model_type=model_type,
-                                        num_classes=num_classes,pretrained=pretrained,**Utils_pro_kwargs)
+                                        num_classes=num_classes,pretrained=pretrained,**ModelsZoo_kwargs)
         self._ModelsZoo_type = type(self._ModelsZoo)
         #rainloader,valloader,Testloader =self._Utils_pro.Utils_pro.image_tensor()
         #criterion,optimizer,exp_lr_scheduler=self._ModelsZoo.ModelsZoo.optimizer()
@@ -78,7 +78,7 @@ class ImagePredictions:
         return self._Utils_pro.y_test  '''
     @property
     def Label_column(self):
-        return self._Utils_pro.label_column
+        return self._Image_converter.label_column
     
     @property
     def ImageShape(self):
@@ -96,8 +96,9 @@ class ImagePredictions:
    
     @property
     def model(self):
-        return self._ModelsZoo.ModelsZoo.create_model() 
+        return self._ModelsZoo.create_model() 
      
+    '''
     @staticmethod
     def _validate_init_kwargs(kwargs):
         valid_kwargs = {
@@ -118,7 +119,8 @@ class ImagePredictions:
             if key not in valid_kwargs:
                 invalid_keys.append(key)
         if invalid_keys:
-            raise ValueError(f'Invalid kwargs passed: {invalid_keys}\nValid kwargs: {list(valid_kwargs)}')
+            raise ValueError(f'Invalid kwargs passed: {invalid_keys}\nValid kwargs: {list(valid_kwargs)}') '''
+    
     
     """
     def train(self,dataloader, model, num_epochs=20):
@@ -165,9 +167,9 @@ class ImagePredictions:
   
     def train_model(self,model, num_epochs=3):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
-        trainloader,valloader,_ =self._Utils_pro_type.image_tensor()
-        criterion,optimizer,_=self._ModelsZoo_type.optimizer()
-        model=self._ModelsZoo_type.create_model()
+        trainloader,valloader,_ =self._Image_converter.image_tensor()
+        criterion,optimizer,_=self._ModelsZoo.optimizer()
+        model=self._ModelsZoo.create_model()
         use_gpu = torch.cuda.is_available()
         since = time.time()
         best_model_wts = copy.deepcopy(model.state_dict())
@@ -229,7 +231,7 @@ class ImagePredictions:
             print()
             # * 2 as we only used half of the dataset
             
-            len_X_train_img,len_X_val_img,_=self._Utils_pro.image_len(self,data)
+            len_X_train_img,len_X_val_img,_=self._Image_converter.image_len(self,data)
             avg_loss = loss_train * 2 / len_X_train_img #dataset_sizes[TRAIN]
             avg_acc = acc_train * 2 /len_X_train_img#dataset_sizes[TRAIN]
             
@@ -286,9 +288,9 @@ class ImagePredictions:
             return model
     
     def eval_model(self):
-        _,_,Testloader =self._Utils_pro.Utils_pro.image_tensor()
-        criterion,_,_=self._ModelsZoo.ModelsZoo.optimizer()
-        model=self._ModelsZoo.ModelsZoo.create_model()
+        _,_,Testloader =self._Image_converter.image_tensor()
+        criterion,_,_=self._ModelsZoo.optimizer()
+        model=self._ModelsZoo.create_model()
         use_gpu = torch.cuda.is_available()
         since = time.time()
         avg_loss = 0
@@ -324,7 +326,7 @@ class ImagePredictions:
 
             del inputs, labels, outputs, preds
             torch.cuda.empty_cache()
-        _,_,len_X_test_img=self._Utils_pro.image_len(self,data)    
+        _,_,len_X_test_img=self._Image_converter.image_len(self,data)    
         avg_loss = loss_test /len_X_test_img #dataset_sizes[TEST]
         avg_acc = acc_test /len_X_test_img#dataset_sizes[TEST]
         
