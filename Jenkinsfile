@@ -183,11 +183,11 @@ stage("Unit Test") {
   'tabular_to_image': {
     node('linux-gpu') {
       ws('workspace/autogluon-tabular_to_image-py3-v3') {
-        timeout(time: max_time, unit: 'MINUTES') {
+   set -ex        timeout(time: max_time, unit: 'MINUTES') {
           checkout scm
           VISIBLE_GPU=env.EXECUTOR_NUMBER.toInteger() % 8
           sh """#!/bin/bash
-          set -ex
+       
           conda env update -n autogluon-tabular_to_image-py3-v3 -f docs/build.yml
           conda activate autogluon-tabular_to_image-py3-v3
           conda list
@@ -264,13 +264,10 @@ stage("Unit Test") {
           conda list
           ${setup_torch_gpu}
           export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
-<<<<<<< HEAD
+
           ${install_tabular_to_image_all} 
           ${install_core_all}
-=======
-
           ${install_core_all_tests}
->>>>>>> upstream/master
           ${install_vision}
           
 
