@@ -104,15 +104,15 @@ class ImagePredictions:
         valid_kwargs = {
             'Utils_pro_type',
             'Utils_pro_kwargs',
-            ''' 'X_train_img',
-             'X_val_img',
-             'X_test_img',
-             'y_train',
-             'y_val,y_test' '''
-             'imageShape',
-             'model_type',
-             'num_classes',
-             'pretrained',
+            'X_train_img',
+            'X_val_img',
+            'X_test_img',
+            'y_train',
+            'y_val,y_test' 
+            'imageShape',
+            'model_type',
+            'num_classes',
+            'pretrained',
         }
         invalid_keys = []
         for key in kwargs:
