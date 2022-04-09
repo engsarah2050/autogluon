@@ -25,7 +25,7 @@ requirements = [
     'networkx>=2.3,<3.0', 
     f'autogluon.core=={version}',
     f'autogluon.features=={version}',
-    f'autogluon.tabular_to_image=={version}', 
+    #f'autogluon.tabular_to_image=={version}', 
 ]
 
 test_requirements = [
