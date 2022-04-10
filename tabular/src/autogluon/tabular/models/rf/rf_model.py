@@ -165,11 +165,8 @@ class RFModel(AbstractModel):
         if self._daal:
             if params.get('warm_start', False):
                 params['warm_start'] = False
-<<<<<<< HEAD
-=======
             # FIXME: This is inefficent but sklearnex doesn't support computing oob_score after training
             params['oob_score'] = True
->>>>>>> upstream/master
 
         model = model_cls(**params)
 
