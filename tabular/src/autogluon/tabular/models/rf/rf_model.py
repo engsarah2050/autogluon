@@ -32,14 +32,6 @@ class RFModel(AbstractModel):
             from .rf_quantile import RandomForestQuantileRegressor
             return RandomForestQuantileRegressor
         if self.params_aux.get('use_daal', False):
-<<<<<<< HEAD
-            # Disabled by default because it appears to degrade performance
-            try:
-                # TODO: Use sklearnex instead once a suitable toggle option is provided that won't impact future models
-                # FIXME: DAAL OOB score is broken, returns biased predictions. Without this optimization, can't compute Efficient OOF.
-                from daal4py.sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-                logger.log(15, '\tUsing daal4py RF backend...')
-=======
             # Disabled by default because OOB score does not yet work properly
             try:
                 # FIXME: sklearnex OOB score is broken, returns biased predictions. Without this optimization, can't compute Efficient OOF.
@@ -52,7 +44,6 @@ class RFModel(AbstractModel):
                 #       Therefore with sklearnex enabled, pred_time_val is incorrect.
                 from sklearnex.ensemble import RandomForestClassifier, RandomForestRegressor
                 logger.log(15, '\tUsing sklearnex RF backend...')
->>>>>>> upstream/master
                 self._daal = True
             except:
                 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor

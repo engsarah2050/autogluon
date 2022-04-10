@@ -1,2 +1,2 @@
 """This is the autogluon version file."""
-__version__ = '0.3.1b20210831'
+__version__ = '0.4.1b20220409'
