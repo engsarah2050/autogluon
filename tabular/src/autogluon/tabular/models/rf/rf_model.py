@@ -252,22 +252,14 @@ class RFModel(AbstractModel):
 
     # FIXME: Unknown if this works with quantile regression
     def _get_oof_pred_proba(self, X, y, **kwargs):
-<<<<<<< HEAD
-        if self._daal:
-            raise AssertionError('DAAL forest backend does not support out-of-bag predictions.')
-=======
->>>>>>> upstream/master
         if not self.model.bootstrap:
             raise ValueError('Forest models must set `bootstrap=True` to compute out-of-fold predictions via out-of-bag predictions.')
 
         oob_is_not_set = getattr(self.model, "oob_decision_function_", None) is None and getattr(self.model, "oob_prediction_", None) is None
 
-<<<<<<< HEAD
-=======
         if oob_is_not_set and self._daal:
             raise AssertionError('DAAL forest backend does not support out-of-bag predictions.')
 
->>>>>>> upstream/master
         # TODO: This can also be done via setting `oob_score=True` in model params,
         #  but getting the correct `pred_time_val` that way is not easy, since we can't time the internal call.
         if oob_is_not_set and self._model_supports_oob_pred_proba():
