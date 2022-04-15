@@ -79,6 +79,7 @@ GET_ITEM_ERROR_RETRY = 50
 >>>>>>> upstream/master
 =======
 
+<<<<<<< HEAD
 # mini-ensemble methods
 UNION_SOUP = 'union_soup'
 GREEDY_SOUP = 'greedy_soup'
@@ -86,6 +87,12 @@ BEST_SOUP = 'best_soup'
 <<<<<<< HEAD
 >>>>>>> upstream/master
 =======
+=======
+# top-k checkpoint average methods
+UNIFORM_SOUP = "uniform_soup"
+GREEDY_SOUP = "greedy_soup"
+BEST = "best"
+>>>>>>> upstream/master
 
 # registered model keys. TODO: document how to add new models.
 CLIP = "clip"
