@@ -26,7 +26,10 @@ import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
 from autogluon.core.dataset import TabularDataset
+from autogluon.core.utils.loaders import load_pkl, load_str
+from autogluon.core.utils.savers import save_pkl, save_str
 from autogluon.DeepInsight_auto.pyDeepInsight import ImageTransformer,LogScaler
+
 from sklearn.model_selection import train_test_split
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -34,13 +37,16 @@ import matplotlib.ticker as ticker
 #from sklearn.model_selection import StratifiedKFol
 from sklearn.manifold import TSNE
 class Image_converter:
+    
+    Dataset = TabularDataset
+    convertor_file_name = 'conerter.pkl'
+    _convortor_version_file_name = '__version__'
+    
     def __init__(self, label_column,image_shape):
       #self.train_dataset=train_dataset
       self.label_column=label_column
       self.image_shape=image_shape
-      
-      
-    Dataset = TabularDataset  
+     
     #def data_split(self,):
     #    X_train, X_test, y_train, y_test = train_test_split(self.train_dataset,  self.label_column, test_size=0.2)
     #    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25
@@ -128,6 +134,7 @@ class Image_converter:
         return len(X_train_img),len(X_val_img),len(X_test_img)
             
     def image_tensor(self,data): 
+        
         preprocess = transforms.Compose([transforms.ToTensor()])    
         batch_size = 64
         
@@ -153,3 +160,118 @@ class Image_converter:
         Testset = TensorDataset(X_test_tensor, y_test_tensor)
         Testloader = DataLoader(Testset, batch_size=batch_size, shuffle=True)
         return trainloader,valloader,Testloader#,num_classes 
+    
+    @classmethod
+    def _load_version_file(cls, path) -> str:
+        version_file_path = path + cls._convortor_version_file_name = '__version__'
+        version = load_str.load(path=version_file_path)
+        return version
+
+    def _save_version_file(self, silent=False):
+        from ..version import __version__
+        version_file_contents = f'{__version__}'
+        version_file_path = self.path + self._convortor_version_file_name = '__version__'
+        save_str.save(path=version_file_path, data=version_file_contents, verbose=not silent)
+
+    def save(self, silent=False):
+        """
+        Save this Predictor to file in directory specified by this Predictor's `path`.
+        Note that :meth:`TabularPredictor.fit` already saves the predictor object automatically
+        (we do not recommend modifying the Predictor object yourself as it tracks many trained models).
+
+        Parameters
+        ----------
+        silent : bool, default = False
+            Whether to save without logging a message.
+        """
+        path = self.path
+        tmp_learner = self._learner
+        tmp_trainer = self._trainer
+        self._learner.save()
+        self._learner = None
+        self._trainer = None
+        save_pkl.save(path=path + self.convertor_file_name, object=self)
+        self._learner = tmp_learner
+        self._trainer = tmp_trainer
+        self._save_version_file(silent=silent)
+        if not silent:
+            logger.log(20, f'images saved. To load, use: convertor = Image_converter.load("{self.path}")')
+
+    @classmethod
+    def _load(cls, path: str):
+        """
+        Inner load method, called in `load`.
+        """
+        convertor: Image_converter = load_pkl.load(path=path + cls.convertor_file_name)
+        learner = convertor._learner_type.load(path)
+        convertor._set_post_fit_vars(learner=learner)
+        return convertor
+
+    @classmethod
+    def load(cls, path: str, verbosity: int = None, require_version_match: bool = True):
+        """
+        Load a TabularPredictor object previously produced by `fit()` from file and returns this object. It is highly recommended the predictor be loaded with the exact AutoGluon version it was fit with.
+
+        Parameters
+        ----------
+        path : str
+            The path to directory in which this Predictor was previously saved.
+        verbosity : int, default = None
+            Sets the verbosity level of this Predictor after it is loaded.
+            Valid values range from 0 (least verbose) to 4 (most verbose).
+            If None, logging verbosity is not changed from existing values.
+            Specify larger values to see more information printed when using Predictor during inference, smaller values to see less information.
+            Refer to TabularPredictor init for more information.
+        require_version_match : bool, default = True
+            If True, will raise an AssertionError if the `autogluon.tabular` version of the loaded predictor does not match the installed version of `autogluon.tabular`.
+            If False, will allow loading of models trained on incompatible versions, but is NOT recommended. Users may run into numerous issues if attempting this.
+        """
+        if verbosity is not None:
+            set_logger_verbosity(verbosity)  # Reset logging after load (may be in new Python session)
+        if path is None:
+            raise ValueError("path cannot be None in load()")
+
+        try:
+            from ..version import __version__
+            version_load = __version__
+        except:
+            version_load = None
+
+        path = setup_outputdir(path, warn_if_exist=False)  # replace ~ with absolute path if it exists
+        try:
+            version_init = cls._load_version_file(path=path)
+        except:
+            logger.warning(f'WARNING: Could not find version file at "{path + cls._predictor_version_file_name}".\n'
+                           f'This means that the predictor was fit in a version `<=0.3.1`.')
+            version_init = None
+
+        if version_init is None:
+            predictor = cls._load(path=path)
+            try:
+                version_init = predictor._learner.version
+            except:
+                version_init = None
+        else:
+            predictor = None
+        if version_init is None:
+            version_init = 'Unknown (Likely <=0.0.11)'
+        if version_load != version_init:
+            logger.warning('')
+            logger.warning('############################## WARNING ##############################')
+            logger.warning('WARNING: AutoGluon version differs from the version used to create the predictor! '
+                           'This may lead to instability and it is highly recommended the predictor be loaded '
+                           'with the exact AutoGluon version it was created with.')
+            logger.warning(f'\tPredictor Version: {version_init}')
+            logger.warning(f'\tCurrent Version:   {version_load}')
+            logger.warning('############################## WARNING ##############################')
+            logger.warning('')
+            if require_version_match:
+                raise AssertionError(
+                    f'Predictor was created on version {version_init} but is being loaded with version {version_load}. '
+                    f'Please ensure the versions match to avoid instability. While it is NOT recommended, '
+                    f'this error can be bypassed by specifying `require_version_match=False`.')
+
+        if predictor is None:
+            predictor = cls._load(path=path)
+
+        return predictor    
