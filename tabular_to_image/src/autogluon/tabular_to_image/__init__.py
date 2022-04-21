@@ -13,5 +13,6 @@ except ImportError:
     pass
 
 from autogluon.tabular_to_image.prediction.predictions import ImagePredictions #.predictor import TabularPredictor
+from autogluon.tabular_to_image.image_converter.converter import Image_converter
 
 logging.basicConfig(format='%(message)s')  # just print message in logs
