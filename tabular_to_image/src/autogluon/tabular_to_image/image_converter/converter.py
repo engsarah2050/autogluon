@@ -165,14 +165,14 @@ class Image_converter:
     
     @classmethod
     def _load_version_file(cls, path) -> str:
-        version_file_path = path + cls._convortor_version_file_name = '__version__'
+        version_file_path = path + cls._convortor_version_file_name 
         version = load_str.load(path=version_file_path)
         return version
 
     def _save_version_file(self, silent=False):
         from ..version import __version__
         version_file_contents = f'{__version__}'
-        version_file_path = self.path + self._convortor_version_file_name = '__version__'
+        version_file_path = self.path + self._convortor_version_file_name 
         save_str.save(path=version_file_path, data=version_file_contents, verbose=not silent)
 
     def save(self, silent=False):
