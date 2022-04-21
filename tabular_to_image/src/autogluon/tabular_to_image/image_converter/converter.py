@@ -4,6 +4,7 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 from torch.autograd import Variable
 from torch.utils.data import TensorDataset, DataLoader
+from autogluon.common.utils.utils import setup_outputdir
 import torch
 #device = torch.device("cuda") #device = 'cuda'
 import torchvision.transforms as transforms
@@ -42,10 +43,11 @@ class Image_converter:
     convertor_file_name = 'conerter.pkl'
     _convortor_version_file_name = '__version__'
     
-    def __init__(self, label_column,image_shape):
+    def __init__(self, label_column,image_shape,path=None):
       #self.train_dataset=train_dataset
       self.label_column=label_column
       self.image_shape=image_shape
+      path = setup_outputdir(path)
      
     #def data_split(self,):
     #    X_train, X_test, y_train, y_test = train_test_split(self.train_dataset,  self.label_column, test_size=0.2)
