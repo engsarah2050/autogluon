@@ -112,9 +112,8 @@ class Image_converter:
         return X_train,X_val,X_test,y_train , y_val,y_test    
      
     def Image_Genartor(self,data):
-        data=self.__get_dataset(data)
-        ln = LogScaler()
         X_train,X_val,X_test,_ , _,_=self._validate_data(data)
+        ln = LogScaler()
         X_train_norm = ln.fit_transform(X_train)
         X_val_norm = ln.fit_transform(X_val)
         X_test_norm = ln.transform(X_test)
