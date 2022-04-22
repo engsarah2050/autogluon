@@ -82,7 +82,7 @@ class Image_converter:
         if len(set(data.columns)) < len(data.columns):
             raise ValueError("Column names are not unique, please change duplicated column names (in pandas: train_data.rename(columns={'current_name':'new_name'})")
         
-        X_train, X_test, y_train, y_test = train_test_split(data,  self.label_column, test_size=0.2)
+        X_train, X_test, y_train, y_test = train_test_split(data.drop(self.label_column, axis=1),data[self.label_column], test_size=0.2)
         X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25)
         
         if not isinstance(X_train, pd.DataFrame):
