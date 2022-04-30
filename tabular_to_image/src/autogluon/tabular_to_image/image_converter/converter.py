@@ -97,14 +97,14 @@ class Image_converter:
         if X_val is not None:
             if not isinstance(X_val, pd.DataFrame):
                 raise AssertionError(f'X_val is required to be a pandas DataFrame, but was instead: {type(X_val)}')
-            train_features = [column for column in X_train.columns if column != y_train]
-            val_features = [column for column in X_val.columns if column != y_val]
+            train_features = [column for column in X_train.columns if column != self.label_column]
+            val_features = [column for column in X_val.columns if column !=self.label_column]
             if np.any(train_features != val_features):
                 raise ValueError("Column names must match between training and val data")
         if X_test is not None:
             if not isinstance(X_test, pd.DataFrame):
                 raise AssertionError(f'X_test is required to be a pandas DataFrame, but was instead: {type(X_test)}')
-            train_features = [column for column in X_train.columns if column != y_train]
+            train_features = [column for column in X_train.columns if column != self.label_column]
             test_features = [column for column in X_test.columns]
             if np.any(train_features != test_features):
                 raise ValueError("Column names must match between training and test_data")
