@@ -11,6 +11,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import TensorDataset, DataLoader
 import torch.nn as nn
 import torch.optim as optim
+import category_encoders as ce
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
 
@@ -81,8 +82,17 @@ class Image_converter:
             raise AssertionError(f'data is required to be a pandas DataFrame, but was instead: {type(data)}')
         if len(set(data.columns)) < len(data.columns):
             raise ValueError("Column names are not unique, please change duplicated column names (in pandas: train_data.rename(columns={'current_name':'new_name'})")
-        
-        X_train, X_test, y_train, y_test = train_test_split(data.drop(self.label_column, axis=1),data[self.label_column], test_size=0.2)
+        labelencoder = LabelEncoder()
+        data[self.label_column] = labelencoder.fit_transform(data[self.label_column]) 
+        categorical_columns=data.select_dtypes(exclude=['int64','float64']).columns
+        CatBoostEncoder=ce.CatBoostEncoder(cols=categorical_columns)
+        X = data.drop(self.label_column, axis=1)
+        y = data[self.label_column]
+        data3 = CatBoostEncoder.fit_transform(X, y)
+        data3[self.label_column]=data.iloc[:,-1]
+        x1 = data3.drop(self.label_column, axis=1)
+        y1= data3[self.label_column]
+        X_train, X_test, y_train, y_test = train_test_split(x1,y1, test_size=0.2)
         X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25)
         
         if not isinstance(X_train, pd.DataFrame):
