@@ -138,7 +138,7 @@ class Image_converter:
 
         plt.figure(figsize=(5, 5))
         _ = it.fit(X_train_norm, plot=True)
-        return X_train_img,X_val_img,X_test_img
+        return X_train_img,X_val_img,X_test_img,y_train , y_val,y_test
     
     def image_len(self,data):
         X_train_img,X_val_img,X_test_img=self.Image_Genartor(data)
@@ -151,8 +151,8 @@ class Image_converter:
         
         le = LabelEncoder()
         #num_classes = np.unique(le.fit_transform(self.y_train)).size
-        _,_,_,y_train , y_val,y_test=self._validate_data(data)
-        X_train_img,X_val_img,X_test_img=self.Image_Genartor(self.image_shape)
+        #_,_,_,y_train , y_val,y_test=self._validate_data(data)
+        X_train_img,X_val_img,X_test_img,y_train , y_val,y_test=self.Image_Genartor(self.image_shape)
         X_train_tensor = torch.stack([preprocess(img) for img in X_train_img ])
         y_train_tensor = torch.from_numpy(le.fit_transform(y_train))
 
