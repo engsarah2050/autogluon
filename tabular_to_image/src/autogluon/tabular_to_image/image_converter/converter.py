@@ -122,7 +122,7 @@ class Image_converter:
         return X_train,X_val,X_test,y_train , y_val,y_test    
      
     def Image_Genartor(self,data):
-        X_train,X_val,X_test,_ , _,_=self._validate_data(data)
+        X_train,X_val,X_test,y_train , y_val,y_test=self._validate_data(data)
         ln = LogScaler()
         X_train_norm = ln.fit_transform(X_train)
         X_val_norm = ln.fit_transform(X_val)
@@ -152,7 +152,7 @@ class Image_converter:
         le = LabelEncoder()
         #num_classes = np.unique(le.fit_transform(self.y_train)).size
         #_,_,_,y_train , y_val,y_test=self._validate_data(data)
-        X_train_img,X_val_img,X_test_img,y_train , y_val,y_test=self.Image_Genartor(self.image_shape)
+        X_train_img,X_val_img,X_test_img,y_train , y_val,y_test=self.Image_Genartor(self,data)
         X_train_tensor = torch.stack([preprocess(img) for img in X_train_img ])
         y_train_tensor = torch.from_numpy(le.fit_transform(y_train))
 
