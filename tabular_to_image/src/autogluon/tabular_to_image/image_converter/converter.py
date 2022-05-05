@@ -92,8 +92,10 @@ class Image_converter:
         data3[self.label_column]=data.iloc[:,-1]
         x1 = data3.drop(self.label_column, axis=1)
         y1= data3[self.label_column]
-        X_train, X_test, y_train, y_test = train_test_split(x1,y1, test_size=0.2)
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25)
+        X_train, X_test, y_train, y_test = train_test_split(x1,y1,
+       test_size=0.2,random_state=23, stratify=y1)
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
+        test_size=0.25,random_state=00)
         
         if not isinstance(X_train, pd.DataFrame):
                 raise AssertionError(
@@ -141,7 +143,7 @@ class Image_converter:
         return X_train_img,X_val_img,X_test_img,y_train , y_val,y_test
     
     def image_len(self,data):
-        X_train_img,X_val_img,X_test_img=self.Image_Genartor(data)
+        X_train_img,X_val_img,X_test_img,y_train , y_val,y_test=self.Image_Genartor(data)
         return len(X_train_img),len(X_val_img),len(X_test_img)
             
     def image_tensor(self,data): 
