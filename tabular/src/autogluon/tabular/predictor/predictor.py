@@ -78,6 +78,7 @@ class TabularPredictor:
         For more information on these options, see `sklearn.metrics`: https://scikit-learn.org/stable/modules/classes.html#sklearn-metrics-metrics
 
         You can also pass your own evaluation function here as long as it follows formatting of the functions defined in folder `autogluon.core.metrics`.
+        For detailed instructions on creating and using a custom metric, refer to https://auto.gluon.ai/stable/tutorials/tabular_prediction/tabular-custom-metric.html
     path : str, default = None
         Path to directory where models and intermediate outputs should be saved.
         If unspecified, a time-stamped folder called "AutogluonModels/ag-[TIMESTAMP]" will be created in the working directory to store all models.
@@ -381,16 +382,17 @@ class TabularPredictor:
                     'AG_TEXT_NN' (Multimodal Text+Tabular model, GPU is required)
                     'TRANSF' (Tabular Transformer, GPU is recommended)
                 If a certain key is missing from hyperparameters, then `fit()` will not train any models of that type. Omitting a model key from hyperparameters is equivalent to including this model key in `excluded_model_types`.
-                For example, set `hyperparameters = { 'NN_TORCH':{...} }` if say you only want to train (Pytorch) neural networks and no other types of models.
+                For example, set `hyperparameters = { 'NN_TORCH':{...} }` if say you only want to train (PyTorch) neural networks and no other types of models.
             Values = dict of hyperparameter settings for each model type, or list of dicts.
                 Each hyperparameter can either be a single fixed value or a search space containing many possible values.
                 Unspecified hyperparameters will be set to default values (or default search spaces if `hyperparameter_tune = True`).
-                Caution: Any provided search spaces will be overridden by fixed defaults if `hyperparameter_tune = False`.
+                Caution: Any provided search spaces will error if `hyperparameter_tune = False`.
                 To train multiple models of a given type, set the value to a list of hyperparameter dictionaries.
                     For example, `hyperparameters = {'RF': [{'criterion': 'gini'}, {'criterion': 'entropy'}]}` will result in 2 random forest models being trained with separate hyperparameters.
-            Advanced functionality: Custom models
-                `hyperparameters` can also take special string values instead of a dictionary of model parameters which maps to a pre-configured model configuration (currently supported options = ['GBMLarge']).
-                    These additional models will be trained using custom pre-specified hyperparameter settings that are known to work well.
+                Some model types have preset hyperparameter configs keyed under strings as shorthand for a complex model hyperparameter configuration known to work well:
+                    'GBM': ['GBMLarge']
+            Advanced functionality: Bring your own model / Custom model support
+                AutoGluon fully supports custom models. For a detailed tutorial on creating and using custom models with AutoGluon, refer to https://auto.gluon.ai/stable/tutorials/tabular_prediction/tabular-custom-model.html
             Advanced functionality: Custom stack levels
                 By default, AutoGluon re-uses the same models and model hyperparameters at each level during stack ensembling.
                 To customize this behaviour, create a hyperparameters dictionary separately for each stack level, and then add them as values to a new dictionary, with keys equal to the stack level.
@@ -1826,7 +1828,7 @@ class TabularPredictor:
                 labels_transformed = self._learner.label_cleaner.transform(y=labels)
         return labels_transformed
 
-    def feature_importance(self, data=None, model=None, features=None, feature_stage='original', subsample_size=1000,
+    def feature_importance(self, data=None, model=None, features=None, feature_stage='original', subsample_size=5000,
                            time_limit=None, num_shuffle_sets=None, include_confidence_band=True, confidence_level=0.99,
                            silent=False):
         """
@@ -1838,7 +1840,7 @@ class TabularPredictor:
         Note that calculating feature importance can be a very computationally expensive process, particularly if the model uses hundreds or thousands of features. In many cases, this can take longer than the original model training.
         To estimate how long `feature_importance(model, data, features)` will take, it is roughly the time taken by `predict_proba(data, model)` multiplied by the number of features.
 
-        Note: For highly accurate importance and p_value estimates, it is recommend to set `subsample_size` to at least 5,000 if possible and `num_shuffle_sets` to at least 10.
+        Note: For highly accurate importance and p_value estimates, it is recommended to set `subsample_size` to at least 5000 if possible and `num_shuffle_sets` to at least 10.
 
         Parameters
         ----------
@@ -1879,7 +1881,7 @@ class TabularPredictor:
                 'transformed_model':
                     Compute importances of the post-model-transformation features. These features are the internal features used by the requested model. They may differ greatly from the original features.
                     If the model is a stack ensemble, this will include stack ensemble features such as the prediction probability features of the stack ensemble's base (ancestor) models.
-        subsample_size : int, default = 1000
+        subsample_size : int, default = 5000
             The number of rows to sample from `data` when computing feature importance.
             If `subsample_size=None` or `data` contains fewer than `subsample_size` rows, all rows will be used during computation.
             Larger values increase the accuracy of the feature importance scores.
@@ -1892,7 +1894,7 @@ class TabularPredictor:
             The number of different permutation shuffles of the data that are evaluated.
             Larger values will increase the quality of the importance evaluation.
             It is generally recommended to increase `subsample_size` before increasing `num_shuffle_sets`.
-            Defaults to 3 if `time_limit` is None or 10 if `time_limit` is specified.
+            Defaults to 5 if `time_limit` is None or 10 if `time_limit` is specified.
             Runtime linearly scales with `num_shuffle_sets`.
         include_confidence_band: bool, default = True
             If True, returned DataFrame will include two additional columns specifying confidence interval for the true underlying importance value of each feature.
@@ -1927,7 +1929,7 @@ class TabularPredictor:
             self._validate_unique_indices(data, 'data')
 
         if num_shuffle_sets is None:
-            num_shuffle_sets = 10 if time_limit else 3
+            num_shuffle_sets = 10 if time_limit else 5
 
         fi_df = self._learner.get_feature_importance(model=model, X=data, features=features,
                                                      feature_stage=feature_stage,
