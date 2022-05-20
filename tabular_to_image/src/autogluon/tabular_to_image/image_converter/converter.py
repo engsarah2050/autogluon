@@ -93,25 +93,33 @@ class Image_converter:
         y = data[self.label_column]
         data3 = CatBoostEncoder.fit_transform(X, y)
         data3[self.label_column]=data.iloc[:,-1]
-        if(memoery<=26 and memory>12 )
-       	 if len(self.label_column)<=50000)
-           if (self.image_shape==224) 
-        		data4=data3.sample(frac=.20,random_state=77)
-	        	x1 = data4.drop(self.label_column, axis=1)
-        		y1= data4[self.label_column]
-			X_train, X_test, y_train, y_test = train_test_split(x1,y1,
-       	 	        test_size=0.2,random_state=23, stratify=y1)
-        		X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,   	  
-                        test_size=0.25,random_state=00)
-          elif (self.image_shape==256 or self.image_shape==299)
-			data4=data3.sample(frac=.1,random_state=77)
-                        x1 = data4.drop(self.label_column, axis=1)
-                        y1= data4[self.label_column]
-                        X_train, X_test, y_train, y_test = train_test_split(x1>
-                        test_size=0.2,random_state=23, stratify=y1)
-                        X_train, X_val, y_train, y_val = train_test_split(X_tr>
-                        test_size=0.25,random_state=00)  
-        
+        if(memoery<=26 and memory>12):
+       	 if len(self.label_column)<=50000):
+           if (self.image_shape==224): 
+             data4=data3.sample(frac=.20,random_state=77)
+	     x1 = data4.drop(self.label_column, axis=1)
+             y1= data4[self.label_column]
+	     X_train, X_test, y_train, y_test =
+             train_test_split(x1,y1,test_size=0.2,random_state=23,stratify=y1)
+       	     X_train, X_val, y_train, y_val = train_test_split(X_train,
+             y_train,test_size=0.25,random_state=00)
+           elif (self.image_shape==256 or self.image_shape==299)
+	     data4=data3.sample(frac=.1,random_state=77)
+             x1 = data4.drop(self.label_column, axis=1)
+             y1= data4[self.label_column]
+             X_train, X_test, y_train, y_test = train_test_split
+             (x1,y1,test_size=0.2,random_state=23, stratify=y1)
+             X_train, X_val, y_train, y_val = train_test_split
+             (X_train,y_train,test_size=0.25,random_state=00)  
+         elif (len(self.label_column)>=50000) and len(self.label_column)<=100000)):
+	  self.image_shape=50
+          data4=data3.sample(frac=.1,random_state=77)
+          x1 = data4.drop(self.label_column, axis=1)
+          y1= data4[self.label_column]
+          X_train, X_test, y_train, y_test =
+          train_test_split(x1,y1,test_size=0.2,random_state=23, stratify=y1)
+          X_train, X_val, y_train, y_val = train_test_split
+          (X_train,y_train,test_size=0.25,random_state=00)		
         if not isinstance(X_train, pd.DataFrame):
                 raise AssertionError(
                 f'train_data is required to be a pandas DataFrame, but was instead: {type(X_train)}')
