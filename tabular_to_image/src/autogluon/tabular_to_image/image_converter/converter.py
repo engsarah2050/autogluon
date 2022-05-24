@@ -95,7 +95,7 @@ class Image_converter:
         y = data[self.label_column]
         data3 = CatBoostEncoder.fit_transform(X, y)
         data3[self.label_column]=data.iloc[:,-1]
-       	if len((self.label_column)<=50000):
+       	if (len(self.label_column)<=50000):
             if (self.image_shape==224): 
                 data4=data3.sample(frac=.20,random_state=77)
                 x1 = data4.drop(self.label_column, axis=1)
