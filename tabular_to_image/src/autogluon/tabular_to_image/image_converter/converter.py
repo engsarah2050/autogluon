@@ -28,6 +28,7 @@ import copy
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
+from pathlib import Path
 from autogluon.core.dataset import TabularDataset
 from autogluon.core.utils.loaders import load_pkl, load_str
 from autogluon.core.utils import get_cpu_count, get_gpu_count_all
@@ -151,7 +152,16 @@ class Image_converter:
         #@jit(target ="cuda") 
         it = ImageTransformer(feature_extractor='tsne',pixels=self.image_shape, random_state=1701,n_jobs=-1)
        
-        X_train_img = it.fit_transform(X_train_norm)
+        X_train_img = it.fit_transform(X_train_norm).astype('float32')
+        
+        del X_train_norm       
+        #path = Path('/content/drive/MyDrive').expanduser()
+        path.expanduser()
+        db1={'X_train_img':X_train_img,'y_train' :y_train}
+        torch.save(db1, path/'db1')
+        del X_train_img
+        del db1
+        
         X_val_img = it.fit_transform(X_val_norm)
         X_test_img = it.transform(X_test_norm)
 
