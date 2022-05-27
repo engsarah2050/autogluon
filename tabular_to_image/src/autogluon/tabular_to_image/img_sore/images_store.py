@@ -119,7 +119,7 @@ class Store:
         self.X_val_img_saved = True
         self.y_val_saved=True
     
-    def save_val(self, X_test_img,y_test):
+    def save_test(self, X_test_img,y_test):
         path = self.path_data + '/test'
         test={'X_test_img':X_test_img,'y_test' :y_test}
         torch.save(test, path)
@@ -173,29 +173,19 @@ class Store:
             return model_type.load(path=path, reset_paths=self.reset_paths)
 
 
-    def reduce_memory_size(self, remove_data=True, remove_fit_stack=False, remove_fit=True, remove_info=False, requires_save=True, reduce_children=False, **kwargs):
+    def reduce_memory_size(self, data_files, remove_data=True, requires_save=True,**kwargs):
         if remove_data and self.is_data_saved:
-            data_files = [
-                self.path_data + 'X.pkl',
-                self.path_data + 'X_val.pkl',
-                self.path_data + 'y.pkl',
-                self.path_data + 'y_val.pkl',
-            ]
-            for data_file in data_files:
-                try:
-                    os.remove(data_file)
-                except FileNotFoundError:
-                    pass
+            try:
+                del data_files
+            except FileNotFoundError:
+                pass
             if requires_save:
                 self.is_data_saved = False
             try:
-                os.rmdir(self.path_data)
+                del data_files
             except OSError:
                 pass
-            try:
-                os.rmdir(self.path_utils)
-            except OSError:
-                pass
+            
         models = self.get_model_names()
         for model in models:
             model = self.load_model(model)
