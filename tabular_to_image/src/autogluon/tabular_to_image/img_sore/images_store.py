@@ -111,6 +111,7 @@ class Store:
         torch.save(train, path)
         self.X_train_img_saved = True
         self.y_train_saved=True
+        return train
 
     def save_val(self, X_val_img,y_val):
         path = self.path_data + '/val'
@@ -118,13 +119,15 @@ class Store:
         torch.save(val, path)
         self.X_val_img_saved = True
         self.y_val_saved=True
+        return val
     
     def save_test(self, X_test_img,y_test):
         path = self.path_data + '/test'
         test={'X_test_img':X_test_img,'y_test' :y_test}
         torch.save(test, path)
         self.X_test_img_saved = True
-        self.y_test_saved=True     
+        self.y_test_saved=True 
+        return test    
 
 
     def set_contexts(self, path_context):

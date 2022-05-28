@@ -1,66 +1,71 @@
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.optim import lr_scheduler
-from torch.autograd import Variable
-from torch.utils.data import TensorDataset, DataLoader
-from autogluon.common.utils.utils import setup_outputdir
-import torch
-#device = torch.device("cuda") #device = 'cuda'
-import torchvision.transforms as transforms
-from torch.utils.data import TensorDataset, DataLoader
-import torch.nn as nn
-import torch.optim as optim
-import category_encoders as ce
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import accuracy_score
-
-from torch.optim import lr_scheduler
-from torch.autograd import Variable
-import numpy as np
-import torchvision
-from torchvision import datasets, models, transforms
+from re import T
 import matplotlib.pyplot as plt
 import time
 import os
 import math
 import copy
-import numpy as np
+import pandas as pd
+import matplotlib.ticker as ticker
+import category_encoders as ce
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
 from pathlib import Path
+from sklearn.model_selection import train_test_split
+from sklearn.manifold import TSNE
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.optim import lr_scheduler
+from torch.autograd import Variable
+from torch.utils.data import TensorDataset, DataLoader
+#device = torch.device("cuda") #device = 'cuda'
+import torchvision.transforms as transforms
+import torchvision
+from torchvision import datasets, models, transforms
+
 from autogluon.core.dataset import TabularDataset
 from autogluon.core.utils.loaders import load_pkl, load_str
 from autogluon.core.utils import get_cpu_count, get_gpu_count_all
 from autogluon.core.utils import get_memory_size, bytes_to_mega_bytes
 from autogluon.core.utils.savers import save_pkl, save_str
+from autogluon.common.utils.utils import setup_outputdir
 from autogluon.DeepInsight_auto.pyDeepInsight import ImageTransformer,LogScaler
+from autogluon.tabular_to_image.img_sore import Store
 
-from sklearn.model_selection import train_test_split
-import pandas as pd
-from matplotlib import pyplot as plt
-import matplotlib.ticker as ticker
-#from sklearn.model_selection import StratifiedKFol
-from sklearn.manifold import TSNE
 class Image_converter:
     
     Dataset = TabularDataset
     convertor_file_name = 'conerter.pkl'
     _convortor_version_file_name = '__version__'
     
-    def __init__(self, label_column,image_shape,path=None):
-      #self.train_dataset=train_dataset
-      self.label_column=label_column
-      self.image_shape=image_shape
-      path = setup_outputdir(path)
-      memoery= math.floor((get_memory_size())/1000)
-      if(memoery<15):
+    def __init__(self, label_column,image_shape,path=None,**kwargs):
+        #self.train_dataset=train_dataset
+        self.label_column=label_column
+        self.image_shape=image_shape
+        path =path.expanduser() #setup_outputdir(path)
+        store_type = kwargs.pop('store_type', Store)
+        store_kwargs = kwargs.pop('store_kwargs', dict())
+        
+        self._store: Store = store_type(path=path,low_memory=False,save_data=False,**store_kwargs)
+        self._store_type = type(self._store)
+        
+        memoery= math.floor((get_memory_size())/1000)
+        if(memoery<15):
             raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	
     #def data_split(self,):
     #    X_train, X_test, y_train, y_test = train_test_split(self.train_dataset,  self.label_column, test_size=0.2)
     #    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25
    
    
+    
+    @property
+    def Path(self):
+        return self._store.path
+    
+    
     use_gpu = torch.cuda.is_available()
     if use_gpu:
         print("Using CUDA")
@@ -153,23 +158,20 @@ class Image_converter:
         it = ImageTransformer(feature_extractor='tsne',pixels=self.image_shape, random_state=1701,n_jobs=-1)
        
         X_train_img = it.fit_transform(X_train_norm).astype('float32')
+        plt.figure(figsize=(5, 5))
+        _ = it.fit(X_train_norm, plot=True)
+        self._store.reduce_memory_size(X_train_norm,remove_data=True,requires_save=True)
+        train=self._store_type.save_train(X_train_img,y_train)
+        self._store.reduce_memory_size(train,remove_data=True,requires_save=True)
         
-        del X_train_norm       
-        #path = Path('/content/drive/MyDrive').expanduser()
-        path.expanduser()
-        db1={'X_train_img':X_train_img,'y_train' :y_train}
-        torch.save(db1, path/'db1')
-        del X_train_img
-        del db1
         
-        X_val_img = it.fit_transform(X_val_norm)
-        X_test_img = it.transform(X_test_norm)
+        #X_val_img = it.fit_transform(X_val_norm)
+        #X_test_img = it.transform(X_test_norm)
 
         tsne = TSNE(n_components=2, perplexity=30, metric='cosine',random_state=1701, n_jobs=-1)
 
-        plt.figure(figsize=(5, 5))
-        _ = it.fit(X_train_norm, plot=True)
-        return X_train_img,X_val_img,X_test_img,y_train , y_val,y_test
+
+        #return X_train_img,y_train#,X_val_img,X_test_img,y_train , y_val,y_test
     
     def image_len(self,data):
         X_train_img,X_val_img,X_test_img,y_train , y_val,y_test=self.Image_Genartor(data)
