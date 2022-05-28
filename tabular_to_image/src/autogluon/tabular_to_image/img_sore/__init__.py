@@ -1,1 +1,1 @@
-from .images_store import Store
+from autogluon.tabular_to_image.img_sore.images_store import Store

@@ -15,16 +15,16 @@ import torch
 
 from autogluon.common.features.feature_metadata import FeatureMetadata
 
-from .utils import process_hyperparameters
-from ..augmentation.distill_utils import format_distillation_labels, augment_data
-from ..constants import AG_ARGS, BINARY, MULTICLASS, REGRESSION, REFIT_FULL_NAME, REFIT_FULL_SUFFIX
-from ..models import AbstractModel, BaggedEnsembleModel, StackerEnsembleModel, WeightedEnsembleModel, GreedyWeightedEnsembleModel, SimpleWeightedEnsembleModel
-from ..scheduler.scheduler_factory import scheduler_factory
-from ..utils import default_holdout_frac, get_pred_from_proba, generate_train_test_split, infer_eval_metric, compute_permutation_feature_importance, extract_column, compute_weighted_metric
-from ..utils.exceptions import TimeLimitExceeded, NotEnoughMemoryError, NoValidFeatures, NoGPUError, NotEnoughCudaMemoryError
-from ..utils.loaders import load_pkl
-from ..utils.savers import save_json, save_pkl
-from ..utils.feature_selection import FeatureSelector
+from autogluon.core.trainer.utils  import process_hyperparameters
+from autogluon.core.augmentation.distill_utils import format_distillation_labels, augment_data
+from autogluon.core.constants import AG_ARGS, BINARY, MULTICLASS, REGRESSION, REFIT_FULL_NAME, REFIT_FULL_SUFFIX
+from autogluon.core.models import AbstractModel, BaggedEnsembleModel, StackerEnsembleModel, WeightedEnsembleModel, GreedyWeightedEnsembleModel, SimpleWeightedEnsembleModel
+from autogluon.core.scheduler.scheduler_factory import scheduler_factory
+from autogluon.core.utils import default_holdout_frac, get_pred_from_proba, generate_train_test_split, infer_eval_metric, compute_permutation_feature_importance, extract_column, compute_weighted_metric
+from autogluon.core.utils.exceptions import TimeLimitExceeded, NotEnoughMemoryError, NoValidFeatures, NoGPUError, NotEnoughCudaMemoryError
+from autogluon.core.utils.loaders import load_pkl
+from autogluon.core.utils.savers import save_json, save_pkl
+from autogluon.core.utils.feature_selection import FeatureSelector
 
 logger = logging.getLogger(__name__)
 
