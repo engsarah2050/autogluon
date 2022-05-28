@@ -173,27 +173,16 @@ class Store:
             return model_type.load(path=path, reset_paths=self.reset_paths)
 
 
-    def reduce_memory_size(self, data_files, remove_data=True, requires_save=True,**kwargs):
-        if remove_data and self.is_data_saved:
+    def reduce_memory_size(self, data_files, remove_data=True, requires_save=True):
+        if remove_data or self.is_data_saved:
             try:
                 del data_files
-            except FileNotFoundError:
-                pass
-            if requires_save:
-                self.is_data_saved = False
-            try:
-                del data_files
+            except NameError:
+                print('f Variable {data_files} is not defined')
             except OSError:
                 pass
-            
-        models = self.get_model_names()
-        for model in models:
-            model = self.load_model(model)
-            model.reduce_memory_size(remove_fit_stack=remove_fit_stack, remove_fit=remove_fit, remove_info=remove_info, requires_save=requires_save, reduce_children=reduce_children, **kwargs)
             if requires_save:
-                self.save_model(model, reduce_memory=False)
-        if requires_save:
-            self.save()
+                self.is_data_saved = False      
 
     # TODO: Also enable deletion of models which didn't succeed in training (files may still be persisted)
     #  This includes the original HPO fold for stacking
