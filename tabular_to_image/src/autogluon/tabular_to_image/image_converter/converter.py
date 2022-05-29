@@ -154,8 +154,8 @@ class Image_converter:
         X_train,X_val,X_test,y_train , y_val,y_test=self._validate_data(data)
         ln = LogScaler()
         X_train_norm = ln.fit_transform(X_train)
-        X_val_norm = ln.fit_transform(X_val)
-        X_test_norm = ln.transform(X_test)
+        #X_val_norm = ln.fit_transform(X_val)
+        #X_test_norm = ln.transform(X_test)
         #@jit(target ="cuda") 
         it = ImageTransformer(feature_extractor='tsne',pixels=self.image_shape, random_state=1701,n_jobs=-1)
        
