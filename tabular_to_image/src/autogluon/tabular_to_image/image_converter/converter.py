@@ -45,7 +45,7 @@ class Image_converter:
         #self.train_dataset=train_dataset
         self.label_column=label_column
         self.image_shape=image_shape
-        path =path.expanduser() #setup_outputdir(path)
+        path =Path(path).expanduser() #setup_outputdir(path)
         store_type = kwargs.pop('store_type', Store)
         store_kwargs = kwargs.pop('store_kwargs', dict())
         
