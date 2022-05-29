@@ -63,6 +63,7 @@ class Store:
     # path_root is the directory containing learner.pkl
     @property
     def path_root(self) -> str:
+        self.path=str(self.path)
         return self.path.rsplit(os.path.sep, maxsplit=2)[0] + os.path.sep
 
     @property
