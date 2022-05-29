@@ -163,7 +163,7 @@ class Image_converter:
         plt.figure(figsize=(5, 5))
         _ = it.fit(X_train_norm, plot=True)
         self._store.reduce_memory_size(X_train_norm,remove_data=True,requires_save=True)
-        train=self._store_type.save_train(X_train_img,y_train)
+        train=self._store.save_train(X_train_img,y_train)
         self._store.reduce_memory_size(train,remove_data=True,requires_save=True)
         
         
