@@ -9,6 +9,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import psutil
+from pathlib import Path
 import torchvision
 from torchvision import datasets, models, transforms
 import torch
@@ -74,6 +75,10 @@ class Store:
     def path_data(self) -> str:
         return self.path_utils + 'data' + os.path.sep
 
+    @property
+    def path_image(self) -> str:
+        return Path(self.path).expanduser() + os.path.sep
+    
     def load_X(self):
         if self._X_saved:
             path = self.path_data + 'X.pkl'
@@ -107,7 +112,7 @@ class Store:
         return X, y, X_val, y_val
 
     def save_train(self, X_train_img,y_train):
-        path = self.path_data + '/train'
+        path = self.path_image + 'train'
         train={'X_train_img':X_train_img,'y_train' :y_train}
         torch.save(train, path)
         self.X_train_img_saved = True
@@ -115,7 +120,7 @@ class Store:
         return train
 
     def save_val(self, X_val_img,y_val):
-        path = self.path_data + '/val'
+        path = self.path_image + 'val'
         val={'X_val_img':X_val_img,'y_val' :y_val}
         torch.save(val, path)
         self.X_val_img_saved = True
@@ -123,7 +128,7 @@ class Store:
         return val
     
     def save_test(self, X_test_img,y_test):
-        path = self.path_data + '/test'
+        path = self.path_data + 'test'
         test={'X_test_img':X_test_img,'y_test' :y_test}
         torch.save(test, path)
         self.X_test_img_saved = True
