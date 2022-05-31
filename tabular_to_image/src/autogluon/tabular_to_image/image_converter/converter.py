@@ -154,19 +154,33 @@ class Image_converter:
         X_train,X_val,X_test,y_train , y_val,y_test=self._validate_data(data)
         ln = LogScaler()
         X_train_norm = ln.fit_transform(X_train)
-        #X_val_norm = ln.fit_transform(X_val)
-        #X_test_norm = ln.transform(X_test)
+
         #@jit(target ="cuda") 
         it = ImageTransformer(feature_extractor='tsne',pixels=self.image_shape, random_state=1701,n_jobs=-1)
        
         X_train_img = it.fit_transform(X_train_norm).astype('float32')
-        plt.figure(figsize=(5, 5))
-        _ = it.fit(X_train_norm, plot=True)
+        #plt.figure(figsize=(5, 5))
+        #_ = it.fit(X_train_norm, plot=True)
         self._store.reduce_memory_size(X_train_norm,remove_data=True,requires_save=True)
         train=self._store.save_train(X_train_img,y_train)
         self._store.reduce_memory_size(train,remove_data=True,requires_save=True)
+
         
+        X_val_norm = ln.fit_transform(X_val)
+        X_val_img = it.fit_transform(X_val_norm).astype('float32')
         
+        self._store.reduce_memory_size(X_val_norm,remove_data=True,requires_save=True)
+        val=self._store.save_train(X_val_img,y_val)
+        self._store.reduce_memory_size(val,remove_data=True,requires_save=True)
+        
+        X_test_norm = ln.fit_transform(X_test)
+        X_test_img = it.fit_transform(X_test_norm).astype('float32')
+        
+        self._store.reduce_memory_size(X_test_norm,remove_data=True,requires_save=True)
+        test=self._store.save_train(X_test_img,y_test)
+        self._store.reduce_memory_size(test,remove_data=True,requires_save=True)
+        
+        #X_test_norm = ln.transform(X_test)
         #X_val_img = it.fit_transform(X_val_norm)
         #X_test_img = it.transform(X_test_norm)
 
