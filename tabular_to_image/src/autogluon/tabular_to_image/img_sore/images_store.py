@@ -79,37 +79,29 @@ class Store:
     def path_image(self) -> Path:
         return Path(self.path).expanduser() #+ os.path.sep
     
-    def load_X(self):
-        if self._X_saved:
-            path = self.path_data + 'X.pkl'
-            return load_pkl.load(path=path)
+    def load_train(self):
+        if self.X_train_img_saved and  self.y_train_saved:
+            path = self.path_image
+            return  torch.load(os.path.join(path,"train"))
         return None
 
-    def load_X_val(self):
-        if self._X_val_saved:
-            path = self.path_data + 'X_val.pkl'
-            return load_pkl.load(path=path)
+    def load_val(self):
+        if self.X_val_img_saved and  self.y_val_saved:
+            path = self.path_image
+            return  torch.load(os.path.join(path,"val"))
         return None
 
-    def load_y(self):
-        if self._y_saved:
-            path = self.path_data + 'y.pkl'
-            return load_pkl.load(path=path)
-        return None
-
-    def load_y_val(self):
-        if self._y_val_saved:
-            path = self.path_data + 'y_val.pkl'
-            return load_pkl.load(path=path)
+    def load_test(self):
+        if self.X_test_img_saved and self.y_test_saved:
+            path = self.path_image
+            return  torch.load(os.path.join(path,"test"))
         return None
 
     def load_data(self):
-        X = self.load_X()
-        y = self.load_y()
-        X_val = self.load_X_val()
-        y_val = self.load_y_val()
-
-        return X, y, X_val, y_val
+        train = self.load_train()
+        val = self.load_val()
+        test = self.load_test()
+        return train,val,test
 
     def save_train(self, X_train_img,y_train):
         path = self.path_image 
