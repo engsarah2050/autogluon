@@ -120,17 +120,17 @@ class Store:
         return train
 
     def save_val(self, X_val_img,y_val):
-        path = self.path_image + 'val'
+        path = self.path_image 
         val={'X_val_img':X_val_img,'y_val' :y_val}
-        torch.save(val, path)
+        torch.save(val, os.path.join(path,"val"))
         self.X_val_img_saved = True
         self.y_val_saved=True
         return val
     
     def save_test(self, X_test_img,y_test):
-        path = self.path_data + 'test'
+        path = self.path_data 
         test={'X_test_img':X_test_img,'y_test' :y_test}
-        torch.save(test, path)
+        torch.save(test, os.path.join(path,"test"))
         self.X_test_img_saved = True
         self.y_test_saved=True 
         return test    
