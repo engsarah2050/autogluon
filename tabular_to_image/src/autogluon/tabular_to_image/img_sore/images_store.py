@@ -77,7 +77,7 @@ class Store:
 
     @property
     def path_image(self) -> str:
-        return Path(self.path).expanduser() + os.path.sep
+        return Path(self.path).expanduser() #+ os.path.sep
     
     def load_X(self):
         if self._X_saved:
