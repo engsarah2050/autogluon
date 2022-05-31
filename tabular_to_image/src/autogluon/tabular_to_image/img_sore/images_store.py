@@ -76,7 +76,7 @@ class Store:
         return self.path_utils + 'data' + os.path.sep
 
     @property
-    def path_image(self) -> str:
+    def path_image(self) -> Path:
         return Path(self.path).expanduser() #+ os.path.sep
     
     def load_X(self):
