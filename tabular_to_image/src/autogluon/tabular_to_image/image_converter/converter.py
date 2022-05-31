@@ -170,14 +170,14 @@ class Image_converter:
         X_val_img = it.fit_transform(X_val_norm).astype('float32')
         
         self._store.reduce_memory_size(X_val_norm,remove_data=True,requires_save=True)
-        val=self._store.save_train(X_val_img,y_val)
+        val=self._store.save_val(X_val_img,y_val)
         self._store.reduce_memory_size(val,remove_data=True,requires_save=True)
         
         X_test_norm = ln.fit_transform(X_test)
         X_test_img = it.fit_transform(X_test_norm).astype('float32')
         
         self._store.reduce_memory_size(X_test_norm,remove_data=True,requires_save=True)
-        test=self._store.save_train(X_test_img,y_test)
+        test=self._store.save_test(X_test_img,y_test)
         self._store.reduce_memory_size(test,remove_data=True,requires_save=True)
         
         #X_test_norm = ln.transform(X_test)
