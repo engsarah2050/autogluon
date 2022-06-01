@@ -120,7 +120,7 @@ class Store:
         return val
     
     def save_test(self, X_test_img,y_test):
-        path = self.path_data 
+        path = self.path_image
         test={'X_test_img':X_test_img,'y_test' :y_test}
         torch.save(test, os.path.join(path,"test"))
         self.X_test_img_saved = True
