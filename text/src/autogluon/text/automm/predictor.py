@@ -54,6 +54,7 @@ from .constants import (
 from .data.datamodule import BaseDataModule
 from .data.infer_types import infer_column_problem_types
 from .data.preprocess_dataframe import MultiModalFeaturePreprocessor
+from .data.mixup import MixupModule
 
 from .utils import (
     create_model,
@@ -74,6 +75,7 @@ from .utils import (
     assign_feature_column_names,
     turn_on_off_feature_column_info,
     try_to_infer_pos_label,
+    get_mixup,
 )
 from .optimization.utils import (
     get_metric,
@@ -479,7 +481,16 @@ class AutoMMPredictor:
             pos_label=pos_label,
         )
 
-        loss_func = get_loss_func(problem_type)
+        mixup_active, mixup_fn = get_mixup(model_config=OmegaConf.select(config,'model'),
+                                     mixup_config=OmegaConf.select(config,'data.mixup'),
+                                     num_classes=output_shape,
+        )
+        if mixup_active and (config.env.per_gpu_batch_size == 1 or config.env.per_gpu_batch_size % 2 == 1):
+            warnings.warn("The mixup is done on the batch."
+                          "The per_gpu_batch_size should be >1 and even for reasonable operation",
+                          UserWarning)
+
+        loss_func = get_loss_func(problem_type, mixup_active)
 
         if time_limit is not None:
             time_limit = timedelta(seconds=time_limit)
@@ -495,6 +506,7 @@ class AutoMMPredictor:
         self._df_preprocessor = df_preprocessor
         self._data_processors = data_processors
         self._model = model
+        self.mixup_fn = mixup_fn
 
         # save artifacts for the current running, except for model checkpoint, which will be saved in _fit()
         self.save(save_path)
@@ -562,6 +574,10 @@ class AutoMMPredictor:
             resume=self._resume,
 >>>>>>> upstream/master
             enable_progress_bar=self._enable_progress_bar,
+<<<<<<< HEAD
+>>>>>>> upstream/master
+=======
+            mixup_fn=self.mixup_fn,
 >>>>>>> upstream/master
         )
         return self
@@ -697,6 +713,10 @@ class AutoMMPredictor:
             resume: bool,
 >>>>>>> upstream/master
             enable_progress_bar: bool,
+<<<<<<< HEAD
+>>>>>>> upstream/master
+=======
+            mixup_fn: MixupModule,
 >>>>>>> upstream/master
     ):
         if teacher_df_preprocessor is not None:
@@ -749,6 +769,8 @@ class AutoMMPredictor:
                 model=model,
                 loss_func=loss_func,
                 efficient_finetune=OmegaConf.select(config, 'optimization.efficient_finetune'),
+                mixup_fn=mixup_fn,
+                mixup_off_epoch=OmegaConf.select(config, 'data.mixup.mixup_off_epoch'),
                 **metrics_kwargs,
                 **optimization_kwargs,
             )
