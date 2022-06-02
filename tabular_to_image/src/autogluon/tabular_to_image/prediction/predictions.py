@@ -20,7 +20,8 @@ from autogluon.tabular_to_image.image_converter import Image_converter
 from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions:
     
-    def init(self,label_column,imageShape,**kwargs):
+    image_data=Image_converter
+    def init(self,**kwargs):
         self._validate_init_kwargs(kwargs)
         Image_converter_type = kwargs.pop('Image_converter_type',Image_converter)
         image_converter_kwargs = kwargs.pop('image_converter_kwargs', dict())
@@ -33,7 +34,7 @@ class ImagePredictions:
         y_val = kwargs.get('y_val', None)
         y_test = kwargs.get('y_test', None) '''
         
-        imageShape = kwargs.get('imageShape', None)
+        imageShape = self._Image_converter.image_shape#kwargs.get('imageShape', None)
         label_column = kwargs.get('label_column', None)
         
         self._Image_converter: Image_converter =Image_converter_type(label_column=label_column,image_shape=imageShape, **image_converter_kwargs)   
@@ -82,7 +83,7 @@ class ImagePredictions:
     
     @property
     def ImageShape(self):
-        return self._ModelsZoo.ImageShape 
+        return self._Image_converter.image_shape 
     @property
     def model_type(self):
         return self._ModelsZoo.model_type 

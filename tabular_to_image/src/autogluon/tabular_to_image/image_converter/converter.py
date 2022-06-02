@@ -43,6 +43,10 @@ class Image_converter:
     convertor_file_name = 'conerter.pkl'
     _convortor_version_file_name = '__version__'
     
+    @property
+    def _constructor(self):
+        return Image_converter
+    
     def __init__(self, label_column,image_shape,path=None,**kwargs):
         #self.train_dataset=train_dataset
         self.label_column=label_column
@@ -66,6 +70,7 @@ class Image_converter:
     @property
     def Path(self):
         return self._store.path
+ 
     
     
     use_gpu = torch.cuda.is_available()
@@ -155,7 +160,8 @@ class Image_converter:
         X_train_norm = ln.fit_transform(X_train)
 
         #@jit(target ="cuda") 
-        it = ImageTransformer(feature_extractor='tsne',pixels=self.image_shape, random_state=1701,n_jobs=-1)
+        tsne = TSNE(n_components=2, perplexity=30, metric='cosine',random_state=1701, n_jobs=-1)
+        it = ImageTransformer(feature_extractor=tsne,pixels=self.image_shape, random_state=1701,n_jobs=-1)
         
                
         X_train_img = it.fit_transform(X_train_norm).astype('float32')
@@ -180,7 +186,7 @@ class Image_converter:
         test=self._store.save_test(X_test_img,y_test)
         self._store.reduce_memory_size(test,remove_data=True,requires_save=True)
         
-        tsne = TSNE(n_components=2, perplexity=30, metric='cosine',random_state=1701, n_jobs=-1)
+        
        
     
     def image_len(self):
@@ -222,6 +228,11 @@ class Image_converter:
         Testloader = DataLoader(Testset, batch_size=batch_size, shuffle=True)
         
         
+        return trainloader,valloader,Testloader
+    
+    def To_tensor_image(self,data):
+        self.Image_Genartor(data)
+        trainloader,valloader,Testloader=self.image_tensor(data)
         return trainloader,valloader,Testloader
     
     @classmethod
