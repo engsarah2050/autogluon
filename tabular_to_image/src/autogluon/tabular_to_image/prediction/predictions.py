@@ -44,7 +44,7 @@ class ImagePredictions:
         ModelsZoo_kwargs = kwargs.pop('ModelsZoo_kwargs', dict())
        
         model_type = kwargs.get('model_type', None)
-        num_classes = kwargs.get('num_classes', None)
+        num_classes =self._Image_converter.num_class() #kwargs.get('num_classes', None)
         pretrained = kwargs.get('pretrained', None)
               
         self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=imageShape ,model_type=model_type,
@@ -75,6 +75,7 @@ class ImagePredictions:
     @property
     def y_test(self):
         return self._Utils_pro.y_test  '''
+
     @property
     def Label_column(self):
         return self._Image_converter.label_column

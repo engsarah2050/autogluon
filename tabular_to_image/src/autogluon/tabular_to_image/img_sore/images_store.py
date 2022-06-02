@@ -125,9 +125,8 @@ class Store:
         torch.save(test, os.path.join(path,"test"))
         self.X_test_img_saved = True
         self.y_test_saved=True 
-        return test    
-
-
+        return test
+     
     def set_contexts(self, path_context):
         self.path, model_paths = self.create_contexts(path_context)
         for model, path in model_paths.items():
@@ -142,6 +141,8 @@ class Store:
             model_paths[model] = new_path
 
         return path, model_paths
+
+        return test    
 
     def save_model(self, model, reduce_memory=True):
         # TODO: In future perhaps give option for the reduce_memory_size arguments, perhaps trainer level variables specified by user?

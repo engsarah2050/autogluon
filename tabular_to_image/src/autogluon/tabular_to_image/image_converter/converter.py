@@ -148,8 +148,7 @@ class Image_converter:
             if np.any(train_features != test_features):
                 raise ValueError("Column names must match between training and test_data")
          
-        return X_train,X_val,X_test,y_train , y_val,y_test    
-     
+        return X_train,X_val,X_test,y_train , y_val,y_test
     def Image_Genartor(self,data):
         X_train,X_val,X_test,y_train , y_val,y_test=self._validate_data(data)
         ln = LogScaler()
@@ -157,7 +156,8 @@ class Image_converter:
 
         #@jit(target ="cuda") 
         it = ImageTransformer(feature_extractor='tsne',pixels=self.image_shape, random_state=1701,n_jobs=-1)
-       
+        
+               
         X_train_img = it.fit_transform(X_train_norm).astype('float32')
         #plt.figure(figsize=(5, 5))
         #_ = it.fit(X_train_norm, plot=True)
@@ -180,18 +180,19 @@ class Image_converter:
         test=self._store.save_test(X_test_img,y_test)
         self._store.reduce_memory_size(test,remove_data=True,requires_save=True)
         
-        #X_test_norm = ln.transform(X_test)
-        #X_val_img = it.fit_transform(X_val_norm)
-        #X_test_img = it.transform(X_test_norm)
-
         tsne = TSNE(n_components=2, perplexity=30, metric='cosine',random_state=1701, n_jobs=-1)
-
-
-        #return X_train_img,y_train#,X_val_img,X_test_img,y_train , y_val,y_test
+       
     
-    def image_len(self,data):
-        X_train_img,X_val_img,X_test_img,y_train , y_val,y_test=self.Image_Genartor(data)
-        return len(X_train_img),len(X_val_img),len(X_test_img)
+    def image_len(self):
+        train,val,test=self._store.load_data()
+        return len(train['X_train_img']),len(val['X_val_img']),len(test['X_test_img'])
+    
+    def num_class(self):
+        _,_,test=self._store.load_data()
+        num_classes = np.unique(test['y_test']).size
+        return num_classes
+    
+    
             
     def image_tensor(self,data): 
         preprocess = transforms.Compose([transforms.ToTensor()])    
@@ -219,7 +220,9 @@ class Image_converter:
 
         Testset = TensorDataset(X_test_tensor, y_test_tensor)
         Testloader = DataLoader(Testset, batch_size=batch_size, shuffle=True)
-        return trainloader,valloader,Testloader#,num_classes 
+        
+        
+        return trainloader,valloader,Testloader
     
     @classmethod
     def _load_version_file(cls, path) -> str:
