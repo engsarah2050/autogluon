@@ -158,7 +158,7 @@ class ImagePredictions:
   
     def train_model(self,model, num_epochs=3):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
-        trainloader,valloader,_ =self.image_data.image_tensor()
+        trainloader,valloader,_ =self.image_data.image_tensor(self.image_data)
         criterion,optimizer,_=self._ModelsZoo.optimizer()
         model=self._ModelsZoo.create_model()
         use_gpu = torch.cuda.is_available()
