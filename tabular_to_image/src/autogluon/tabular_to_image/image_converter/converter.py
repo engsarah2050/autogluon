@@ -208,7 +208,7 @@ class Image_converter:
     
     
             
-    def image_tensor(self,data): 
+    def image_tensor(self): 
         preprocess = transforms.Compose([transforms.ToTensor()])    
         batch_size = 32
         
@@ -240,7 +240,7 @@ class Image_converter:
     
     def To_tensor_image(self,data):
         self.Image_Genartor(data)
-        trainloader,valloader,Testloader=self.image_tensor(data)
+        trainloader,valloader,Testloader=self.image_tensor()
         return trainloader,valloader,Testloader
     
     @classmethod

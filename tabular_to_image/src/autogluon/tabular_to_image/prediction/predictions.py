@@ -81,7 +81,7 @@ class ImagePredictions:
         return self._ModelsZoo.model_type 
     @property
     def num_classes(self):
-        return self._ModelsZoo.num_classes 
+        return self.image_data.num_class()
     @property
     def pretrained(self):
         return self._ModelsZoo.pretrained 
@@ -222,7 +222,7 @@ class ImagePredictions:
             print()
             # * 2 as we only used half of the dataset
             
-            len_X_train_img,len_X_val_img,_=self.image_data.image_len(self,data)
+            len_X_train_img,len_X_val_img,_=self.image_data.image_len()
             avg_loss = loss_train * 2 / len_X_train_img #dataset_sizes[TRAIN]
             avg_acc = acc_train * 2 /len_X_train_img#dataset_sizes[TRAIN]
             
