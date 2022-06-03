@@ -23,9 +23,7 @@ class ImagePredictions:
     image_data=Image_converter
     def init(self,**kwargs):
         self._validate_init_kwargs(kwargs)
-        Image_converter_type = kwargs.pop('Image_converter_type',Image_converter)
-        image_converter_kwargs = kwargs.pop('image_converter_kwargs', dict())
-              
+                     
         ''' X_train_img = kwargs.get('X_train_img', None)
         X_val_img = kwargs.get('X_val_img', None)
         X_test_img = kwargs.get('X_test_img', None)
@@ -34,18 +32,13 @@ class ImagePredictions:
         y_val = kwargs.get('y_val', None)
         y_test = kwargs.get('y_test', None) '''
         
-        imageShape = self._Image_converter.image_shape#kwargs.get('imageShape', None)
-        label_column = kwargs.get('label_column', None)
-        
-        self._Image_converter: Image_converter =Image_converter_type(label_column=label_column,image_shape=imageShape, **image_converter_kwargs)   
-        self._Image_converter_type = type(self._Image_converter)
-                
+        imageShape =self.image_data.Image_shape #kwargs.get('imageShape', None)            
         
         ModelsZoo_type = kwargs.pop('ModelsZoo_type', ModelsZoo)
         ModelsZoo_kwargs = kwargs.pop('ModelsZoo_kwargs', dict())
        
         model_type = kwargs.get('model_type', None)
-        num_classes =self._Image_converter.num_class() #kwargs.get('num_classes', None)
+        num_classes =self.image_data.num_class() #kwargs.get('num_classes', None)
         pretrained = kwargs.get('pretrained', None)
               
         self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=imageShape ,model_type=model_type,
@@ -79,22 +72,19 @@ class ImagePredictions:
 
     @property
     def Label_column(self):
-        return self._Image_converter.label_column
-    
+        return self.image_data.Lable_column   
     @property
     def ImageShape(self):
-        return self._Image_converter.image_shape 
+        return self.image_data.Image_shape 
     @property
     def model_type(self):
         return self._ModelsZoo.model_type 
     @property
     def num_classes(self):
         return self._ModelsZoo.num_classes 
-    
     @property
     def pretrained(self):
         return self._ModelsZoo.pretrained 
-   
     @property
     def model(self):
         return self._ModelsZoo.create_model() 
@@ -168,7 +158,7 @@ class ImagePredictions:
   
     def train_model(self,model, num_epochs=3):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
-        trainloader,valloader,_ =self._Image_converter.image_tensor()
+        trainloader,valloader,_ =self.image_data.image_tensor()
         criterion,optimizer,_=self._ModelsZoo.optimizer()
         model=self._ModelsZoo.create_model()
         use_gpu = torch.cuda.is_available()
@@ -232,7 +222,7 @@ class ImagePredictions:
             print()
             # * 2 as we only used half of the dataset
             
-            len_X_train_img,len_X_val_img,_=self._Image_converter.image_len(self,data)
+            len_X_train_img,len_X_val_img,_=self.image_data.image_len(self,data)
             avg_loss = loss_train * 2 / len_X_train_img #dataset_sizes[TRAIN]
             avg_acc = acc_train * 2 /len_X_train_img#dataset_sizes[TRAIN]
             
@@ -289,7 +279,7 @@ class ImagePredictions:
             return model
     
     def eval_model(self):
-        _,_,Testloader =self._Image_converter.image_tensor()
+        _,_,Testloader =self.image_data.image_tensor()
         criterion,_,_=self._ModelsZoo.optimizer()
         model=self._ModelsZoo.create_model()
         use_gpu = torch.cuda.is_available()
@@ -327,7 +317,7 @@ class ImagePredictions:
 
             del inputs, labels, outputs, preds
             torch.cuda.empty_cache()
-        _,_,len_X_test_img=self._Image_converter.image_len(self,data)    
+        _,_,len_X_test_img=self.image_data.image_len(self,data)    
         avg_loss = loss_test /len_X_test_img #dataset_sizes[TEST]
         avg_acc = acc_test /len_X_test_img#dataset_sizes[TEST]
         
