@@ -37,7 +37,7 @@ from autogluon.common.utils.utils import setup_outputdir
 from autogluon.DeepInsight_auto.pyDeepInsight import ImageTransformer,LogScaler
 from autogluon.tabular_to_image.img_sore import Store
 
-class Image_converter:
+class Image_converter(object):
     
     Dataset = TabularDataset
     convertor_file_name = 'conerter.pkl'
@@ -48,6 +48,21 @@ class Image_converter:
         return Image_converter
     
     def __init__(self, label_column,image_shape,path=None,**kwargs):
+        
+        label_column=label_column
+        image_shape=image_shape
+        path =Path(path).expanduser() #setup_outputdir(path)
+        store_type = kwargs.pop('store_type', Store)
+        store_kwargs = kwargs.pop('store_kwargs', dict())
+        
+        _store: Store = store_type(path=path,low_memory=False,save_data=False,**store_kwargs)
+        self._store_type = type(self._store)
+        
+        memoery= math.floor((get_memory_size())/1000)
+        if(memoery<15):
+            raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	
+        
+        super().__init__(label_column,image_shape,path=None,**kwargs, **kwargs)     
         #self.train_dataset=train_dataset
         self.label_column=label_column
         self.image_shape=image_shape
