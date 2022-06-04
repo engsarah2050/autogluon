@@ -62,7 +62,7 @@ class Image_converter(object):
         if(memoery<15):
             raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	
         
-        super().__init__(label_column,image_shape,path=None,**kwargs, **kwargs)     
+        ''' super().__init__(label_column,image_shape,path=None,**kwargs, **kwargs)     
         #self.train_dataset=train_dataset
         self.label_column=label_column
         self.image_shape=image_shape
@@ -75,7 +75,7 @@ class Image_converter(object):
         
         memoery= math.floor((get_memory_size())/1000)
         if(memoery<15):
-            raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	
+            raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	 '''
     #def data_split(self,):
     #    X_train, X_test, y_train, y_test = train_test_split(self.train_dataset,  self.label_column, test_size=0.2)
     #    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25
