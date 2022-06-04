@@ -36,34 +36,16 @@ from autogluon.core.utils.savers import save_pkl, save_str
 from autogluon.common.utils.utils import setup_outputdir
 from autogluon.DeepInsight_auto.pyDeepInsight import ImageTransformer,LogScaler
 from autogluon.tabular_to_image.img_sore import Store
-from autogluon.core.Convertor_base.Covert import BaseImage_converter
 
-class Image_converter(BaseImage_converter):
+class BaseImage_converter:
     
     Dataset = TabularDataset
     convertor_file_name = 'conerter.pkl'
     _convortor_version_file_name = '__version__'
     
-    @property
-    def _constructor(self):
-        return Image_converter
-    
+      
     def __init__(self, label_column,image_shape,path=None,**kwargs):
-        
-        label_column=label_column
-        image_shape=image_shape
-        path =Path(path).expanduser() #setup_outputdir(path)
-        store_type = kwargs.pop('store_type', Store)
-        store_kwargs = kwargs.pop('store_kwargs', dict())
-        
-        _store: Store = store_type(path=path,low_memory=False,save_data=False,**store_kwargs)
-        _store_type = type(_store)
-        
-        memoery= math.floor((get_memory_size())/1000)
-        if(memoery<15):
-            raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	
-        
-        super().__init__(label_column,image_shape,path=None,**kwargs, **kwargs)     
+                
         #self.train_dataset=train_dataset
         self.label_column=label_column
         self.image_shape=image_shape
@@ -72,14 +54,12 @@ class Image_converter(BaseImage_converter):
         store_kwargs = kwargs.pop('store_kwargs', dict())
         
         self._store: Store = store_type(path=path,low_memory=False,save_data=False,**store_kwargs)
-        self._store_type = type(self._store)
-        
+        self._store_type = type(self._store) 
         memoery= math.floor((get_memory_size())/1000)
         if(memoery<15):
             raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	 
-        
-   
-    
+  
+  
     @property
     def Path(self):
         return self._store.path
@@ -92,8 +72,7 @@ class Image_converter(BaseImage_converter):
     def Lable_column(self):
         return self.label_column
     
-    
-    
+
     use_gpu = torch.cuda.is_available()
     if use_gpu:
         print("Using CUDA")
@@ -268,4 +247,28 @@ class Image_converter(BaseImage_converter):
         version_file_path = self.path + self._convortor_version_file_name 
         save_str.save(path=version_file_path, data=version_file_contents, verbose=not silent)
 
-    
+    def save(self, silent=False):
+        """
+        Save this Predictor to file in directory specified by this Predictor's `path`.
+        Note that :meth:`TabularPredictor.fit` already saves the predictor object automatically
+        (we do not recommend modifying the Predictor object yourself as it tracks many trained models).
+
+        Parameters
+        ----------
+        silent : bool, default = False
+            Whether to save without logging a message.
+        """
+        path = self.path
+        tmp_learner = self._learner
+        tmp_trainer = self._trainer
+        self._learner.save()
+        self._learner = None
+        self._trainer = None
+        save_pkl.save(path=path + self.convertor_file_name, object=self)
+        self._learner = tmp_learner
+        self._trainer = tmp_trainer
+        self._save_version_file(silent=silent)
+        if not silent:
+            logger.log(20, f'images saved. To load, use: convertor = Image_converter.load("{self.path}")')
+
+   

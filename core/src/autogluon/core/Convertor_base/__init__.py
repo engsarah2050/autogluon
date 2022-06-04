@@ -1,0 +1,1 @@
+from autogluon.core.Convertor_base.Covert import BaseImage_converter
