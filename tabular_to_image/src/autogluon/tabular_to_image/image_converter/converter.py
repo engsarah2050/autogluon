@@ -67,8 +67,8 @@ class Image_converter(BaseImage_converter):
         #self.train_dataset=train_dataset
         self.label_column=label_column
         self.image_shape=image_shape
-        path =Path(path).expanduser() #setup_outputdir(path)
-        store_type = kwargs.pop('store_type', Store)
+        self.Path =Path(path).expanduser() #setup_outputdir(path)
+        self.store_type = kwargs.pop('store_type', Store)
         store_kwargs = kwargs.pop('store_kwargs', dict())
         
         self._store: Store = store_type(path=path,low_memory=False,save_data=False,**store_kwargs)
