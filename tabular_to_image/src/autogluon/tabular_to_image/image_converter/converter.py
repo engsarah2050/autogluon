@@ -48,12 +48,18 @@ class Image_converter(TabularDataset):
     def _constructor(self):
         return Image_converter
     
+    # preserved properties that will be copied to a new instance
+    _metadata = ['label_column,image_shape,path']
+    
     def __init__(self,data, label_column,image_shape,path,**kwargs):
-        super().__init__(data,**kwargs)     
+             
         #self.train_dataset=train_dataset
+        if isinstance(data, str) :
+            data = self.from_csv(data) 
+        
         self.label_column=label_column
         self.image_shape=image_shape
-        self.Path =Path(path).expanduser() #setup_outputdir(path)
+        self.path =Path(path).expanduser() #setup_outputdir(path)
         self.store_type = kwargs.pop('store_type', Store)
         store_kwargs = kwargs.pop('store_kwargs', dict())
         
@@ -64,18 +70,19 @@ class Image_converter(TabularDataset):
         if(memoery<15):
             raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	 
         
+        super().__init__(data,**kwargs)
    
     
     @property
-    def Path(self):
+    def path(self):
         return self._store.path
  
     @property
-    def Image_shape(self):
+    def image_shape(self):
         return self.image_shape
     
     @property
-    def Lable_column(self):
+    def lable_column(self):
         return self.label_column
     
     
