@@ -51,11 +51,14 @@ class Image_converter(TabularDataset):
     # preserved properties that will be copied to a new instance
     _metadata = ['label_column,image_shape,path']
     
-    def __init__(self,data, label_column,image_shape,path,**kwargs):
-             
-        #self.train_dataset=train_dataset
+    def __init__(self,data, label_column='lab_col',image_shape='img_shape',path='path',**kwargs):       
         if isinstance(data, str) :
-            data = self.from_csv(data) 
+            path = data
+            data = Path(path).expanduser() #setup_outputdir(path)
+        else:
+            path = None 
+            
+        super().__init__(data,**kwargs)
         
         self.label_column=label_column
         self.image_shape=image_shape
@@ -70,7 +73,7 @@ class Image_converter(TabularDataset):
         if(memoery<15):
             raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	 
         
-        super().__init__(data,**kwargs)
+        
    
     
     @property

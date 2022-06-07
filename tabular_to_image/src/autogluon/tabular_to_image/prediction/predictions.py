@@ -32,7 +32,7 @@ class ImagePredictions:
         y_val = kwargs.get('y_val', None)
         y_test = kwargs.get('y_test', None) '''
         
-        imageShape =self.image_data.Image_shape #kwargs.get('imageShape', None)            
+        imageShape =self.image_data.image_shape #kwargs.get('imageShape', None)            
         
         ModelsZoo_type = kwargs.pop('ModelsZoo_type', ModelsZoo)
         ModelsZoo_kwargs = kwargs.pop('ModelsZoo_kwargs', dict())
@@ -71,11 +71,11 @@ class ImagePredictions:
         return self._Utils_pro.y_test  '''
 
     @property
-    def Label_column(self):
-        return self.image_data.Lable_column   
+    def Label_column(self): 
+        return self.image_data.lable_column  
     @property
     def ImageShape(self):
-        return self.image_data.Image_shape 
+        return self.image_data.image_shape 
     @property
     def model_type(self):
         return self._ModelsZoo.model_type 
