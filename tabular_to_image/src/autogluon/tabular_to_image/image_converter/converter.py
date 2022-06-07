@@ -1,3 +1,4 @@
+from pickle import NONE
 from re import T
 import matplotlib.pyplot as plt
 import time
@@ -51,13 +52,10 @@ class Image_converter(TabularDataset):
     # preserved properties that will be copied to a new instance
     _metadata = ['label_column,image_shape,path']
     
-    def __init__(self,data, label_column='lab_col',image_shape='img_shape',path='path',**kwargs):       
-        if isinstance(data, str) :
-            path = data
-            data = Path(path).expanduser() #setup_outputdir(path)
-        else:
-            path = None 
-            
+    def __init__(self,data=None, label_column='lab_col',image_shape='img_shape',path='path',**kwargs):       
+        if data is None:
+            data = {}
+              
         super().__init__(data,**kwargs)
         
         self.label_column=label_column
