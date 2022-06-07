@@ -363,13 +363,9 @@ stage("Unit Test") {
 
           ${install_text}
           ${install_vision}
-<<<<<<< HEAD
-          ${install_forecasting}
           ${install_tabular_to_image_all}
           ${install_DeepInsight_auto_all}
-=======
           ${install_timeseries}
->>>>>>> upstream/master
           ${install_autogluon}
           """
         }
@@ -613,13 +609,9 @@ stage("Build Docs") {
         unstash 'tabular_to_image'
         unstash 'text'
         unstash 'cloud_fit_deploy'
-<<<<<<< HEAD
-        unstash 'forecasting'
         unstash 'DeepInsight_auto'
-       
-=======
         unstash 'timeseries'
->>>>>>> upstream/master
+
 
         sh """#!/bin/bash
         set -ex
