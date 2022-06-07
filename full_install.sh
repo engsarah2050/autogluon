@@ -7,6 +7,10 @@ python3 -m pip install -e tabular/[all,tests]
 python3 -m pip install -e tabular_to_image/[all,tests]
 python3 -m pip install -e text/
 python3 -m pip install -e vision/
+<<<<<<< HEAD
 python3 -m pip install -e forecasting/
 python3 -m pip install -e DeepInsight_auto/[all,tests]
+=======
+python3 -m pip install -e timeseries/[tests]
+>>>>>>> upstream/master
 python3 -m pip install -e autogluon/

@@ -56,15 +56,15 @@ install_tabular_to_image_all = """
 """
 
 install_text = """
-    python3 -m pip install --upgrade -e text/
+    python3 -m pip install --upgrade -e text/[tests]
 """
 
 install_vision = """
     python3 -m pip install --upgrade -e vision/
 """
 
-install_forecasting = """
-    python3 -m pip install --upgrade -e forecasting/
+install_timeseries = """
+    python3 -m pip install --upgrade -e timeseries/[tests]
 """
 
 install_DeepInsight_auto = """
@@ -240,6 +240,7 @@ stage("Unit Test") {
           # launch different process for each test to make sure memory is released
           python3 -m pip install --upgrade pytest-xdist
 
+          black --check --preview --diff text/src/autogluon/text/automm
           cd text/
           python3 -m pytest --junitxml=results.xml --forked --runslow tests
           """
@@ -280,9 +281,9 @@ stage("Unit Test") {
       }
     }
   },
-  'forecasting': {
+  'timeseries': {
     node('linux-gpu') {
-      ws('workspace/autogluon-forecasting-py3-v3') {
+      ws('workspace/autogluon-timeseries-py3-v3') {
         timeout(time: max_time, unit: 'MINUTES') {
           checkout scm
           VISIBLE_GPU=env.EXECUTOR_NUMBER.toInteger() % 8
@@ -290,17 +291,17 @@ stage("Unit Test") {
           set -ex
           # conda create allows overwrite the existing env with -y flag, but does not take file as input
           # hence create the new env and update it with file
-          conda create -n autogluon-forecasting-py3-v3 -y
-          conda env update -n autogluon-forecasting-py3-v3 -f docs/build_gpu.yml
-          conda activate autogluon-forecasting-py3-v3
+          conda create -n autogluon-timeseries-py3-v3 -y
+          conda env update -n autogluon-timeseries-py3-v3 -f docs/build_gpu.yml
+          conda activate autogluon-timeseries-py3-v3
           conda list
           ${setup_mxnet_gpu}
           export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
           ${install_core_all_tests}
           ${install_features}
           ${install_tabular_all}
-          ${install_forecasting}
-          cd forecasting/
+          ${install_timeseries}
+          cd timeseries/
           python3 -m pytest --junitxml=results.xml --runslow tests
           """
         }
@@ -362,9 +363,13 @@ stage("Unit Test") {
 
           ${install_text}
           ${install_vision}
+<<<<<<< HEAD
           ${install_forecasting}
           ${install_tabular_to_image_all}
           ${install_DeepInsight_auto_all}
+=======
+          ${install_timeseries}
+>>>>>>> upstream/master
           ${install_autogluon}
           """
         }
@@ -531,18 +536,18 @@ stage("Build Tutorials") {
       }
     }
   },
-  'forecasting': {
+  'timeseries': {
     node('linux-gpu') {
-      ws('workspace/autogluon-forecasting-py3-v3') {
+      ws('workspace/autogluon-timeseries-py3-v3') {
         checkout scm
         VISIBLE_GPU=env.EXECUTOR_NUMBER.toInteger() % 8
         sh """#!/bin/bash
         set -ex
         # conda create allows overwrite the existing env with -y flag, but does not take file as input
         # hence create the new env and update it with file
-        conda create -n autogluon-tutorial-forecasting-v3 -y
-        conda env update -n autogluon-tutorial-forecasting-v3 -f docs/build_contrib_gpu.yml
-        conda activate autogluon-tutorial-forecasting-v3
+        conda create -n autogluon-tutorial-timeseries-v3 -y
+        conda env update -n autogluon-tutorial-timeseries-v3 -f docs/build_contrib_gpu.yml
+        conda activate autogluon-tutorial-timeseries-v3
         conda list
         ${setup_mxnet_gpu}
         export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
@@ -552,12 +557,12 @@ stage("Build Tutorials") {
         git clean -fx
         bash docs/build_pip_install.sh
 
-        # only build for docs/forecasting
+        # only build for docs/timeseries
         shopt -s extglob
-        rm -rf ./docs/tutorials/!(forecasting)
+        rm -rf ./docs/tutorials/!(timeseries)
         cd docs && rm -rf _build && d2lbook build rst && cd ..
         """
-        stash includes: 'docs/_build/rst/tutorials/forecasting/*', name: 'forecasting'
+        stash includes: 'docs/_build/rst/tutorials/timeseries/*', name: 'timeseries'
       }
     }
   }
@@ -608,9 +613,13 @@ stage("Build Docs") {
         unstash 'tabular_to_image'
         unstash 'text'
         unstash 'cloud_fit_deploy'
+<<<<<<< HEAD
         unstash 'forecasting'
         unstash 'DeepInsight_auto'
        
+=======
+        unstash 'timeseries'
+>>>>>>> upstream/master
 
         sh """#!/bin/bash
         set -ex
@@ -633,7 +642,7 @@ stage("Build Docs") {
         ${install_DeepInsight_auto_all}
         ${install_text}
         ${install_vision}
-        ${install_forecasting}
+        ${install_timeseries}
         ${install_autogluon}
 
         sed -i -e 's/###_PLACEHOLDER_WEB_CONTENT_ROOT_###/http:\\/\\/${escaped_context_root}/g' docs/config.ini
