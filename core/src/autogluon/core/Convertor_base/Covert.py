@@ -37,18 +37,25 @@ from autogluon.common.utils.utils import setup_outputdir
 from autogluon.DeepInsight_auto.pyDeepInsight import ImageTransformer,LogScaler
 from autogluon.tabular_to_image.img_sore import Store
 
-class BaseImage_converter:
+class BaseImage_converter(pd.DataFrame):
     
-    Dataset = TabularDataset
-    convertor_file_name = 'conerter.pkl'
-    _convortor_version_file_name = '__version__'
-    
-      
-    def __init__(self,file_path ,**kwargs):
-                
-
-        self.file_ath =Path(path).expanduser() #setup_outputdir(path)
-
-   
+    @property
+    def _constructor(self):
+        return  BaseImage_converter
+  
+    @property
+    def _constructor_sliced(self):
+        return pd.Series
+  
+    #_metadata = ['label_column,image_shape']  
+    def __init__(self,data,**kwargs): 
+        if isinstance(data, pd.DataFrame):
+            data = data         
+        else:
+            data = None
+        
+        super().__init__(data, **kwargs)
+         
+        
   
   

@@ -39,32 +39,23 @@ from autogluon.DeepInsight_auto.pyDeepInsight import ImageTransformer,LogScaler
 from autogluon.tabular_to_image.img_sore import Store
 from autogluon.core.Convertor_base.Covert import BaseImage_converter
 
-class Image_converter(TabularDataset):
+class Image_converter():
     
-    Dataset = TabularDataset
+    Dataset = BaseImage_converter
     convertor_file_name = 'conerter.pkl'
     _convortor_version_file_name = '__version__'
     
-    @property
-    def _constructor(self):
-        return Image_converter
-    
-    # preserved properties that will be copied to a new instance
-    _metadata = ['label_column,image_shape,path']
-    
-    def __init__(self,data=None, label_column='lab_col',image_shape='img_shape',path='path',**kwargs):       
-        if data is None:
-            data = {}
-              
-        super().__init__(data,**kwargs)
+   
+    def __init__(self,label_column,image_shape,saved_path='path',**kwargs):       
         
         self.label_column=label_column
         self.image_shape=image_shape
-        self.path =Path(path).expanduser() #setup_outputdir(path)
+   
+        self.saved_path =Path(saved_path).expanduser() #setup_outputdir(path)
         self.store_type = kwargs.pop('store_type', Store)
         store_kwargs = kwargs.pop('store_kwargs', dict())
         
-        self._store: Store = self.store_type(path=path,low_memory=False,save_data=False,**store_kwargs)
+        self._store: Store = self.store_type(path=saved_path,low_memory=False,save_data=False,**store_kwargs)
         self._store_type = type(self._store)
         
         memoery= math.floor((get_memory_size())/1000)
