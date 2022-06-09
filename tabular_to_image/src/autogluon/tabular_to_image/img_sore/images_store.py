@@ -98,9 +98,9 @@ class Store:
         return None
 
     def load_data(self):
-        train = self.load_train(self)
-        val = self.load_val(self)
-        test = self.load_test(self) 
+        train = self.load_train()
+        val = self.load_val()
+        test = self.load_test() 
         return train,val,test
 
     def save_train(self, X_train_img,y_train):
