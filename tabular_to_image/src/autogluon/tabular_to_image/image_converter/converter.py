@@ -37,17 +37,31 @@ from autogluon.core.utils.savers import save_pkl, save_str
 from autogluon.common.utils.utils import setup_outputdir
 from autogluon.DeepInsight_auto.pyDeepInsight import ImageTransformer,LogScaler
 from autogluon.tabular_to_image.img_sore import Store
-from autogluon.core.Convertor_base.Covert import BaseImage_converter
+#from autogluon.core.Convertor_base.Covert import BaseImage_converter
 
-class Image_converter():
+class Image_converter(pd.DataFrame):
     
-    Dataset = BaseImage_converter
+    #Dataset = BaseImage_converter
     convertor_file_name = 'conerter.pkl'
     _convortor_version_file_name = '__version__'
     
-   
-    def __init__(self,label_column,image_shape,saved_path='path',**kwargs):       
+    @property
+    def _constructor(self):
+        return  Image_converter
+  
+    @property
+    def _constructor_sliced(self):
+        return pd.Series
+    
+    def __init__(self,data,label_column,image_shape,saved_path,**kwargs):       
         
+        if isinstance(data, pd.DataFrame):
+            data = data         
+        else:
+            data = None
+        
+        super().__init__(data, **kwargs)
+                
         self.label_column=label_column
         self.image_shape=image_shape
    
