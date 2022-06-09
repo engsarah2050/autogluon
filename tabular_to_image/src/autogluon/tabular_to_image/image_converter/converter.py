@@ -252,7 +252,7 @@ class Image_converter(object):
     
     def To_tensor_image(self,data):
         self.Image_Genartor(data)
-        trainloader,valloader,Testloader=self.image_tensor()
+        trainloader,valloader,Testloader=self.image_tensor(self)
         return trainloader,valloader,Testloader
     
     @classmethod
