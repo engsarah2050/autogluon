@@ -51,13 +51,13 @@ class Store:
 
         self.is_data_saved = False
         
-        self.X_train_img_saved = False
+        self.x_train_img_saved = False
         self.y_train_saved=False
         
-        self.X_val_img_saved = False
+        self.x_val_img_saved = False
         self.y_val_saved=False
         
-        self.X_test_img_saved = False
+        self.x_test_img_saved = False
         self.y_test_saved=False
 
        
@@ -79,20 +79,39 @@ class Store:
     def path_image(self) -> Path:
         return Path(self.path).expanduser() #+ os.path.sep
     
+    
+    def X_train_img_saved(self):
+        return self.X_train_img_saved
+    
+    def Y_train_saved(self):
+        return self.y_train_saved
+    
+    def X_val_img_saved(self):
+        return self.x_val_img_saved
+    
+    def Y_val_saved(self):
+            return self.y_val_saved
+        
+    def X_test_img_saved(self):
+        return  self.x_test_img_saved 
+    
+    def  Y_test_saved(self):
+        return self.y_test_saved
+    
     def load_train(self):
-        if self.X_train_img_saved and  self.y_train_saved:
+        if self.X_train_img_saved and  self.Y_train_saved:
             path = self.path_image
             return  torch.load(os.path.join(path,"train"))
         return None
 
     def load_val(self):
-        if self.X_val_img_saved and  self.y_val_saved:
+        if self.X_val_img_saved and  self.Y_val_saved:
             path = self.path_image
             return  torch.load(os.path.join(path,"val"))
         return None
 
     def load_test(self):
-        if self.X_test_img_saved and self.y_test_saved:
+        if self.X_test_img_saved and self.Y_test_saved:
             path = self.path_image
             return  torch.load(os.path.join(path,"test"))
         return None
