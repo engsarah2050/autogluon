@@ -75,7 +75,7 @@ class Store:
     def path_data(self) -> str:
         return self.path_utils + 'data' + os.path.sep
 
-    @property
+    
     def path_image(self) -> Path:
         return Path(self.path).expanduser() #+ os.path.sep
     
@@ -100,20 +100,17 @@ class Store:
     
     def load_train(self):
         if self.X_train_img_saved and  self.Y_train_saved:
-            path = self.path_image
-            return  torch.load(os.path.join(path,"train"))
+            return  torch.load(os.path.join(self.path_image,"train"))
         return None
 
     def load_val(self):
         if self.X_val_img_saved and  self.Y_val_saved:
-            path = self.path_image
-            return  torch.load(os.path.join(path,"val"))
+            return  torch.load(os.path.join(self.path_image,"val"))
         return None
 
     def load_test(self):
         if self.X_test_img_saved and self.Y_test_saved:
-            path = self.path_image
-            return  torch.load(os.path.join(path,"test"))
+            return  torch.load(os.path.join(self.path_image,"test"))
         return None
 
     def load_data(self):
