@@ -59,9 +59,7 @@ class Image_converter(pd.DataFrame):
             data = data         
         else:
             data = None
-        
-        super().__init__(data, **kwargs)
-                
+                          
         self.label_column=label_column
         self.image_shape=image_shape
    
@@ -76,12 +74,13 @@ class Image_converter(pd.DataFrame):
         if(memoery<15):
             raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	 
         
+        super().__init__(data, **kwargs)
         
    
     
     @property
     def path(self):
-        return self._store.path
+        return self.saved_path
  
     @property
     def image_shape(self):
