@@ -121,7 +121,7 @@ class Image_converter(object):
         if len(set(data.columns)) < len(data.columns):
             raise ValueError("Column names are not unique, please change duplicated column names (in pandas: train_data.rename(columns={'current_name':'new_name'})")
         labelencoder = LabelEncoder()
-        data[self.label_column] = labelencoder.fit_transform(data[self.Lable_column]) 
+        data[self.label_column] = labelencoder.fit_transform(data[self.label_column]) 
         categorical_columns=data.select_dtypes(exclude=['int64','float64']).columns
         CatBoostEncoder=ce.CatBoostEncoder(cols=categorical_columns)
         X = data.drop(self.label_column, axis=1)
