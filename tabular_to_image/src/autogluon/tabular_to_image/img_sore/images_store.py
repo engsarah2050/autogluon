@@ -123,7 +123,7 @@ class Store:
         return None
 
     def load_data(self,path):
-        train = self.load_train(self,path)
+        train = self.load_train(path)
         val = self.load_val(self,path)
         test = self.load_test(self,path) 
         return train,val,test
