@@ -210,7 +210,7 @@ class Image_converter(object):
        
     
     def image_len(self):
-        train,val,test=self._store.load_data(self)
+        train,val,test=self._store.load_data(self.saved_path)
         return len(train['X_train_img']),len(val['X_val_img']),len(test['X_test_img'])
     
     def num_class(self):
@@ -227,7 +227,7 @@ class Image_converter(object):
         le = LabelEncoder()
         #num_classes = np.unique(le.fit_transform(self.y_train)).size
         #_,_,_,y_train , y_val,y_test=self._validate_data(data)
-        train,val,test=self._store_type.load_data(self.store_type,self.saved_path)
+        train,val,test=self._store_type.load_data(self.saved_path)
         
         X_train_tensor = torch.stack([preprocess(img) for img in train['X_train_img']])
         y_train_tensor = torch.from_numpy(le.fit_transform(train['y_train']))
