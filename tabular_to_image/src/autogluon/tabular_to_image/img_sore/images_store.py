@@ -77,7 +77,11 @@ class Store:
 
     
     def path_image(self) -> Path:
-        return Path(self.path).expanduser() #+ os.path.sep
+        return Path(self.path).expanduser() #+ os.path.sep  
+    
+    def paths(self) -> str:
+        return str(self.path)
+    
     
     
     def X_train_img_saved(self):
@@ -129,14 +133,14 @@ class Store:
 
     def save_val(self, X_val_img,y_val): 
         val={'X_val_img':X_val_img,'y_val' :y_val}
-        torch.save(val, os.path.join(self.path_image,"val"))
+        torch.save(val, os.path.join(str(self.path),"val"))
         self.X_val_img_saved = True
         self.Y_val_saved=True
         return val
     
     def save_test(self, X_test_img,y_test):
         test={'X_test_img':X_test_img,'y_test' :y_test}
-        torch.save(test, os.path.join(self.path_image,"test"))
+        torch.save(test, os.path.join(str(self.paths),"test"))
         self.X_test_img_saved = True
         self.Y_test_saved=True 
         return test
