@@ -121,7 +121,8 @@ class Store:
 
     def save_train(self, X_train_img,y_train):
         train={'X_train_img':X_train_img,'y_train' :y_train}
-        torch.save(train, os.path.join(self.path_image ,"train"))
+        #path=self.Path(self.path).expanduser()
+        torch.save(train, os.path.join(str(self.path) ,"train"))
         self.X_train_img_saved = True
         self.Y_train_saved=True
         return train
