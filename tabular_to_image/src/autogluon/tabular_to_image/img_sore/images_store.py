@@ -140,7 +140,7 @@ class Store:
     
     def save_test(self, X_test_img,y_test):
         test={'X_test_img':X_test_img,'y_test' :y_test}
-        torch.save(test, os.path.join(str(self.paths),"test"))
+        torch.save(test, os.path.join(str(self.path),"test"))
         self.X_test_img_saved = True
         self.Y_test_saved=True 
         return test
