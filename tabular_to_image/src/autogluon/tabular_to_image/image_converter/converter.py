@@ -213,14 +213,14 @@ class Image_converter(object):
         train,val,test=self._store.load_data(self.saved_path)
         return len(train['X_train_img']),len(val['X_val_img']),len(test['X_test_img'])
     
-    def num_class(path):
+    def num_class(cls,path):
         _,_,test=Store.load_data(path)
         num_classes = np.unique(test['y_test']).size
         return num_classes
     
     
             
-    def image_tensor(path): 
+    def image_tensor(cls,path): 
         preprocess = transforms.Compose([transforms.ToTensor()])    
         batch_size = 32
         
