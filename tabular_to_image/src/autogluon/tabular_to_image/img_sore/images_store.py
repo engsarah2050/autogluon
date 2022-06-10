@@ -44,7 +44,7 @@ class Store:
     trainer_info_json_name = 'info.json'
     distill_stackname = 'distill'  # name of stack-level for distilled student models
 
-    def __init__(self, path: str,  low_memory=False, save_data=False):
+    def __init__(self, path,  low_memory=False, save_data=False):
         self.path = path
         self.save_data = save_data
         self.low_memory = low_memory
@@ -118,7 +118,7 @@ class Store:
         return None
 
     def load_data(self):
-        train = self.load_train(self)
+        train = self.load_train()
         val = self.load_val(self)
         test = self.load_test(self) 
         return train,val,test
