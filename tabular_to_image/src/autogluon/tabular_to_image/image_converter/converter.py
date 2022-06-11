@@ -220,14 +220,15 @@ class Image_converter(object):
     
     
             
-    def image_tensor(path): 
+    @classmethod
+    def image_tensor(cls,path): 
         preprocess = transforms.Compose([transforms.ToTensor()])    
         batch_size = 32
         
         le = LabelEncoder()
         #num_classes = np.unique(le.fit_transform(self.y_train)).size
         
-        train,val,test=Store.load_data(path)
+        train,val,test=Store.load_data(cls.path)
         
         X_train_tensor = torch.stack([preprocess(img) for img in train['X_train_img']])
         y_train_tensor = torch.from_numpy(le.fit_transform(train['y_train']))

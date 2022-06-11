@@ -125,10 +125,11 @@ class Store:
         return  torch.load(os.path.join(str(path),"test"))
         #return None
 
-    def load_data(path):
-        train =Store.load_train(Store,path)
-        val =Store.load_val(Store,path)
-        test =Store.load_test(Store,path) 
+    @classmethod
+    def load_data(cls,path):
+        train =Store.load_train(cls,path)
+        val =Store.load_val(cls,path)
+        test =Store.load_test(cls,path) 
         return train,val,test
 
     def save_train(self, X_train_img,y_train):
