@@ -108,27 +108,27 @@ class Store:
         return cls(str(path))
     
     @classmethod
-    def load_train(path):
+    def load_train(cls,path):
         #if self.X_train_img_saved and  self.Y_train_saved:
         return  torch.load(os.path.join(str(path),"train"))
         #return None
 
     @classmethod
-    def load_val(path):
+    def load_val(cls,path):
         #if self.X_val_img_saved and  self.Y_val_saved:
         return  torch.load(os.path.join(str(path),"val"))
         #return None
 
     @classmethod
-    def load_test(path):
+    def load_test(cls,path):
         #if self.X_test_img_saved and self.Y_test_saved:
         return  torch.load(os.path.join(str(path),"test"))
         #return None
 
     def load_data(path):
-        train =Store.load_train(path)
-        val =Store.load_val(path)
-        test =Store.load_test(path) 
+        train =Store.load_train(Store,path)
+        val =Store.load_val(Store,path)
+        test =Store.load_test(Store,path) 
         return train,val,test
 
     def save_train(self, X_train_img,y_train):
