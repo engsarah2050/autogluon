@@ -220,7 +220,7 @@ class Image_converter(object):
     
     
             
-    def image_tensor(cls,path): 
+    def image_tensor(path): 
         preprocess = transforms.Compose([transforms.ToTensor()])    
         batch_size = 32
         
