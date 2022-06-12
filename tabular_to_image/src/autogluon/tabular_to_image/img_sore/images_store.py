@@ -103,7 +103,7 @@ class Store:
     def  Y_test_saved(self):
         return self.y_test_saved
     
-    @classmethod
+    '''@classmethod
     def load_path(cls,path):
         return cls(str(path))
     
@@ -130,7 +130,7 @@ class Store:
         train =Store.load_train(cls,path)
         val =Store.load_val(cls,path)
         test =Store.load_test(cls,path) 
-        return train,val,test
+        return train,val,test '''
 
     def save_train(self, X_train_img,y_train):
         train={'X_train_img':X_train_img,'y_train' :y_train}

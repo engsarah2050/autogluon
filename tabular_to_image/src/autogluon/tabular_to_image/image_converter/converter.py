@@ -30,7 +30,7 @@ import torchvision
 from torchvision import datasets, models, transforms
 
 from autogluon.core.dataset import TabularDataset
-from autogluon.core.utils.loaders import load_pkl, load_str
+from autogluon.core.utils.loaders import load_pkl, load_str,load_compress
 from autogluon.core.utils import get_cpu_count, get_gpu_count_all
 from autogluon.core.utils import get_memory_size, bytes_to_mega_bytes
 from autogluon.core.utils.savers import save_pkl, save_str
@@ -219,16 +219,22 @@ class Image_converter(object):
         return num_classes
     
     
+    @classmethod
+    def load_data(cls,path:str):
+        train =load_compress.load_train(path=path)
+        val =load_compress.load_val(path=path)
+        test =load_compress.load_test(path=path) 
+        return train,val,test
             
     @classmethod
-    def image_tensor(cls,path): 
+    def image_tensor(cls,path:str): 
         preprocess = transforms.Compose([transforms.ToTensor()])    
         batch_size = 32
         
         le = LabelEncoder()
         #num_classes = np.unique(le.fit_transform(self.y_train)).size
         
-        train,val,test=Store.load_data(Store,path)
+        train,val,test=cls.load_data(path=path)
         
         X_train_tensor = torch.stack([preprocess(img) for img in train['X_train_img']])
         y_train_tensor = torch.from_numpy(le.fit_transform(train['y_train']))
