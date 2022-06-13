@@ -221,11 +221,29 @@ class Image_converter(object):
     
     
     @classmethod
-    def load_data(cls,path:str):
-        train =load_compress.load_train(path=path)
-        val =load_compress.load_val(path=path)
-        test =load_compress.load_test(path=path) 
-        return train,val,test
+    def load_data(cls,path:str, reset_paths=False):
+        if not reset_paths:
+            train =load_compress.load_train(path=path)
+            val =load_compress.load_val(path=path)
+            test =load_compress.load_test(path=path) 
+            return train,val,test
+        else:
+            obj_train =load_compress.load_train(path=path)
+            obj_val =load_compress.load_val(path=path)
+            obj_test =load_compress.load_test(path=path) 
+            
+            obj_train.set_contexts(path)
+            obj_train.reset_paths =reset_paths
+            
+            obj_val.set_contexts(path)
+            obj_val.reset_paths = reset_paths  
+            
+            obj_test.set_contexts(path)
+            obj_test.reset_paths = reset_paths          
+            
+            return obj_train,obj_val,obj_test
+        
+        
             
     @classmethod
     def image_tensor(cls,path:str): 
