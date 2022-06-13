@@ -208,13 +208,14 @@ class Image_converter(object):
         
         
        
-    
-    def image_len(self):
-        train,val,test=self._store.load_data(self.saved_path)
+    @classmethod
+    def image_len(cls,path):
+        train,val,test=cls.load_data(path=path)
         return len(train['X_train_img']),len(val['X_val_img']),len(test['X_test_img'])
     
-    def num_class(path):
-        _,_,test=Store.load_data(path)
+    @classmethod
+    def num_class(cls,path):
+        _,_,test=cls.load_data(path=path)
         num_classes = np.unique(test['y_test']).size
         return num_classes
     
@@ -257,10 +258,7 @@ class Image_converter(object):
         
         return trainloader,valloader,Testloader
     
-    def To_tensor_image(self,data):
-        self.Image_Genartor(data)
-        trainloader,valloader,Testloader=self.image_tensor(self)
-        return trainloader,valloader,Testloader
+
     
     @classmethod
     def _load_version_file(cls, path) -> str:
