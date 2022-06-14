@@ -25,7 +25,10 @@ LOSS = "loss"
 OUTPUT = "output"
 WEIGHT = "weight"
 FEATURES = "features"
-MASK = "mask"
+MASKS = "masks"
+PROBABILITY = "probability"
+COLUMN_FEATURES = "column_features"
+
 
 # Metric
 MAX = "max"
@@ -42,6 +45,7 @@ ROC_AUC = "roc_auc"
 AVERAGE_PRECISION = "average_precision"
 LOG_LOSS = "log_loss"
 CROSS_ENTROPY = "cross_entropy"
+COSINE_EMBEDDING_LOSS = "cosine_embedding_loss"
 METRIC_MODE_MAP = {
     ACC: MAX,
     ACCURACY: MAX,
@@ -81,7 +85,8 @@ DATA = "data"
 OPTIMIZATION = "optimization"
 ENVIRONMENT = "environment"
 DISTILLER = "distiller"
-VALID_CONFIG_KEYS = [MODEL, DATA, OPTIMIZATION, ENVIRONMENT, DISTILLER]
+MATCHER = "matcher"
+VALID_CONFIG_KEYS = [MODEL, DATA, OPTIMIZATION, ENVIRONMENT, DISTILLER, MATCHER]
 
 # Image normalization mean and std. This is only to normalize images for the CLIP model.
 CLIP_IMAGE_MEAN = (0.48145466, 0.4578275, 0.40821073)
@@ -122,6 +127,9 @@ BEST = "best"
 # efficient finetuning strategies
 NORM_FIT = "norm_fit"
 BIT_FIT = "bit_fit"
+LORA = "lora"
+LORA_BIAS = "lora_bias"
+LORA_NORM = "lora_norm"
 
 # registered model keys. TODO: document how to add new models.
 CLIP = "clip"
@@ -139,6 +147,15 @@ FUSION_TRANSFORMER = "fusion_transformer"
 <<<<<<< HEAD
 >>>>>>> upstream/master
 =======
+
+# metric learning loss type
+CONTRASTIVE_LOSS = "contrastive_loss"
+
+# metric learning distance type
+COSINE_SIMILARITY = "cosine_similarity"
+
+# metric learning miner type
+PAIR_MARGIN_MINER = "pair_margin_miner"
 
 # checkpoints
 RAY_TUNE_CHECKPOINT = "ray_tune_checkpoint.ckpt"
