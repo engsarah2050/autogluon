@@ -22,7 +22,7 @@ from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions:
     
     #image_data=Image_converter
-    def init(self,lable,image_shape,saved_path,pretrained=True,**kwargs):
+    def init(self,lable,image_shape,saved_path,model_type='efficientnet-b0',pretrained=True,**kwargs):
         self._validate_init_kwargs(kwargs)
                      
         Image_converter_type = kwargs.pop('Image_converter_type', Image_converter)
@@ -64,17 +64,16 @@ class ImagePredictions:
     def model(self):
         return self._ModelsZoo.create_model() 
      
-    '''
+    
     @staticmethod
     def _validate_init_kwargs(kwargs):
         valid_kwargs = {
-            'Utils_pro_type',
-            'Utils_pro_kwargs',
-            'X_train_img',
-            'X_val_img',
-            'X_test_img',
-            'y_train',
-            'y_val,y_test' 
+            'Image_converter_type',
+            'Image_converter_kwargs',
+            'lable',
+            'saved_path',
+            'ModelsZoo_type',
+            'ModelsZoo_kwargs',
             'imageShape',
             'model_type',
             'num_classes',
@@ -85,7 +84,7 @@ class ImagePredictions:
             if key not in valid_kwargs:
                 invalid_keys.append(key)
         if invalid_keys:
-            raise ValueError(f'Invalid kwargs passed: {invalid_keys}\nValid kwargs: {list(valid_kwargs)}') '''
+            raise ValueError(f'Invalid kwargs passed: {invalid_keys}\nValid kwargs: {list(valid_kwargs)}') 
     
     
     """
