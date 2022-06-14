@@ -131,6 +131,10 @@ class ImagePredictions:
         return pd.DataFrame(results)
     """
   
+    def generate_image(self,data):
+        return self._Image_converter.Image_Genartor(data)
+    
+    
     def train_model(self,model, num_epochs=3):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=self._Image_converter_type.image_tensor(self._Image_converter.savd_path)
