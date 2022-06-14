@@ -39,7 +39,7 @@ from autogluon.DeepInsight_auto.pyDeepInsight import ImageTransformer,LogScaler
 from autogluon.tabular_to_image.img_sore import Store
 from autogluon.core.Convertor_base.Covert import BaseImage_converter
 
-class Image_converter(object):
+class Image_converter:
     
     Dataset = TabularDataset
     convertor_file_name = 'conerter.pkl'
