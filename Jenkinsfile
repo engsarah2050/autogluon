@@ -207,7 +207,7 @@ stage("Unit Test") {
   'tabular_to_image': {
     node('linux-gpu') {
       ws('workspace/autogluon-tabular_to_image-py3-v3') {
-   set -ex        timeout(time: max_time, unit: 'MINUTES') {
+        timeout(time: max_time, unit: 'MINUTES') {
           checkout scm
           VISIBLE_GPU=env.EXECUTOR_NUMBER.toInteger() % 8
           sh """#!/bin/bash
