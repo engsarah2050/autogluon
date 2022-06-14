@@ -79,8 +79,8 @@ class Image_converter(object):
    
     
  
-    '''@property
-    def path(self):
+    @property
+    def savd_path(self):
         return self.saved_path
  
     @property
@@ -89,7 +89,7 @@ class Image_converter(object):
     
     @property
     def lable_column(self):
-        return self.label_column   '''
+        return self.label_column  
     
     
     
@@ -174,6 +174,7 @@ class Image_converter(object):
                 raise ValueError("Column names must match between training and test_data")
          
         return X_train,X_val,X_test,y_train , y_val,y_test
+    
     def Image_Genartor(self,data):
         X_train,X_val,X_test,y_train , y_val,y_test=self._validate_data(data)
         ln = LogScaler()

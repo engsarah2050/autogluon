@@ -1,7 +1,9 @@
+from pydoc import pathdirs
 import matplotlib.pyplot as plt
 import time
 import os
 import copy
+from tabular_to_image.src.autogluon.tabular_to_image import image_converter
 import torch
 #device = torch.device("cuda") #device = 'cuda'
 import torchvision.transforms as transforms
@@ -20,68 +22,42 @@ from autogluon.tabular_to_image.image_converter import Image_converter
 from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions:
     
-    image_data=Image_converter
+    #image_data=Image_converter
     def init(self,**kwargs):
         self._validate_init_kwargs(kwargs)
                      
-        ''' X_train_img = kwargs.get('X_train_img', None)
-        X_val_img = kwargs.get('X_val_img', None)
-        X_test_img = kwargs.get('X_test_img', None)
-        
-        y_train = kwargs.get('y_train', None)
-        y_val = kwargs.get('y_val', None)
-        y_test = kwargs.get('y_test', None) '''
-        
-        imageShape =self.image_data.image_shape #kwargs.get('imageShape', None)            
-        
+        Image_converter_type = kwargs.pop('Image_converter_type', Image_converter)
+        Image_converter_kwargs = kwargs.pop('Image_converter_kwargs', dict())
+        lable = kwargs.get('lable', None)
+        image_shape = kwargs.get('image_shape', None)
+        saved_path = kwargs.get('saved_path', None)            
+    
+        self._Image_converter: Image_converter = Image_converter_type(label_column=lable,image_shape=image_shape,saved_path=saved_path,**ModelsZoo_kwargs)
+        self._Image_converter_type = type(self._Image_converter)
+        ##################
         ModelsZoo_type = kwargs.pop('ModelsZoo_type', ModelsZoo)
-        ModelsZoo_kwargs = kwargs.pop('ModelsZoo_kwargs', dict())
-       
+        ModelsZoo_kwargs = kwargs.pop('ModelsZoo_kwargs', dict())     
         model_type = kwargs.get('model_type', None)
-        num_classes =self.image_data.num_class() #kwargs.get('num_classes', None)
+        num_classes =self._Image_converter_type.num_class(saved_path)
         pretrained = kwargs.get('pretrained', None)
               
-        self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=imageShape ,model_type=model_type,
+        self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=image_shape ,model_type=model_type,
                                         num_classes=num_classes,pretrained=pretrained,**ModelsZoo_kwargs)
         self._ModelsZoo_type = type(self._ModelsZoo)
-        #rainloader,valloader,Testloader =self._Utils_pro.Utils_pro.image_tensor()
-        #criterion,optimizer,exp_lr_scheduler=self._ModelsZoo.ModelsZoo.optimizer()
-        #use_gpu = torch.cuda.is_available()
-        #models=self._ModelsZoo.ModelsZoo.create_model()
-        
-    '''  
-    @property
-     def X_train_img(self):
-        return self._Utils_pro.X_train_img 
-    @property
-    def X_val_img(self):
-        return self._Utils_pro.X_val_img  
-    @property
-    def X_test_img(self):
-        return self._Utils_pro.X_test_img    
-    
-    @property
-    def y_train(self):
-        return self._Utils_pro.y_train 
-    @property
-    def y_val(self):
-        return self._Utils_pro.y_val 
-    @property
-    def y_test(self):
-        return self._Utils_pro.y_test  '''
 
+        
     @property
     def Label_column(self): 
-        return self.image_data.lable_column  
+        return self._Image_converter.label_column 
     @property
     def ImageShape(self):
-        return self.image_data.image_shape 
+        return self._Image_converter.image_shape
     @property
     def model_type(self):
         return self._ModelsZoo.model_type 
     @property
     def num_classes(self):
-        return self.image_data.num_class()
+        return self._Image_converter_type.num_class(self._Image_converter_type.savd_path)
     @property
     def pretrained(self):
         return self._ModelsZoo.pretrained 
@@ -158,12 +134,12 @@ class ImagePredictions:
   
     def train_model(self,model, num_epochs=3):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
-        trainloader,valloader,_ =self.image_data.image_tensor(self.image_data)
+        trainloader,valloader,_=self._Image_converter_type.image_tensor(self._Image_converter.savd_path)
         criterion,optimizer,_=self._ModelsZoo.optimizer()
         model=self._ModelsZoo.create_model()
         use_gpu = torch.cuda.is_available()
         since = time.time()
-        best_model_wts = copy.deepcopy(model.state_dict())
+        best_modefl_wts = copy.deepcopy(model.state_dict())
         best_acc = 0.0
         
         avg_loss = 0
@@ -279,7 +255,7 @@ class ImagePredictions:
             return model
     
     def eval_model(self):
-        _,_,Testloader =self.image_data.image_tensor()
+        _,_,Testloader =self._Image_converter_type.image_tensor(self._Image_converter.savd_path)
         criterion,_,_=self._ModelsZoo.optimizer()
         model=self._ModelsZoo.create_model()
         use_gpu = torch.cuda.is_available()
