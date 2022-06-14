@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 import copy
-from tabular_to_image.image_converter.converter import image_converter
+from tabular_to_image.image_converter import Image_converter
 import torch
 #device = torch.device("cuda") #device = 'cuda'
 import torchvision.transforms as transforms
