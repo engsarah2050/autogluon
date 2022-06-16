@@ -22,8 +22,8 @@ from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions:
     
     #image_data=Image_converter
-    def init(self,lable,image_shape,saved_path,model_type='efficientnet-b0',pretrained=True,**kwargs):
-        #self._validate_init_kwargs(kwargs)
+    def __init__(self,lable,image_shape,saved_path,model_type='efficientnet-b0',pretrained=True,**kwargs):
+        self._validate_init_kwargs(kwargs)
                      
         Image_converter_type = kwargs.pop('Image_converter_type', Image_converter)
         Image_converter_kwargs = kwargs.pop('Image_converter_kwargs', dict())
