@@ -25,6 +25,9 @@ class ImagePredictions:
     def __init__(self,lable,image_shape,saved_path,model_type='efficientnet-b0',pretrained=True,**kwargs):
         self._validate_init_kwargs(kwargs)
                      
+        self.lable=lable
+        self.image_shape=image_shape
+        self.saved_path=saved_path
         Image_converter_type = kwargs.pop('Image_converter_type', Image_converter)
         Image_converter_kwargs = kwargs.pop('Image_converter_kwargs', dict())
         lable = kwargs.get('lable', None)
