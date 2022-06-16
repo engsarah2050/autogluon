@@ -34,7 +34,7 @@ class ImagePredictions:
         image_shape = kwargs.get('image_shape', None)
         saved_path = kwargs.get('saved_path', None)            
     
-        self._Image_converter: Image_converter = Image_converter_type(label_column=lable,image_shape=image_shape,saved_path=saved_path,**Image_converter_kwargs)
+        self._Image_converter: Image_converter = Image_converter_type(label_column=lable,image_shape=imageShape,saved_path=saved_path,**Image_converter_kwargs)
         self._Image_converter_type = type(self._Image_converter)
         ##################
         ModelsZoo_type = kwargs.pop('ModelsZoo_type', ModelsZoo)
