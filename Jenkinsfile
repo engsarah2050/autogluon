@@ -209,21 +209,15 @@ stage("Unit Test") {
       }
     }
   },
-<<<<<<< HEAD
+
   'tabular_to_image': {
-    node('linux-gpu') {
+    node('linux-gpu') b{
       ws('workspace/autogluon-tabular_to_image-py3-v3') {
-=======
-  'multimodal': {
-    node('linux-gpu') {
-      ws('workspace/autogluon-multimodal-py3-v3') {
->>>>>>> upstream/master
         timeout(time: max_time, unit: 'MINUTES') {
           checkout scm
           VISIBLE_GPU=env.EXECUTOR_NUMBER.toInteger() % 8
           sh """#!/bin/bash
-<<<<<<< HEAD
-       
+    
           conda env update -n autogluon-tabular_to_image-py3-v3 -f docs/build.yml
           conda activate autogluon-tabular_to_image-py3-v3
           conda list
@@ -240,14 +234,24 @@ stage("Unit Test") {
           ${install_mxnet}
           ${install_DeepInsight_auto_all}
           ${install_extra}
-          ${install_vision}
-          
-
+          ${install_vision}        
 
           cd tabular_to_image/
           python3 -m pytest --junitxml=results.xml --runslow tests
           ${cleanup_venv}
-=======
+          """
+        }
+      }
+    }
+  },
+   
+  'multimodal': {
+    node('linux-gpu') {
+      ws('workspace/autogluon-multimodal-py3-v3') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          checkout scm
+          VISIBLE_GPU=env.EXECUTOR_NUMBER.toInteger() % 8
+          sh """#!/bin/bash
           set -ex
           # conda create allows overwrite the existing env with -y flag, but does not take file as input
           # hence create the new env and update it with file
@@ -267,16 +271,12 @@ stage("Unit Test") {
 
           cd multimodal/
           python3 -m pytest --junitxml=results.xml --forked --runslow tests
->>>>>>> upstream/master
           """
         }
       }
     }
-<<<<<<< HEAD
-  },  
-=======
   },
->>>>>>> upstream/master
+
   'text': {
     node('linux-gpu') {
       ws('workspace/autogluon-text-py3-v3') {
@@ -369,7 +369,7 @@ stage("Unit Test") {
       }
     }
   },
-'DeepInsight_auto': {
+  'DeepInsight_auto': {
     node('linux-gpu') {
       ws('workspace/autogluon-DeepInsight_auto-py3-v3') {
         timeout(time: max_time, unit: 'MINUTES') {
@@ -692,12 +692,9 @@ stage("Build Docs") {
         ${install_core_all_tests}
         ${install_features}
         ${install_tabular_all}
-<<<<<<< HEAD
         ${install_tabular_to_image_all}
         ${install_DeepInsight_auto_all}
-=======
         ${install_multimodal}
->>>>>>> upstream/master
         ${install_text}
         ${install_vision}
         ${install_timeseries}
