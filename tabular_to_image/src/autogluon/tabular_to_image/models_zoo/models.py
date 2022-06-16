@@ -22,6 +22,23 @@ class ModelsZoo():
         self.pretrained=True
         #use_gpu = torch.cuda.is_available() 
          
+    
+    @property
+    def Image_sahpe(self):
+        return self.imageShape
+ 
+    @property
+    def MODEL(self):
+        return self.model_type
+    
+    @property
+    def N_class(self):
+        return self.num_classes
+        
+    @property
+    def Pretrain(self):
+        return self.pretrained
+    
     def create_model(self):
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         if   self.imageShape=='224':

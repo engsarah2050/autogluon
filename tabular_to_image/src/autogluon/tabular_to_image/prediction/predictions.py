@@ -22,11 +22,11 @@ from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions:
     
     #image_data=Image_converter
-    def __init__(self,lable,image_shape,saved_path,model_type='efficientnet-b0',pretrained=True,**kwargs):
+    def __init__(self,lable,imageShape,saved_path,model_type='efficientnet-b0',pretrained=True,**kwargs):
         self._validate_init_kwargs(kwargs)
                      
         self.lable=lable
-        self.image_shape=image_shape
+        self.image_shape=imageShape
         self.saved_path=saved_path
         Image_converter_type = kwargs.pop('Image_converter_type', Image_converter)
         Image_converter_kwargs = kwargs.pop('Image_converter_kwargs', dict())
@@ -34,37 +34,37 @@ class ImagePredictions:
         image_shape = kwargs.get('image_shape', None)
         saved_path = kwargs.get('saved_path', None)            
     
-        self._Image_converter: Image_converter = Image_converter_type(label_column=lable,image_shape=image_shape,saved_path=saved_path,**Image_converter_kwargs)
+        self._Image_converter: Image_converter = Image_converter_type(label_column=lable,imageShape=image_shape,saved_path=saved_path,**Image_converter_kwargs)
         self._Image_converter_type = type(self._Image_converter)
         ##################
         ModelsZoo_type = kwargs.pop('ModelsZoo_type', ModelsZoo)
         ModelsZoo_kwargs = kwargs.pop('ModelsZoo_kwargs', dict())     
         model_type = kwargs.get('model_type', None)
-        num_classes =self._Image_converter_type.num_class(saved_path)
+        num_classes =Image_converter.num_class(saved_path)
         pretrained = kwargs.get('pretrained', None)
               
-        self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=image_shape ,model_type=model_type,
+        self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=imageShape ,model_type=model_type,
                                         num_classes=num_classes,pretrained=pretrained,**ModelsZoo_kwargs)
         self._ModelsZoo_type = type(self._ModelsZoo)
 
         
     @property
     def Label_column(self): 
-        return self._Image_converter.label_column 
+        return self._Image_converter.lable_column
     @property
     def ImageShape(self):
         return self._Image_converter.image_shape
     @property
-    def model_type(self):
-        return self._ModelsZoo.model_type 
+    def Model_type(self):
+        return self._ModelsZoo.MODEL
     @property
-    def num_classes(self):
-        return self._Image_converter_type.num_class(self._Image_converter_type.savd_path)
+    def Num_classes(self):
+        return Image_converter.num_class(self.saved_path)
     @property
-    def pretrained(self):
-        return self._ModelsZoo.pretrained 
+    def Pretrained(self):
+        return self._ModelsZoo.Pretrain
     @property
-    def model(self):
+    def Model(self):
         return self._ModelsZoo.create_model() 
      
     
