@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 import copy
+from tabular_to_image.src.autogluon.tabular_to_image import image_converter
 import torch
 #device = torch.device("cuda") #device = 'cuda'
 import torchvision.transforms as transforms
@@ -131,7 +132,7 @@ class ImagePredictions:
     """
   
     def generate_image(self,data):
-        return self._Image_converter_type.Image_Genartor(data)
+        return image_converter.Image_converter.Image_Genartor(data) #_Image_converter_type.Image_Genartor(data)
     
     
     def train_model(self,model, num_epochs=3):
