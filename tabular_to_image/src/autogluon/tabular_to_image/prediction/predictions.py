@@ -31,7 +31,7 @@ class ImagePredictions:
         Image_converter_type = kwargs.pop('Image_converter_type', Image_converter)
         Image_converter_kwargs = kwargs.pop('Image_converter_kwargs', dict())
         lable = kwargs.get('lable', None)
-        imageShape = kwargs.get('image_shape', None)
+        imageShape = kwargs.get('imageShape', None)
         saved_path = kwargs.get('saved_path', None)            
     
         self._Image_converter: Image_converter = Image_converter_type(label_column=lable,image_shape=imageShape,saved_path=saved_path,**Image_converter_kwargs)
