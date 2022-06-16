@@ -26,12 +26,12 @@ class ImagePredictions:
         self._validate_init_kwargs(kwargs)
                      
         self.lable=lable
-        self.image_shape=imageShape
+        self.imageShape=imageShape
         self.saved_path=saved_path
         Image_converter_type = kwargs.pop('Image_converter_type', Image_converter)
         Image_converter_kwargs = kwargs.pop('Image_converter_kwargs', dict())
         lable = kwargs.get('lable', None)
-        image_shape = kwargs.get('image_shape', None)
+        imageShape = kwargs.get('image_shape', None)
         saved_path = kwargs.get('saved_path', None)            
     
         self._Image_converter: Image_converter = Image_converter_type(label_column=lable,image_shape=imageShape,saved_path=saved_path,**Image_converter_kwargs)
@@ -43,7 +43,7 @@ class ImagePredictions:
         num_classes =Image_converter.num_class(saved_path)
         pretrained = kwargs.get('pretrained', None)
               
-        self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=image_shape ,model_type=model_type,
+        self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=imageShape ,model_type=model_type,
                                         num_classes=num_classes,pretrained=pretrained,**ModelsZoo_kwargs)
         self._ModelsZoo_type = type(self._ModelsZoo)
 
