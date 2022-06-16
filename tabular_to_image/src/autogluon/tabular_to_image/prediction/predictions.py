@@ -131,7 +131,8 @@ class ImagePredictions:
     """
   
     def generate_image(self,data):
-         return Image_converter.Image_Genartor(data) #_Image_converter_type.Image_Genartor(data)
+        self._Image_converter.Image_Genartor(data=data)
+     #.Image_Genartor(data) #_Image_converter_type.Image_Genartor(data)
     
     
     def train_model(self,model, num_epochs=3):
