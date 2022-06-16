@@ -245,70 +245,7 @@ stage("Unit Test") {
     }
   },
    
-  'multimodal': {
-    node('linux-gpu') {
-      ws('workspace/autogluon-multimodal-py3-v3') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          checkout scm
-          VISIBLE_GPU=env.EXECUTOR_NUMBER.toInteger() % 8
-          sh """#!/bin/bash
-          set -ex
-          # conda create allows overwrite the existing env with -y flag, but does not take file as input
-          # hence create the new env and update it with file
-          conda create -n autogluon-multimodal-py3-v3 -y
-          conda env update -n autogluon-multimodal-py3-v3 -f docs/build_gpu.yml
-          conda activate autogluon-multimodal-py3-v3
-          conda list
-          export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
 
-          ${install_core_all_tests}
-          ${install_features}
-          # Python 3.7 bug workaround: https://github.com/python/typing/issues/573
-          python3 -m pip uninstall -y typing
-          ${install_multimodal}
-          # launch different process for each test to make sure memory is released
-          python3 -m pip install --upgrade pytest-xdist
-
-          cd multimodal/
-          python3 -m pytest --junitxml=results.xml --forked --runslow tests
-          """
-        }
-      }
-    }
-  },
-
-  'text': {
-    node('linux-gpu') {
-      ws('workspace/autogluon-text-py3-v3') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          checkout scm
-          VISIBLE_GPU=env.EXECUTOR_NUMBER.toInteger() % 8
-          sh """#!/bin/bash
-          set -ex
-          # conda create allows overwrite the existing env with -y flag, but does not take file as input
-          # hence create the new env and update it with file
-          conda create -n autogluon-text-py3-v3 -y
-          conda env update -n autogluon-text-py3-v3 -f docs/build_gpu.yml
-          conda activate autogluon-text-py3-v3
-          conda list
-          export CUDA_VISIBLE_DEVICES=${VISIBLE_GPU}
-
-          ${install_core_all_tests}
-          ${install_features}
-          ${install_multimodal}
-          # Python 3.7 bug workaround: https://github.com/python/typing/issues/573
-          python3 -m pip uninstall -y typing
-          ${install_text}
-          # launch different process for each test to make sure memory is released
-          python3 -m pip install --upgrade pytest-xdist
-
-          cd text/
-          python3 -m pytest --junitxml=results.xml --forked --runslow tests
-          """
-        }
-      }
-    }
-  },
   'vision': {
     node('linux-gpu') {
       ws('workspace/autogluon-vision-py3-v3') {
