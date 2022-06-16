@@ -15,7 +15,7 @@ import copy
 #from autogluon.TablarToImage import  Utils
 
 class ModelsZoo():  
-    def __init__(self, imageShape,model_type, num_classes, pretrained=True):  
+    def __init__(self, imageShape,model_type, num_classes, pretrained=True,**kwargs):  
         self.imageShape = imageShape 
         self.model_type=model_type
         self.num_classes=num_classes
@@ -24,7 +24,7 @@ class ModelsZoo():
          
     
     @property
-    def Image_sahpe(self):
+    def ImageShape(self):
         return self.imageShape
  
     @property

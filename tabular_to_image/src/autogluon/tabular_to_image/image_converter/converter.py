@@ -62,8 +62,8 @@ class Image_converter:
                           
         self.label_column=label_column
         self.image_shape=image_shape
-   
         self.saved_path =Path(saved_path).expanduser() #setup_outputdir(path)
+   
         self.store_type = kwargs.pop('store_type', Store)
         store_kwargs = kwargs.pop('store_kwargs', dict())
         
