@@ -53,7 +53,7 @@ class ImagePredictions:
         return self._Image_converter.lable_column
     @property
     def ImageShape(self):
-        return self._Image_converter.image_shape
+        return self._Image_converter.imageshape
     @property
     def Model_type(self):
         return self._ModelsZoo.MODEL
