@@ -50,19 +50,19 @@ class ImagePredictions:
         
     @property
     def Label_column(self): 
-        return self._Image_converter.lable_column
+        return self._Image_converter.label_column
     @property
     def ImageShape(self):
-        return self._Image_converter.imageshape
+        return self._Image_converter.image_shape
     @property
     def Model_type(self):
-        return self._ModelsZoo.MODEL
+        return self._ModelsZoo.model_type
     @property
     def Num_classes(self):
-        return Image_converter.num_class(self.saved_path)
+        return Image_converter.num_class(self._Image_converter.saved_path)
     @property
     def Pretrained(self):
-        return self._ModelsZoo.Pretrain
+        return self._ModelsZoo.pretrained
     @property
     def Model(self):
         return self._ModelsZoo.create_model() 

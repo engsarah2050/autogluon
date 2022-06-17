@@ -61,7 +61,7 @@ class Image_converter:
             data = None '''
                           
         self.label_column=label_column
-        #self.image_shape=image_shape
+        self.image_shape=image_shape
         self.saved_path =Path(saved_path).expanduser() #setup_outputdir(path)
    
         self.store_type = kwargs.pop('store_type', Store)
@@ -79,9 +79,9 @@ class Image_converter:
    
     
  
-    @property
+    '''  @property
     def savd_path(self):
-        return self.saved_path
+        return Path(self.saved_path).expanduser()
  
     @property
     def imageshape(self):
@@ -89,7 +89,7 @@ class Image_converter:
     
     @property
     def lable_column(self):
-        return self.label_column
+        return self.label_column '''
     
     
     
