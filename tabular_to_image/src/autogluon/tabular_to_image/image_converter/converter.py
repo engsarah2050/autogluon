@@ -1,5 +1,7 @@
 from pickle import NONE
 from re import T
+from tkinter import N
+from types import new_class
 import matplotlib.pyplot as plt
 import time
 import os
@@ -102,21 +104,7 @@ class Image_converter:
         
         
     def _validate_data(self, data):        
-        data = self.__get_dataset(data)
-        if isinstance(data, str):
-            data = TabularDataset(data)
-        if not isinstance(data, pd.DataFrame):
-            raise AssertionError(f'data is required to be a pandas DataFrame, but was instead: {type(data)}')
-        if len(set(data.columns)) < len(data.columns):
-            raise ValueError("Column names are not unique, please change duplicated column names (in pandas: train_data.rename(columns={'current_name':'new_name'})")
-        labelencoder = LabelEncoder()
-        data[self.label_column] = labelencoder.fit_transform(data[self.label_column]) 
-        categorical_columns=data.select_dtypes(exclude=['int64','float64']).columns
-        CatBoostEncoder=ce.CatBoostEncoder(cols=categorical_columns)
-        X = data.drop(self.label_column, axis=1)
-        y = data[self.label_column]
-        data3 = CatBoostEncoder.fit_transform(X, y)
-        data3[self.label_column]=data.iloc[:,-1]
+        data3=self.encodes_data(data=data)
        	if (len(self.label_column)<=50000):
             if (self.image_shape==224): 
                 data4=data3.sample(frac=.20,random_state=77)
@@ -203,11 +191,31 @@ class Image_converter:
         train,val,test=cls.load_data(path=path)
         return len(train['X_train_img']),len(val['X_val_img']),len(test['X_test_img'])
     
-    @classmethod
-    def num_class(cls,path):
-        _,_,test=cls.load_data(path=path)
-        num_classes = np.unique(test['y_test']).size
-        return num_classes
+    
+    def encodes_data(self,data):
+        data=self.__get_dataset(data)
+        if isinstance(data, str):
+            data = TabularDataset(data)
+        if not isinstance(data, pd.DataFrame):
+            raise AssertionError(f'data is required to be a pandas DataFrame, but was instead: {type(data)}')
+        if len(set(data.columns)) < len(data.columns):
+            raise ValueError("Column names are not unique, please change duplicated column names (in pandas: train_data.rename(columns={'current_name':'new_name'})")
+        
+        labelencoder = LabelEncoder()
+        data[self.label_column] = labelencoder.fit_transform(data[self.label_column]) 
+        categorical_columns=data.select_dtypes(exclude=['int64','float64']).columns
+        CatBoostEncoder=ce.CatBoostEncoder(cols=categorical_columns)
+        X = data.drop(self.label_column, axis=1)
+        y = data[self.label_column]
+        data3 = CatBoostEncoder.fit_transform(X, y)
+        data3[self.label_column]=data.iloc[:,-1]
+        return data3
+    
+    def num_class(self,data):
+        data3=self.encodes_data(data)
+        y1= data3[self.label_column]
+        n_class=np.unique(y1).size
+        return n_class
     
     
     @classmethod

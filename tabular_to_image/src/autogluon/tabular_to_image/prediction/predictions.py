@@ -40,7 +40,7 @@ class ImagePredictions:
         ModelsZoo_type = kwargs.pop('ModelsZoo_type', ModelsZoo)
         ModelsZoo_kwargs = kwargs.pop('ModelsZoo_kwargs', dict())     
         model_type = kwargs.get('model_type', None)
-        num_classes =Image_converter.num_class(saved_path)
+        num_classes =np.unique(self._Image_converter.label_column).size#self._Image_converter.num_class(data)
         pretrained = kwargs.get('pretrained', None)
               
         self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=imageShape ,model_type=model_type,
@@ -59,7 +59,7 @@ class ImagePredictions:
         return self._ModelsZoo.model_type
     @property
     def Num_classes(self):
-        return Image_converter.num_class(self._Image_converter.saved_path)
+        return  np.unique(self._Image_converter.label_column).size
     @property
     def Pretrained(self):
         return self._ModelsZoo.pretrained
