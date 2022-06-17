@@ -45,24 +45,13 @@ class Image_converter:
     convertor_file_name = 'conerter.pkl'
     _convortor_version_file_name = '__version__'
     
-    ''' @property
-    def _constructor(self):
-        return  Image_converter
-  
-    @property
-    def _constructor_sliced(self):
-        return pd.Series '''
-    
-    def __init__(self,label_column,image_shape,saved_path,**kwargs):       
         
-        '''if isinstance(data, pd.DataFrame):
-            data = data         
-        else:
-            data = None '''
+    def __init__(self,label_column,image_shape:int,saved_path:str,**kwargs):       
+        
                           
         self.label_column=label_column
         self.image_shape=image_shape
-        self.saved_path =Path(saved_path).expanduser() #setup_outputdir(path)
+        self.saved_path =str(saved_path) #setup_outputdir(path)Path(saved_path).expanduser()
    
         self.store_type = kwargs.pop('store_type', Store)
         store_kwargs = kwargs.pop('store_kwargs', dict())

@@ -15,11 +15,11 @@ import copy
 #from autogluon.TablarToImage import  Utils
 
 class ModelsZoo():  
-    def __init__(self, imageShape,model_type, num_classes, pretrained=True,**kwargs):  
+    def __init__(self, imageShape:int,model_type, num_classes, pretrained,**kwargs):  
         self.imageShape = imageShape 
         self.model_type=model_type
         self.num_classes=num_classes
-        self.pretrained=True
+        self.pretrained=pretrained
         #use_gpu = torch.cuda.is_available() 
          
     

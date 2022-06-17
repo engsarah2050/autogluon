@@ -22,7 +22,7 @@ from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions:
     
     #image_data=Image_converter
-    def __init__(self,lable,imageShape,saved_path,model_type='efficientnet-b0',pretrained=True,**kwargs):
+    def __init__(self,lable,imageShape:int,saved_path:str,model_type:str='efficientnet-b0',pretrained:bool=True,**kwargs):
         self._validate_init_kwargs(kwargs)
                      
         #self.lable=lable
