@@ -212,7 +212,22 @@ class Image_converter:
         return data3
     
     def num_class(self,data):
-        data3=self._encodes_data(data)
+        data=self.__get_dataset(data)
+        if isinstance(data, str):
+            data = TabularDataset(data)
+        if not isinstance(data, pd.DataFrame):
+            raise AssertionError(f'data is required to be a pandas DataFrame, but was instead: {type(data)}')
+        if len(set(data.columns)) < len(data.columns):
+            raise ValueError("Column names are not unique, please change duplicated column names (in pandas: train_data.rename(columns={'current_name':'new_name'})") 
+        
+        labelencoder = LabelEncoder()
+        data[self.label_column] = labelencoder.fit_transform(data[self.label_column]) 
+        categorical_columns=data.select_dtypes(exclude=['int64','float64']).columns
+        CatBoostEncoder=ce.CatBoostEncoder(cols=categorical_columns)
+        X = data.drop(self.label_column, axis=1)
+        y = data[self.label_column]
+        data3 = CatBoostEncoder.fit_transform(X, y)
+        data3[self.label_column]=data.iloc[:,-1]
         y1= data3[self.label_column]
         n_class=np.unique(y1).size
         return n_class
