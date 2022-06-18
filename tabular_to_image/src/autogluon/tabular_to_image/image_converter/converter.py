@@ -70,7 +70,7 @@ class Image_converter:
    
     
  
-    '''  @property
+     @property
     def savd_path(self):
         return Path(self.saved_path).expanduser()
  
@@ -80,7 +80,7 @@ class Image_converter:
     
     @property
     def lable_column(self):
-        return self.label_column '''
+        return self.label_column 
     
     
     
