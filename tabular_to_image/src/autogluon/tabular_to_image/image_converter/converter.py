@@ -194,12 +194,12 @@ class Image_converter:
     
     def _encodes_data(self,data):
         data=self.__get_dataset(data)
-        if isinstance(data, str):
+        '''  if isinstance(data, str):
             data = TabularDataset(data)
         if not isinstance(data, pd.DataFrame):
             raise AssertionError(f'data is required to be a pandas DataFrame, but was instead: {type(data)}')
         if len(set(data.columns)) < len(data.columns):
-            raise ValueError("Column names are not unique, please change duplicated column names (in pandas: train_data.rename(columns={'current_name':'new_name'})")
+            raise ValueError("Column names are not unique, please change duplicated column names (in pandas: train_data.rename(columns={'current_name':'new_name'})") '''
         
         labelencoder = LabelEncoder()
         data[self.label_column] = labelencoder.fit_transform(data[self.label_column]) 
