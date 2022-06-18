@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from tabular_to_image.src.autogluon.tabular_to_image.image_converter.converter import Image_converter
 from torchvision import datasets, models, transforms
 import torch.optim as optim
 from torch.optim import lr_scheduler

@@ -22,7 +22,7 @@ from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions:
     
     #image_data=Image_converter
-    def __init__(self,lable,imageShape:int,saved_path:str,model_type:str='efficientnet-b0',pretrained:bool=True,**kwargs):
+    def __init__(self,data,lable,imageShape:int,saved_path:str,model_type:str='efficientnet-b0',pretrained:bool=True,**kwargs):
         self._validate_init_kwargs(kwargs)
                      
         #self.lable=lable
@@ -40,7 +40,7 @@ class ImagePredictions:
         ModelsZoo_type = kwargs.pop('ModelsZoo_type', ModelsZoo)
         ModelsZoo_kwargs = kwargs.pop('ModelsZoo_kwargs', dict())     
         model_type = kwargs.get('model_type', None)
-        num_classes =np.unique(self._Image_converter.label_column).size#self._Image_converter.num_class(data)
+        num_classes =self._Image_converter.num_class(data)#self._Image_converter.num_class(data)
         pretrained = kwargs.get('pretrained', None)
               
         self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=imageShape ,model_type=model_type,
@@ -57,9 +57,9 @@ class ImagePredictions:
     @property
     def Model_type(self):
         return self._ModelsZoo.model_type
-    @property
+    ''' @property
     def Num_classes(self):
-        return  np.unique(self._Image_converter.label_column).size
+        return  self._Image_converter.num_class(data) '''
     @property
     def Pretrained(self):
         return self._ModelsZoo.pretrained
@@ -79,7 +79,7 @@ class ImagePredictions:
             'ModelsZoo_kwargs',
             'imageShape',
             'model_type',
-            'num_classes',
+            #'num_classes',
             'pretrained',
         }
         invalid_keys = []
