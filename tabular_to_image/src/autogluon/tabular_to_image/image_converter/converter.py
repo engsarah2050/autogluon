@@ -104,7 +104,7 @@ class Image_converter:
         
         
     def _validate_data(self, data):        
-        data3=self.encodes_data(data=data)
+        data3=self._encodes_data(data=data)
        	if (len(self.label_column)<=50000):
             if (self.image_shape==224): 
                 data4=data3.sample(frac=.20,random_state=77)
@@ -192,7 +192,7 @@ class Image_converter:
         return len(train['X_train_img']),len(val['X_val_img']),len(test['X_test_img'])
     
     
-    def encodes_data(self,data):
+    def _encodes_data(self,data):
         data=self.__get_dataset(data)
         if isinstance(data, str):
             data = TabularDataset(data)
@@ -212,7 +212,7 @@ class Image_converter:
         return data3
     
     def num_class(self,data):
-        data3=self.encodes_data(data)
+        data3=self._encodes_data(data)
         y1= data3[self.label_column]
         n_class=np.unique(y1).size
         return n_class
