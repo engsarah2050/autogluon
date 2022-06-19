@@ -58,7 +58,7 @@ class Image_converter:
         self.store_type = kwargs.pop('store_type', Store)
         store_kwargs = kwargs.pop('store_kwargs', dict())
         
-        self._store: Store = self.store_type(path=saved_path,low_memory=False,save_data=False,**store_kwargs)
+        self._store: Store = self.store_type(path=self.saved_path,low_memory=False,save_data=False,**store_kwargs)
         self._store_type = type(self._store)
         
         memoery= math.floor((get_memory_size())/1000)
