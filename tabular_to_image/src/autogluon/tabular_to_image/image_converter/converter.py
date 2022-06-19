@@ -70,7 +70,7 @@ class Image_converter:
    
     
  
-     @property
+    @property
     def savd_path(self):
         return Path(self.saved_path).expanduser()
  
@@ -105,21 +105,21 @@ class Image_converter:
         
     def _validate_data(self, data):        
         data3=self._encodes_data(data=data)
-       	if (len(self.label_column)<=50000):
-            if (self.image_shape==224): 
+       	if (len(self.lable_column)<=50000):
+            if (self.imageshape==224): 
                 data4=data3.sample(frac=.20,random_state=77)
                 x1 = data4.drop(self.label_column, axis=1)
-                y1= data4[self.label_column]
+                y1= data4[self.lable_column]
                 X_train, X_test, y_train, y_test =train_test_split(x1,y1,test_size=0.2,random_state=23,stratify=y1)
        	        X_train, X_val, y_train, y_val = train_test_split(X_train,y_train,test_size=0.25,random_state=00)
-            elif (self.image_shape==256 or self.image_shape==299):
+            elif (self.imageshape==256 or self.imageshape==299):
                 data4=data3.sample(frac=.1,random_state=77)
                 x1 = data4.drop(self.label_column, axis=1)
                 y1= data4[self.label_column]
                 X_train, X_test, y_train, y_test = train_test_split(x1,y1,test_size=0.2,random_state=23, stratify=y1)
                 X_train, X_val, y_train, y_val = train_test_split(X_train,y_train,test_size=0.25,random_state=00)  
-        elif (len(self.label_column)>=50000) and (len(self.label_column)<=100000):
-            self.image_shape=50
+        elif (len(self.lable_column)>=50000) and (len(self.lable_column)<=100000):
+            self.imageshape=50
             data4=data3.sample(frac=.1,random_state=77)
             x1 = data4.drop(self.label_column, axis=1)
             y1= data4[self.label_column]
@@ -202,18 +202,18 @@ class Image_converter:
             raise ValueError("Column names are not unique, please change duplicated column names (in pandas: train_data.rename(columns={'current_name':'new_name'})")
         
         labelencoder = LabelEncoder()
-        data[self.label_column] = labelencoder.fit_transform(data[self.label_column]) 
+        data[self.lable_column] = labelencoder.fit_transform(data[self.lable_column]) 
         categorical_columns=data.select_dtypes(exclude=['int64','float64']).columns
         CatBoostEncoder=ce.CatBoostEncoder(cols=categorical_columns)
-        X = data.drop(self.label_column, axis=1)
-        y = data[self.label_column]
+        X = data.drop(self.lable_column, axis=1)
+        y = data[self.lable_column]
         data3 = CatBoostEncoder.fit_transform(X, y)
-        data3[self.label_column]=data.iloc[:,-1]
+        data3[self.lable_column]=data.iloc[:,-1]
         return data3
     
     def num_class(self,data):
         data3=self._encodes_data(data)
-        y1= data3[self.label_column]
+        y1= data3[self.lable_column]
         n_class=np.unique(y1).size
         return n_class
     
