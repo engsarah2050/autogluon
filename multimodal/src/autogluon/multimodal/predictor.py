@@ -325,6 +325,7 @@ class AutoMMPredictor:
 =======
         self,
         train_data: pd.DataFrame,
+        preset: str = None,
         config: Optional[dict] = None,
         tuning_data: Optional[pd.DataFrame] = None,
         time_limit: Optional[int] = None,
@@ -348,6 +349,8 @@ class AutoMMPredictor:
         ----------
         train_data
             A dataframe containing training data.
+        preset
+            Name of a preset. See the available presets in `presets.py`.
         config
             A dictionary with four keys "model", "data", "optimization", and "environment".
             Each key's value can be a string, yaml file path, or OmegaConf's DictConfig.
@@ -639,6 +642,7 @@ class AutoMMPredictor:
             ckpt_path=None if hyperparameter_tune_kwargs is not None else self._ckpt_path,
             resume=False if hyperparameter_tune_kwargs is not None else self._resume,
             enable_progress_bar=False if hyperparameter_tune_kwargs is not None else self._enable_progress_bar,
+            preset=preset,
             config=config,
             hyperparameters=hyperparameters,
             teacher_predictor=teacher_predictor,
@@ -826,7 +830,14 @@ class AutoMMPredictor:
         )
 
         critics, baseline_funcs = None, None
-        if self._config.distiller.soft_label_loss_type == "mean_square_error":
+        if not self._config.distiller.soft_label_loss_type:
+            # automatically infer loss func based on problem type if not specified
+            if self._problem_type == "regression":
+                soft_label_loss_func = nn.MSELoss()
+            else:
+                assert self._output_shape > 1
+                soft_label_loss_func = nn.CrossEntropyLoss()
+        elif self._config.distiller.soft_label_loss_type == "mean_square_error":
             soft_label_loss_func = nn.MSELoss()
         elif self._config.distiller.soft_label_loss_type == "cross_entropy":
             soft_label_loss_func = nn.CrossEntropyLoss()
@@ -917,9 +928,13 @@ class AutoMMPredictor:
         resume: bool,
         enable_progress_bar: bool,
 <<<<<<< HEAD
+<<<<<<< HEAD
         mixup_fn: MixupModule,
 >>>>>>> upstream/master
 =======
+=======
+        preset: Optional[str] = None,
+>>>>>>> upstream/master
         config: Optional[dict] = None,
         hyperparameters: Optional[Union[str, Dict, List[str]]] = None,
         teacher_predictor: Union[str, AutoMMPredictor] = None,
@@ -931,6 +946,7 @@ class AutoMMPredictor:
             config = self._config
 
         config = get_config(
+            preset=preset,
             config=config,
             overrides=hyperparameters,
         )
@@ -981,7 +997,6 @@ class AutoMMPredictor:
         )
         validation_metric, custom_metric_func = get_metric(
             metric_name=validation_metric_name,
-            problem_type=self._problem_type,
             num_classes=self._output_shape,
             pos_label=pos_label,
         )
@@ -1476,6 +1491,7 @@ class AutoMMPredictor:
         else:
             task = LitModule(
                 model=self._model,
+                loss_func=self._loss_func if hasattr(self, "_loss_func") else None,
             )
 
 <<<<<<< HEAD
@@ -1602,12 +1618,10 @@ class AutoMMPredictor:
         y_pred = self._df_preprocessor.transform_prediction(
             y_pred=logits_or_prob,
             inverse_categorical=False,
-            loss_func=self._loss_func if hasattr(self, "_loss_func") else None,
         )
         y_pred_inv = self._df_preprocessor.transform_prediction(
             y_pred=logits_or_prob,
             inverse_categorical=True,
-            loss_func=self._loss_func if hasattr(self, "_loss_func") else None,
         )
         y_true = self._df_preprocessor.transform_label_for_metric(df=data)
 
@@ -1623,12 +1637,6 @@ class AutoMMPredictor:
 
         results = {}
         for per_metric in metrics:
-            if self._problem_type != BINARY and per_metric.lower() in [
-                "roc_auc",
-                "average_precision",
-                "f1",
-            ]:
-                raise ValueError(f"Metric {per_metric} is only supported for binary classification.")
             pos_label = try_to_infer_pos_label(
                 data_config=self._config.data,
                 label_encoder=self._df_preprocessor.label_generator,
@@ -1678,7 +1686,6 @@ class AutoMMPredictor:
         )
         pred = self._df_preprocessor.transform_prediction(
             y_pred=logits_or_prob,
-            loss_func=self._loss_func if hasattr(self, "_loss_func") else None,
         )
         if as_pandas:
             pred = self.as_pandas(data=data, to_be_converted=pred)

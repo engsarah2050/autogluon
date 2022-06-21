@@ -70,10 +70,7 @@ from .constants import (
     VALID_METRICS,
     VALID_CONFIG_KEYS,
 )
-from .presets import (
-    list_model_presets,
-    get_preset,
-)
+from .presets import get_automm_preset, get_basic_automm_config
 
 logger = logging.getLogger(AUTOMM)
 
@@ -101,10 +98,19 @@ def infer_metrics(
     eval_metric_name
         Name of evaluation metric.
     """
+
     if eval_metric_name is not None:
+        if problem_type != BINARY and eval_metric_name.lower() in [
+            ROC_AUC,
+            AVERAGE_PRECISION,
+            F1,
+        ]:
+            raise ValueError(f"Metric {eval_metric_name} is only supported for binary classification.")
+
         if eval_metric_name in VALID_METRICS:
             validation_metric_name = eval_metric_name
             return validation_metric_name, eval_metric_name
+
         warnings.warn(
             f"Currently, we cannot convert the metric: {eval_metric_name} to a metric supported in torchmetrics. "
             f"Thus, we will fall-back to use accuracy for multi-class classification problems "
@@ -183,7 +189,8 @@ def filter_search_space(hyperparameters: dict, keys_to_filter: Union[str, List[s
 
 
 def get_config(
-    config: Union[dict, DictConfig],
+    preset: Optional[str] = None,
+    config: Optional[Union[dict, DictConfig]] = None,
     overrides: Optional[Union[str, List[str], Dict]] = None,
 ):
     """
@@ -192,6 +199,8 @@ def get_config(
 
     Parameters
     ----------
+    preset
+        Name of a preset.
     config
         A dictionary including four keys: "model", "data", "optimization", and "environment".
         If any key is not not given, we will fill in with the default value.
@@ -240,17 +249,20 @@ def get_config(
     Configurations as a DictConfig object
     """
     if config is None:
-        config = get_preset(list_model_presets()[0])
+        config = {}
+
     if not isinstance(config, DictConfig):
-        all_configs = []
-        for k, default_value in [
-            ("model", "fusion_mlp_image_text_tabular"),
-            ("data", "default"),
-            ("optimization", "adamw"),
-            ("environment", "default"),
-        ]:
+        if preset is None:
+            basic_config = get_basic_automm_config()
+            preset_overrides = None
+        else:
+            basic_config, preset_overrides = get_automm_preset(preset=preset)
+
+        for k, default_value in basic_config.items():
             if k not in config:
                 config[k] = default_value
+
+        all_configs = []
         for k, v in config.items():
             if isinstance(v, dict):
                 per_config = OmegaConf.create(v)
@@ -269,10 +281,14 @@ def get_config(
             all_configs.append(per_config)
 
         config = OmegaConf.merge(*all_configs)
+        # apply the preset's overrides
+        if preset_overrides:
+            config = apply_omegaconf_overrides(config, overrides=preset_overrides, check_key_exist=True)
+
     verify_model_names(config.model)
     logger.debug(f"overrides: {overrides}")
     if overrides is not None:
-        # avoid manipulating user-provided overrides
+        # avoid manipulating the user-provided overrides
         overrides = copy.deepcopy(overrides)
         # apply customized model names
         overrides = parse_dotlist_conf(overrides)  # convert to a dict
@@ -282,7 +298,7 @@ def get_config(
         )
         # remove `model.names` from overrides since it's already applied.
         overrides.pop("model.names", None)
-        # apply all the overrides
+        # apply the user-provided overrides
         config = apply_omegaconf_overrides(config, overrides=overrides, check_key_exist=True)
     verify_model_names(config.model)
     return config
@@ -458,11 +474,17 @@ def select_model(
         raise ValueError("No model is available for this dataset.")
     # only allow no more than 1 fusion model
     assert len(fusion_model_name) <= 1
+
     if len(selected_model_names) > 1:
         assert len(fusion_model_name) == 1
         selected_model_names.extend(fusion_model_name)
-    else:  # remove the fusion model's config make `config.model.names` and the keys of `config.model` consistent.
-        if len(fusion_model_name) == 1 and hasattr(config.model, fusion_model_name[0]):
+    elif len(fusion_model_name) == 1 and hasattr(config.model, fusion_model_name[0]):
+        if data_status[CATEGORICAL] or data_status[NUMERICAL]:
+            # retain the fusion model for uni-modal tabular data.
+            assert len(fusion_model_name) == 1
+            selected_model_names.extend(fusion_model_name)
+        else:
+            # remove the fusion model's config make `config.model.names` and the keys of `config.model` consistent.
             delattr(config.model, fusion_model_name[0])
 
     config.model.names = selected_model_names
@@ -776,7 +798,11 @@ def create_model(
         # must have one fusion model if there are multiple independent models
         return fusion_model(models=all_models)
     elif len(all_models) == 1:
-        return all_models[0]
+        if isinstance(all_models[0], NumericalTransformer) or isinstance(all_models[0], CategoricalTransformer):
+            # retain fusion model for uni-modal tabular data
+            return fusion_model(models=all_models)
+        else:
+            return all_models[0]
     else:
         raise ValueError(f"No available models for {names}")
 
@@ -1030,7 +1056,8 @@ def compute_score(
 
 
 def parse_dotlist_conf(conf):
-    """Parse the config files that is potentially in the dotlist format to a dictionary
+    """
+    Parse the config files that is potentially in the dotlist format to a dictionary.
 
     Parameters
     ----------
@@ -1357,7 +1384,7 @@ def try_to_infer_pos_label(
 
     pos_label = OmegaConf.select(data_config, "pos_label", default=None)
     if pos_label is not None:
-        print(f"pos_label: {pos_label}\n")
+        logger.debug(f"pos_label: {pos_label}\n")
         pos_label = label_encoder.transform([pos_label]).item()
     else:
         pos_label = 1

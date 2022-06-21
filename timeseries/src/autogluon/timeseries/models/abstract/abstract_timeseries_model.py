@@ -1,16 +1,17 @@
 import copy
 import logging
 import time
-from typing import Any, Dict, Union, Tuple, Optional
+from typing import Any, Dict, Union, Tuple, Optional, List
 
 import autogluon.core as ag
 from autogluon.core.models import AbstractModel
 from autogluon.common.savers import save_pkl
+from ... import TimeSeriesEvaluator
 
 from ...dataset import TimeSeriesDataFrame
 from ...utils.metadata import get_prototype_metadata_dict
-from ...utils.metric_utils import check_get_evaluation_metric
 from .model_trial import skip_hpo, model_trial
+from ...utils.warning_filters import evaluator_warning_filter
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +85,9 @@ class AbstractTimeSeriesModel(AbstractModel):
             eval_metric=None,
             hyperparameters=hyperparameters,
         )
-        self.eval_metric: str = check_get_evaluation_metric(eval_metric)
+        self.eval_metric: str = TimeSeriesEvaluator.check_get_evaluation_metric(
+            eval_metric
+        )
         self.stopping_metric = None
         self.problem_type = "timeseries"
         self.conformalize = False
@@ -98,6 +101,9 @@ class AbstractTimeSeriesModel(AbstractModel):
             "quantile_levels",
             kwargs.get("quantiles", [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]),
         )
+
+    def __repr__(self) -> str:
+        return self.name
 
     def _initialize(self, **kwargs) -> None:
         self._init_params_aux()
@@ -194,6 +200,32 @@ class AbstractTimeSeriesModel(AbstractModel):
         """
         raise NotImplementedError
 
+    def _check_fit_params(self):
+        # gracefully handle hyperparameter specifications if they are provided to fit instead
+        if any(isinstance(v, ag.Space) for v in self.params.values()):
+            raise ValueError(
+                "Hyperparameter spaces provided to `fit`. Please provide concrete values "
+                "as hyperparameters when initializing or use `hyperparameter_tune` instead."
+            )
+
+    def _check_predict_inputs(
+        self,
+        data: TimeSeriesDataFrame,
+        quantile_levels: Optional[List[float]] = None,
+        **kwargs,  # noqa: F841
+    ):
+        logger.debug(f"Predicting with time series model {self.name}")
+        logger.debug(
+            f"\tProvided data for prediction with {len(data)} rows, {data.num_items} items. "
+            f"Average time series length is {len(data) / data.num_items}."
+        )
+
+        quantiles = quantile_levels or self.quantile_levels
+        if not all(0 < q < 1 for q in quantiles):
+            raise ValueError(
+                "Invalid quantile value specified. Quantiles must be between 0 and 1 (exclusive)."
+            )
+
     def predict(self, data: TimeSeriesDataFrame, **kwargs) -> TimeSeriesDataFrame:
         """Given a dataset, predict the next `self.prediction_length` time steps.
         This method produces predictions for the forecast horizon *after* the individual time series.
@@ -223,6 +255,34 @@ class AbstractTimeSeriesModel(AbstractModel):
         """
         raise NotImplementedError
 
+    def predict_for_scoring(self, data: TimeSeriesDataFrame, **kwargs):
+        """Given a dataset, truncate the last `self.prediction_length` time steps and forecast these
+        steps with previous history. This method produces predictions for the *last* `self.prediction_length`
+        steps of the *given* time series, in order to be used for validation or scoring.
+
+        Parameters
+        ----------
+        data: TimeSeriesDataFrame
+            The dataset where each time series is the "context" for predictions.
+
+        Other Parameters
+        ----------------
+        quantile_levels
+            Quantiles of probabilistic forecasts, if probabilistic forecasts are implemented by the
+            corresponding subclass. If None, `self.quantile_levels` will be used instead,
+            if provided during initialization.
+
+        Returns
+        -------
+        predictions: TimeSeriesDataFrame
+            pandas data frames with a timestamp index, where each input item from the input
+            data is given as a separate forecast item in the dictionary, keyed by the `item_id`s
+            of input items.
+        """
+        return self.predict(
+            data.slice_by_timestep(slice(None, -self.prediction_length)), **kwargs
+        )
+
     def score(self, data: TimeSeriesDataFrame, metric: str = None, **kwargs) -> float:
         """Return the evaluation scores for given metric and dataset. The last
         `self.prediction_length` time steps of each time series in the input data set
@@ -249,7 +309,17 @@ class AbstractTimeSeriesModel(AbstractModel):
             The computed forecast evaluation score on the last `self.prediction_length`
             time steps of each time series.
         """
-        raise NotImplementedError
+        metric = self.eval_metric if metric is None else metric
+        with evaluator_warning_filter():
+            evaluator = TimeSeriesEvaluator(
+                eval_metric=metric,
+                prediction_length=self.prediction_length,
+                target_column=self.target,
+            )
+            predictions = self.predict_for_scoring(data)
+            metric_value = evaluator(data, predictions)
+
+        return metric_value * TimeSeriesEvaluator.METRIC_COEFFICIENTS[metric]
 
     def _hyperparameter_tune(
         self,

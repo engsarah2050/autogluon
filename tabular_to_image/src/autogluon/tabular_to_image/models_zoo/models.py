@@ -125,6 +125,7 @@ class ModelsZoo():
                 model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
             elif self.model_type == 'densenet169' :
                 model = models.densenet169(pretrained=self.pretrained).to(device)
+                for param in model.parameters():
                     param.requires_grad = False 
                 model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
             elif self.model_type =='densenet201' :
