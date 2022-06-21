@@ -39,13 +39,13 @@ class ImagePredictions:
         ##################
         ModelsZoo_type = kwargs.pop('ModelsZoo_type', ModelsZoo)
         ModelsZoo_kwargs = kwargs.pop('ModelsZoo_kwargs', dict())  
-        self.Model_type=model_type   
+        self.model_type=model_type   
         #model_type = kwargs.get('model_type', None)
         num_classes =self._Image_converter.num_class(data)#self._Image_converter.num_class(data)
-        pretrained = kwargs.get('pretrained', None)
+        self.pretrained = pretrained
               
-        self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=imageShape ,model_type=self.Model_type,
-                                        num_classes=num_classes,pretrained=pretrained,**ModelsZoo_kwargs)
+        self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=self.imageShape ,model_type=self.model_type,
+                                        num_classes=num_classes,pretrained=self.pretrained,**ModelsZoo_kwargs)
         self._ModelsZoo_type = type(self._ModelsZoo)
 
         
