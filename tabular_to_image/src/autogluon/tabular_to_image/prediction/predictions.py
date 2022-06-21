@@ -277,7 +277,8 @@ class ImagePredictions:
             return model
     
     def eval_model(self):
-        _,_,Testloader =Image_converter.image_tensor(self.saved_path model_name=self._ModelsZoo_type.MODEL
+        _,_,Testloader =Image_converter.image_tensor(self.saved_path )
+        model_name=self._ModelsZoo_type.MODEL
         
         commonModels=['resnet18','resnet34','resnet50','resnet101','resnet152','alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                       'densenet121','densenet161','densenet169','densenet201''googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
@@ -290,8 +291,7 @@ class ImagePredictions:
             model=self._ModelsZoo.create_model()
         else:
             raise AssertionError(f'Model "{model_name}" is not a valid model to specify as best! Valid models: {commonModels}')
-        )
-        
+               
         criterion,_,_=self._ModelsZoo.optimizer()
         use_gpu = torch.cuda.is_available()
         since = time.time()
