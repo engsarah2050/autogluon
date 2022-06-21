@@ -138,7 +138,7 @@ class ImagePredictions:
      #.Image_Genartor(data) #_Image_converter_type.Image_Genartor(data)
     
     
-    def train_model(self,model, num_epochs=3):
+    def train_model(self, num_epochs=3):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
         criterion,optimizer,_=self._ModelsZoo.optimizer()
