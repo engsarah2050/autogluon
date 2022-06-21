@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 import copy
+from tabular_to_image.src.autogluon.tabular_to_image import image_converter
 import torch
 #device = torch.device("cuda") #device = 'cuda'
 import torchvision.transforms as transforms
@@ -141,8 +142,23 @@ class ImagePredictions:
     def train_model(self, num_epochs=3):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
+        model_name=self._ModelsZoo_type.MODEL
+        
+        commonModels=['resnet18','resnet34','resnet50','resnet101','resnet152','alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
+                      'densenet121','densenet161','densenet169','densenet201''googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
+                'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7'                       
+                'squeezenet1_0','squeezenet1_1'
+                'resnext50_32x4d','resnext101_32x8d',
+                'inception_v3','xception']
+        
+        if model_name in commonModels:
+            model=self._ModelsZoo.create_model()
+        else:
+            raise AssertionError(f'Model "{model_name}" is not a valid model to specify as best! Valid models: {commonModels}')
+        
+        
         criterion,optimizer,_=self._ModelsZoo.optimizer()
-        model=self._ModelsZoo.create_model()
+       
         use_gpu = torch.cuda.is_available()
         since = time.time()
         best_modefl_wts = copy.deepcopy(model.state_dict())
@@ -204,7 +220,7 @@ class ImagePredictions:
             print()
             # * 2 as we only used half of the dataset
             
-            len_X_train_img,len_X_val_img,_=self.image_data.image_len()
+            len_X_train_img,len_X_val_img,_=Image_converter.image_len(self.saved_path)
             avg_loss = loss_train * 2 / len_X_train_img #dataset_sizes[TRAIN]
             avg_acc = acc_train * 2 /len_X_train_img#dataset_sizes[TRAIN]
             
@@ -261,9 +277,22 @@ class ImagePredictions:
             return model
     
     def eval_model(self):
-        _,_,Testloader =Image_converter.image_tensor(self.saved_path)
+        _,_,Testloader =Image_converter.image_tensor(self.saved_path model_name=self._ModelsZoo_type.MODEL
+        
+        commonModels=['resnet18','resnet34','resnet50','resnet101','resnet152','alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
+                      'densenet121','densenet161','densenet169','densenet201''googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
+                'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7'                       
+                'squeezenet1_0','squeezenet1_1'
+                'resnext50_32x4d','resnext101_32x8d',
+                'inception_v3','xception']
+        
+        if model_name in commonModels:
+            model=self._ModelsZoo.create_model()
+        else:
+            raise AssertionError(f'Model "{model_name}" is not a valid model to specify as best! Valid models: {commonModels}')
+        )
+        
         criterion,_,_=self._ModelsZoo.optimizer()
-        model=self._ModelsZoo.create_model()
         use_gpu = torch.cuda.is_available()
         since = time.time()
         avg_loss = 0

@@ -42,6 +42,7 @@ class ModelsZoo():
     
     def create_model(self):
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        commonShapes=[224,227,256,299]
         if   self.imageShape==224:
             if self.model_type =='resnet18'  :
                 model = models.resnet18(pretrained=self.pretrained).to(device)
@@ -216,8 +217,10 @@ class ModelsZoo():
                 for param in model.parameters():
                     param.requires_grad = False
                 model.AuxLogits.fc = nn.Linear(model.AuxLogits.fc.in_features, self.num_classes)
-                model.fc = nn.Linear(model.fc.in_features, self.num_classes)
-        return model.double().to(device)
+                model.fc = nn.Linear(model.fc.in_features, self.num_classes)       
+        else:
+            raise AssertionError(f'ImageShape "{self.ImageShape}" is not a valid size for an image !,plase insert a Valid from : {commonShapes} more info check https://medium.com/analytics-vidhya/how-to-pick-the-optimal-image-size-for-training-convolution-neural-network-65702b880f05')
+        return model.to(device)
     
     def optimizer(self):
         criterion = nn.CrossEntropyLoss() 
