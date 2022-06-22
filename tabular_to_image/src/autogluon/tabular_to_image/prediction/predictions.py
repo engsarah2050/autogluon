@@ -142,7 +142,7 @@ class ImagePredictions:
     def train_model(self, num_epochs=3):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
-        model_name=self.Model_type
+        model_name=self.model_type
         
         commonModels=['resnet18','resnet34','resnet50','resnet101','resnet152','alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                       'densenet121','densenet161','densenet169','densenet201''googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
@@ -151,7 +151,7 @@ class ImagePredictions:
                 'resnext50_32x4d','resnext101_32x8d',
                 'inception_v3','xception']
         
-        if model_name is in commonModels:
+        if model_name in commonModels:
             model=self._ModelsZoo.create_model()
         else:
             raise AssertionError(f'Model "{model_name}" is not a valid model to specify as best! Valid models: {commonModels}')
@@ -278,7 +278,7 @@ class ImagePredictions:
     
     def eval_model(self):
         _,_,Testloader =Image_converter.image_tensor(self.saved_path )
-        model_name=self._ModelsZoo_type.MODEL
+        model_name=self.model_type
         
         commonModels=['resnet18','resnet34','resnet50','resnet101','resnet152','alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                       'densenet121','densenet161','densenet169','densenet201''googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
