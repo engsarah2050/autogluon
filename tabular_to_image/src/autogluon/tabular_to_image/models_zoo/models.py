@@ -178,14 +178,15 @@ class ModelsZoo():
                 model = EfficientNet.from_name('efficientnet-b0').to(device)
                 for param in model.parameters():
                     param.requires_grad =True
-                    model = nn.Sequential(nn.Linear(in_features=1792, out_features=625),
+                    model1 = nn.Sequential(nn.Linear(in_features=1792, out_features=625),
                                     nn.ReLU(),
                                     nn.Dropout(p=0.3),
                                     nn.Linear(in_features=625, out_features=256),
                                     nn.ReLU(),
-                                    nn.Linear(in_features=256, out_features=self.N_class),
+                                    nn.Linear(in_features=256, out_features=self.num_classes),
                                     )    
-                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)
+                    #model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)
+                    model.fc=model1
 
         elif  self.imageShape==227:
             if self.model_type =='squeezenet1_0':
@@ -235,6 +236,7 @@ class ModelsZoo():
         elif self.ImageShape==224:
             optimizer = optim.Adam(self.create_model().parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-5)
             exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor = 0.1, patience =  5, mode = 'max', verbose=True)       
+            criterion = nn.NLLLoss()
         return   criterion,optimizer,exp_lr_scheduler
 
 #np.random.seed(37)
