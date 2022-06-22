@@ -114,6 +114,7 @@ from .utils import (
     try_to_infer_pos_label,
     get_mixup,
     CustomUnpickler,
+    is_interactive,
 )
 from .optimization.utils import (
     get_metric,
@@ -155,9 +156,13 @@ class AutoMMModelCheckpoint(pl.callbacks.ModelCheckpoint):
 
 class AutoMMPredictor:
     """
-    AutoMMPredictor can predict the values of one dataframe column conditioned on the rest columns.
-    The prediction can be either a classification or regression problem. The feature columns can contain
-    image paths, text, numerical, and categorical features.
+    AutoMMPredictor is a deep learning "model zoo" of model zoos. It can automatically build deep learning models that
+    are suitable for multimodal datasets. You will only need to preprocess the data in the multimodal dataframe format
+    and the AutoMMPredictor can predict the values of one column conditioned on the features from the other columns.
+
+    The prediction can be either classification or regression. The feature columns can contain
+    image paths, text, numerical, and categorical values.
+
     """
 
     def __init__(
@@ -302,6 +307,15 @@ class AutoMMPredictor:
 =======
     # This func is required by the abstract trainer of TabularPredictor.
     def set_verbosity(self, verbosity: int):
+        """Set the verbosity level of the log.
+
+        Parameters
+        ----------
+        verbosity
+            The verbosity level
+
+        """
+        self._verbosity = verbosity
         set_logger_verbosity(verbosity, logger=logger)
 >>>>>>> upstream/master
 
@@ -325,7 +339,7 @@ class AutoMMPredictor:
 =======
         self,
         train_data: pd.DataFrame,
-        preset: str = None,
+        presets: str = None,
         config: Optional[dict] = None,
         tuning_data: Optional[pd.DataFrame] = None,
         time_limit: Optional[int] = None,
@@ -349,8 +363,8 @@ class AutoMMPredictor:
         ----------
         train_data
             A dataframe containing training data.
-        preset
-            Name of a preset. See the available presets in `presets.py`.
+        presets
+            Name of the presets. See the available presets in `presets.py`.
         config
             A dictionary with four keys "model", "data", "optimization", and "environment".
             Each key's value can be a string, yaml file path, or OmegaConf's DictConfig.
@@ -642,7 +656,7 @@ class AutoMMPredictor:
             ckpt_path=None if hyperparameter_tune_kwargs is not None else self._ckpt_path,
             resume=False if hyperparameter_tune_kwargs is not None else self._resume,
             enable_progress_bar=False if hyperparameter_tune_kwargs is not None else self._enable_progress_bar,
-            preset=preset,
+            presets=presets,
             config=config,
             hyperparameters=hyperparameters,
             teacher_predictor=teacher_predictor,
@@ -929,11 +943,15 @@ class AutoMMPredictor:
         enable_progress_bar: bool,
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         mixup_fn: MixupModule,
 >>>>>>> upstream/master
 =======
 =======
         preset: Optional[str] = None,
+>>>>>>> upstream/master
+=======
+        presets: Optional[str] = None,
 >>>>>>> upstream/master
         config: Optional[dict] = None,
         hyperparameters: Optional[Union[str, Dict, List[str]]] = None,
@@ -946,7 +964,7 @@ class AutoMMPredictor:
             config = self._config
 
         config = get_config(
-            preset=preset,
+            presets=presets,
             config=config,
             overrides=hyperparameters,
         )
@@ -1190,6 +1208,16 @@ class AutoMMPredictor:
         num_gpus = config.env.num_gpus if isinstance(config.env.num_gpus, int) else len(config.env.num_gpus)
         if num_gpus < 0:  # In case config.env.num_gpus is -1, meaning using all gpus.
             num_gpus = torch.cuda.device_count()
+
+        if is_interactive() and num_gpus > 1:
+            warnings.warn(
+                "Interactive environment is detected. Currently, AutoMMPredictor does not support multi-gpu "
+                "training under an interactive environment due to the limitation of ddp / ddp_spawn strategies "
+                "in PT Lightning. Thus, we switch to single gpu training. For multi-gpu training, you need to execute "
+                "AutoMMPredictor in a script.",
+                UserWarning,
+            )
+            num_gpus = 1
 
         if num_gpus == 0:  # CPU only training
             warnings.warn(
@@ -1650,7 +1678,7 @@ class AutoMMPredictor:
             results[per_metric] = score
 
         if return_pred:
-            return results, self.as_pandas(data=data, to_be_converted=y_pred_inv)
+            return results, self._as_pandas(data=data, to_be_converted=y_pred_inv)
         else:
             return results
 
@@ -1688,7 +1716,7 @@ class AutoMMPredictor:
             y_pred=logits_or_prob,
         )
         if as_pandas:
-            pred = self.as_pandas(data=data, to_be_converted=pred)
+            pred = self._as_pandas(data=data, to_be_converted=pred)
         return pred
 
     def predict_proba(
@@ -1748,7 +1776,7 @@ class AutoMMPredictor:
                 )
                 prob = prob[:, pos_label]
         if as_pandas:
-            prob = self.as_pandas(data=data, to_be_converted=prob)
+            prob = self._as_pandas(data=data, to_be_converted=prob)
         return prob
 
     def extract_embedding(
@@ -1798,7 +1826,7 @@ class AutoMMPredictor:
             )
         return data
 
-    def as_pandas(
+    def _as_pandas(
         self,
         data: Union[pd.DataFrame, dict, list],
         to_be_converted: np.ndarray,
@@ -1849,7 +1877,7 @@ class AutoMMPredictor:
             Whether to save the downloaded model for offline deployment.
             When standalone = True, save the transformers.CLIPModel and transformers.AutoModel to os.path.join(path,model_name),
             and reset the associate model.model_name.checkpoint_name start with `local://` in config.yaml.
-            When standalone = False, does not save the model, and requires online environment to download in load().
+            When standalone = False, the saved artifact may require an online environment to process in load().
         """
 
         if standalone:
@@ -1917,7 +1945,7 @@ class AutoMMPredictor:
 
         try:
             with open(os.path.join(path, "data_processors.pkl"), "rb") as fp:
-                data_processors = pickle.load(fp)
+                data_processors = CustomUnpickler(fp).load()
             # Load text tokenizers after loading data processors.
             if TEXT in data_processors:
                 data_processors[TEXT] = load_text_tokenizers(
