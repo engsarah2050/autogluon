@@ -176,18 +176,18 @@ class ModelsZoo():
                 model.classifier[1] = nn.Linear(model.classifier[1].in_features, self.num_classes).double()           
             elif self.model_type=='efficientnet-b0':
                 model = EfficientNet.from_pretrained('efficientnet-b0',num_classes=self.num_classes).to(device)
-                '''  for param in model.parameters():
+                for param in model.parameters():
                     param.requires_grad =True
-                    model1 = nn.Sequential(nn.Linear(in_features=1792, out_features=625),
+                    '''model1 = nn.Sequential(nn.Linear(in_features=1792, out_features=625),
                                     nn.ReLU(),
                                     nn.Dropout(p=0.3),
                                     nn.Linear(in_features=625, out_features=256),
                                     nn.ReLU(),
                                     nn.Linear(in_features=256, out_features=self.num_classes),
-                                    )    
-                    #model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)
-                    model.fc=model1
- '''
+                                    )  '''   
+                model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)
+                    #model.fc=model1
+ 
         elif  self.imageShape==227:
             if self.model_type =='squeezenet1_0':
                 model = models.squeezenet1_0(pretrained=self.pretrained).to(device)

@@ -698,11 +698,8 @@ stage("Build Docs") {
         unstash 'image_prediction'
         unstash 'object_detection'
         unstash 'tabular'
-<<<<<<< HEAD
         unstash 'tabular_to_image'
-=======
         unstash 'multimodal'
->>>>>>> upstream/master
         unstash 'text'
         unstash 'cloud_fit_deploy'
         unstash 'DeepInsight_auto'
