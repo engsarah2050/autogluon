@@ -8,6 +8,10 @@ python3 -m pip install -e tabular_to_image/[all,tests]
 python3 -m pip install -e multimodal/[tests]
 python3 -m pip install -e text/[tests]
 python3 -m pip install -e vision/
+<<<<<<< HEAD
 python3 -m pip install -e DeepInsight_auto/[all,tests]
 python3 -m pip install -e timeseries/[tests]
+=======
+python3 -m pip install -e timeseries/[all,tests]
+>>>>>>> upstream/master
 python3 -m pip install -e autogluon/

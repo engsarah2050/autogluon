@@ -328,7 +328,7 @@ class ImagePredictions:
 
             del inputs, labels, outputs, preds
             torch.cuda.empty_cache()
-        _,_,len_X_test_img=self.image_data.image_len(self,data)    
+        _,_,len_X_test_img=Image_converter.image_len(self.saved_path)  
         avg_loss = loss_test /len_X_test_img #dataset_sizes[TEST]
         avg_acc = acc_test /len_X_test_img#dataset_sizes[TEST]
         
