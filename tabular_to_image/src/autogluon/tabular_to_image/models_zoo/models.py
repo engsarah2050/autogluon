@@ -43,6 +43,7 @@ class ModelsZoo():
     def create_model(self):
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         commonShapes=[224,227,256,299]
+        models_list=['resnet','alexnet','vgg','densenet','googlenet','shufflenet','mobilenet','efficientnet','resnext','inception']
         if   self.imageShape==224:
             if self.model_type =='resnet18'  :
                 model = models.resnet18(pretrained=self.pretrained).to(device)
@@ -186,8 +187,11 @@ class ModelsZoo():
                                     nn.Linear(in_features=256, out_features=self.num_classes),
                                     )  '''   
                 model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)
-                    #model.fc=model1
- 
+            elif self.model_type=='efficientnet-b2':
+                model = EfficientNet.from_pretrained('efficientnet-b2',num_classes=self.num_classes).to(device)
+                for param in model.parameters():
+                    param.requires_grad =True   
+                model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)     
         elif  self.imageShape==227:
             if self.model_type =='squeezenet1_0':
                 model = models.squeezenet1_0(pretrained=self.pretrained).to(device)
