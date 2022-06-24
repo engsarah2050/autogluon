@@ -186,25 +186,47 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = False
                     model.classifier[1] = nn.Linear(model.classifier[1].in_features, self.num_classes).double()           
-            if x== 'efficientnet':   
+            if x=='efficientnet':   
                 if self.model_type=='efficientnet-b0':
                     model = EfficientNet.from_pretrained('efficientnet-b0',num_classes=self.num_classes).to(device)
                     for param in model.parameters():
-                        param.requires_grad =True
-                        '''model1 = nn.Sequential(nn.Linear(in_features=1792, out_features=625),
-                                            nn.ReLU(),
-                                            nn.Dropout(p=0.3),
-                                            nn.Linear(in_features=625, out_features=256),
-                                            nn.ReLU(),
-                                            nn.Linear(in_features=256, out_features=self.num_classes),
-                                            )  '''   
+                        param.requires_grad =True                     
                     model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)
-                        
+                elif self.model_type=='efficientnet-b1':
+                    model = EfficientNet.from_pretrained('efficientnet-b0',num_classes=self.num_classes).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True                     
+                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)   
                 elif self.model_type=='efficientnet-b2':
                     model = EfficientNet.from_pretrained('efficientnet-b2',num_classes=self.num_classes).to(device)
                     for param in model.parameters():
                         param.requires_grad =True   
                     model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)                                  
+                elif self.model_type=='efficientnet-b3':
+                    model = EfficientNet.from_pretrained('efficientnet-b3',num_classes=self.num_classes).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True                     
+                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)        
+                elif self.model_type=='efficientnet-b4':
+                    model = EfficientNet.from_pretrained('efficientnet-b4',num_classes=self.num_classes).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True                     
+                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)
+                elif self.model_type=='efficientnet-b5':
+                    model = EfficientNet.from_pretrained('efficientnet-b5',num_classes=self.num_classes).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True                     
+                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)                   
+                elif self.model_type=='efficientnet-b6':
+                    model = EfficientNet.from_pretrained('efficientnet-b6',num_classes=self.num_classes).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True                     
+                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)
+                elif self.model_type=='efficientnet-b7':
+                    model = EfficientNet.from_pretrained('efficientnet-b7',num_classes=self.num_classes).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True                     
+                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)    
         elif  self.imageShape==227:
             if x=='squeezenet':
                 if self.model_type =='squeezenet1_0':
