@@ -138,6 +138,7 @@ tabular_to_image/src/autogluon/tabular_to_image/version.py
 DeepInsight_auto/src/autogluon/DeepInsight_auto/version.py
 text/src/autogluon/text/version.py
 vision/src/autogluon/vision/version.py
+multimodal/src/autogluon/multimodal/version.py
 
 AutogluonModels
 VERSION.minor
