@@ -17,6 +17,7 @@ from torch.autograd import Variable
 import numpy as np
 import torchvision
 from torchvision import datasets, models, transforms
+from autogluon.core.utils import get_memory_size, bytes_to_mega_bytes
 from autogluon.tabular_to_image.image_converter import Image_converter
 from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions:
