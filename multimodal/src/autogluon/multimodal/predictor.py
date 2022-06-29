@@ -1283,13 +1283,19 @@ class AutoMMPredictor:
                 max_time=max_time,
                 callbacks=callbacks,
                 logger=tb_logger,
-                gradient_clip_val=1,
-                gradient_clip_algorithm="norm",
+                gradient_clip_val=OmegaConf.select(config, "optimization.gradient_clip_val", default=1),
+                gradient_clip_algorithm=OmegaConf.select(
+                    config, "optimization.gradient_clip_algorithm", default="norm"
+                ),
                 accumulate_grad_batches=grad_steps,
+<<<<<<< HEAD
                 log_every_n_steps=10,
 <<<<<<< HEAD
                 enable_progress_bar=self._enable_progress_bar,
 =======
+=======
+                log_every_n_steps=OmegaConf.select(config, "optimization.log_every_n_steps", default=10),
+>>>>>>> upstream/master
                 enable_progress_bar=enable_progress_bar,
 >>>>>>> upstream/master
                 fast_dev_run=config.env.fast_dev_run,
