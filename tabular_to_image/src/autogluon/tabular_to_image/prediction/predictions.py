@@ -275,7 +275,7 @@ class ImagePredictions:
             print("Best acc: {:.4f}".format(best_acc))
             
             model.load_state_dict(best_model_wts)
-            return model
+            return model,best_acc
     
     def eval_model(self):
         _,_,Testloader =Image_converter.image_tensor(self.saved_path )
@@ -339,7 +339,18 @@ class ImagePredictions:
         print("Avg loss (test): {:.4f}".format(avg_loss))
         print("Avg acc (test): {:.4f}".format(avg_acc))
         print('-' * 10)
-        
+        return avg_acc 
+    
+    
+    def regnerate_model(self, num_epochs=3):  
+        commonModels=['resnet18','resnet34','resnet50','resnet101','resnet152','alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
+                'densenet121','densenet161','densenet169','densenet201''googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
+                'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7'                       
+                'squeezenet1_0','squeezenet1_1'
+                'resnext50_32x4d','resnext101_32x8d',
+                'inception_v3','xception']
+        self.train_model(num_epochs)
+        return   
     """
     def plot_results(df, figsize=(10, 5)):
         fig, ax1 = plt.subplots(figsize=figsize)
