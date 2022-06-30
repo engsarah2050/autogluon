@@ -342,15 +342,166 @@ class ImagePredictions:
         return avg_acc 
     
     
-    def regnerate_model(self, num_epochs=3):  
+    def init_train(self,model_type, num_epochs=3):
+            #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
+        trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
+                
         commonModels=['resnet18','resnet34','resnet50','resnet101','resnet152','alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
-                'densenet121','densenet161','densenet169','densenet201''googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
+                      'densenet121','densenet161','densenet169','densenet201''googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
                 'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7'                       
                 'squeezenet1_0','squeezenet1_1'
                 'resnext50_32x4d','resnext101_32x8d',
                 'inception_v3','xception']
-        self.train_model(num_epochs)
-        return   
+        
+        if model_type in commonModels:
+            model=self._ModelsZoo.create_model()
+        else:
+            raise AssertionError(f'Model "{model_type}" is not a valid model to specify as best! Valid models: {commonModels}')
+        
+        
+        criterion,optimizer,_=self._ModelsZoo.optimizer()
+       
+        use_gpu = torch.cuda.is_available()
+        since = time.time()
+        best_modefl_wts = copy.deepcopy(model.state_dict())
+        best_acc = 0.0
+        
+        avg_loss = 0
+        avg_acc = 0
+        avg_loss_val = 0
+        avg_acc_val = 0
+        
+        
+        train_batches = len(trainloader)
+        val_batches = len(valloader)
+        
+        for epoch in range(num_epochs):
+            print("Epoch {}/{}".format(epoch, num_epochs))
+            print('-' * 10)
+            
+            loss_train = 0
+            loss_val = 0
+            acc_train = 0
+            acc_val = 0
+            
+            model.train(True)
+            
+            for i, data in enumerate(trainloader):
+                if i % 100 == 0:
+                    print("\rTraining batch {}/{}".format(i, train_batches / 2), end='', flush=True)
+                    
+                # Use half training dataset
+                #if i >= train_batches / 2:
+                #    break
+                    
+                inputs, labels = data
+                
+                if use_gpu:
+                    inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+                else:
+                    inputs, labels = Variable(inputs), Variable(labels)
+                
+                
+                optimizer.zero_grad()
+                
+                outputs = model(inputs)
+                
+                _, preds = torch.max(outputs.data, 1)
+                loss = criterion(outputs, labels)
+                
+                loss.backward()
+                optimizer.step()
+                
+                #loss_train += loss.data[0]
+                loss_train += loss.item() * inputs.size(0)
+                acc_train += torch.sum(preds == labels.data)
+                
+                del inputs, labels, outputs, preds
+                torch.cuda.empty_cache()
+            
+            print()
+            # * 2 as we only used half of the dataset
+            
+            len_X_train_img,len_X_val_img,_=Image_converter.image_len(self.saved_path)
+            avg_loss = loss_train * 2 / len_X_train_img #dataset_sizes[TRAIN]
+            avg_acc = acc_train * 2 /len_X_train_img#dataset_sizes[TRAIN]
+            
+            model.train(False)
+            model.eval()
+                
+            for i, data in enumerate(valloader):
+                if i % 100 == 0:
+                    print("\rValidation batch {}/{}".format(i, val_batches), end='', flush=True)
+                    
+                inputs, labels = data
+                
+                if use_gpu:
+                    inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
+                else:
+                    inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
+                
+                optimizer.zero_grad()
+                
+                outputs = model(inputs)
+                
+                _, preds = torch.max(outputs.data, 1)
+                loss = criterion(outputs, labels)
+                
+                #loss_val += loss.data[0]
+                loss_val += loss.item() * inputs.size(0)
+                acc_val += torch.sum(preds == labels.data)
+                
+                del inputs, labels, outputs, preds
+                torch.cuda.empty_cache()
+            
+            avg_loss_val = loss_val /len_X_val_img #dataset_sizes[VAL]
+            avg_acc_val = acc_val /len_X_val_img #dataset_sizes[VAL]
+            
+            print()
+            print("Epoch {} result: ".format(epoch))
+            print("Avg loss (train): {:.4f}".format(avg_loss))
+            print("Avg acc (train): {:.4f}".format(avg_acc))
+            print("Avg loss (val): {:.4f}".format(avg_loss_val))
+            print("Avg acc (val): {:.4f}".format(avg_acc_val))
+            print('-' * 10)
+            print()
+            
+            if avg_acc_val > best_acc:
+                    best_acc = avg_acc_val
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                
+            elapsed_time = time.time() - since
+            print()
+            print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
+            print("Best acc: {:.4f}".format(best_acc))
+            
+            model.load_state_dict(best_model_wts)
+            return model,best_acc
+        
+    def pick_model(self):  
+        model_type=['resnet','alexnet','vgg','densenet','googlenet','shufflenet',
+                     'mobilenet','wide_resnet','efficientnet','squeezenet',
+                     'mnasnet','resnext','inception']  
+        i=0
+        score=[0.0]
+        num_epochs=3
+        best_model=model_type[0]
+        model=None
+        for i in len(model_type):
+            model,score[i]=self.init_train(model_type[i],num_epochs)
+        for i in len(model_type):
+            if score[i]>=.84:
+                best_model=model_type[i] 
+                model.__class__.__name__=best_model
+                
+        
+        return model
+        
+
+    
+
+    
+       
     """
     def plot_results(df, figsize=(10, 5)):
         fig, ax1 = plt.subplots(figsize=figsize)

@@ -23,6 +23,7 @@ class ModelsZoo():
         self.model_type=model_type
         self.num_classes=num_classes
         self.pretrained=pretrained
+        
         #use_gpu = torch.cuda.is_available() 
          
     
