@@ -18,6 +18,7 @@ import numpy as np
 import torchvision
 from torchvision import datasets, models, transforms
 from autogluon.core.utils import get_memory_size, bytes_to_mega_bytes
+from torchensemble import VotingClassifier
 from autogluon.tabular_to_image.image_converter import Image_converter
 from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions:
@@ -495,6 +496,19 @@ class ImagePredictions:
             if round(value.item(),2)>=0.84:
                 model=key#.__class__.__name__
         return model
+    
+    def voting(self):
+        model=self.pick_model()#model=VotingClassifier(estimator=[('model1', model1), ('model2', model2)],n_estimators=2)
+        model5=VotingClassifier(estimator=model,n_estimators=4,cuda=True)
+        model5.set_optimizer('Adam', lr=5e-4)#, weight_decay=5e-4)
+        criterion = nn.CrossEntropyLoss()
+        #model.set_criterion(criterion)
+        trainloader,valloader,Testloader,=Image_converter.image_tensor(self.saved_path)
+        model5.fit(trainloader,epochs=20,test_loader=Testloader)
+        accuracy,return_loss = model5.evaluate(valloader,True)
+        return model5,accuracy,return_loss
+        
+        
         
 
     
