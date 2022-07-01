@@ -479,22 +479,21 @@ class ImagePredictions:
             return model,best_acc
         
     def pick_model(self):  
-        model_type=['resnet','alexnet','vgg','densenet','googlenet','shufflenet',
-                     'mobilenet','wide_resnet','efficientnet','squeezenet',
-                     'mnasnet','resnext','inception']  
-        i=0
-        score=[0.0]
-        num_epochs=3
-        best_model=model_type[0]
+        model_type=['resnet50','resnet101','resnet152','alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
+        'densenet121','densenet161','densenet169','densenet201''googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
+         'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7'                       
+               'squeezenet1_0','squeezenet1_1'  'resnext50_32x4d','resnext101_32x8d',
+                'inception_v3','xception']
+        res=set()
+        res2={}
         model=None
-        for i in len(model_type):
-            model,score[i]=self.init_train(model_type[i],num_epochs)
-        for i in len(model_type):
-            if score[i]>=.84:
-                best_model=model_type[i] 
-                model.__class__.__name__=best_model
-                
-        
+        epoch=1
+        for i in range(len(model_type)):
+           res=self.init_train(model_type[i], epoch)
+        res2=dict([res])  
+        for key,value in  res2.items():    
+            if round(value.item(),2)>=0.84:
+                model=key#.__class__.__name__
         return model
         
 
