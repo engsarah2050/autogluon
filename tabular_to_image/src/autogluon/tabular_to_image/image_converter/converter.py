@@ -113,18 +113,29 @@ class Image_converter:
                 X_train, X_test, y_train, y_test =train_test_split(x1,y1,test_size=0.2,random_state=23,stratify=y1)
        	        X_train, X_val, y_train, y_val = train_test_split(X_train,y_train,test_size=0.25,random_state=00)
             elif (self.imageshape==256 or self.imageshape==299):
-                data4=data3.sample(frac=.1,random_state=77)
+                data4=data3.sample(frac=.15,random_state=77)
                 x1 = data4.drop(self.label_column, axis=1)
                 y1= data4[self.label_column]
                 X_train, X_test, y_train, y_test = train_test_split(x1,y1,test_size=0.2,random_state=23, stratify=y1)
                 X_train, X_val, y_train, y_val = train_test_split(X_train,y_train,test_size=0.25,random_state=00)  
-        elif (len(self.lable_column)>=50000) and (len(self.lable_column)<=100000):
+        elif (len(self.lable_column)>50000) and (len(self.lable_column)<=100000):
+            self.imageshape=100
+            data4=data3.sample(frac=.1,random_state=77)
+            x1 = data4.drop(self.label_column, axis=1)
+            y1= data4[self.label_column]
+            X_train, X_test, y_train, y_test =train_test_split(x1,y1,test_size=0.2,random_state=23, stratify=y1)
+            X_train, X_val, y_train, y_val = train_test_split (X_train,y_train,test_size=0.25,random_state=00)		
+        elif (len(self.lable_column)>100000) :
             self.imageshape=50
             data4=data3.sample(frac=.1,random_state=77)
             x1 = data4.drop(self.label_column, axis=1)
             y1= data4[self.label_column]
             X_train, X_test, y_train, y_test =train_test_split(x1,y1,test_size=0.2,random_state=23, stratify=y1)
             X_train, X_val, y_train, y_val = train_test_split (X_train,y_train,test_size=0.25,random_state=00)		
+        else:
+            raise AssertionError(f'dataset size is  "{len(self.lable_column)}" is beyond the cabacity of current resrorce ,plese consider increse them or split yor data into suckes .the minimum image size is 50')    
+        
+            
         
         if not isinstance(X_train, pd.DataFrame):
                 raise AssertionError(
@@ -152,6 +163,9 @@ class Image_converter:
          
         return X_train,X_val,X_test,y_train , y_val,y_test
     
+    def len_dataset(self):        
+       	return len(self.lable_column)
+            
     def Image_Genartor(self,data):
         X_train,X_val,X_test,y_train , y_val,y_test=self._validate_data(data)
         ln = LogScaler()

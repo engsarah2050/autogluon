@@ -19,6 +19,13 @@ import torchvision
 from torchvision import datasets, models, transforms
 from autogluon.core.utils import get_memory_size, bytes_to_mega_bytes
 from torchensemble import VotingClassifier
+from torchensemble.fusion import FusionClassifier
+from torchensemble.voting import VotingClassifier
+from torchensemble.bagging import BaggingClassifier
+from torchensemble.gradient_boosting import GradientBoostingClassifier
+from torchensemble.snapshot_ensemble import SnapshotEnsembleClassifier
+from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
+from torchensemble.fusion import FusionClassifier
 from autogluon.tabular_to_image.image_converter import Image_converter
 from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions:
@@ -144,21 +151,9 @@ class ImagePredictions:
     def train_model(self, num_epochs=3):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
-        model_name=self.model_type
-        
-        commonModels=['resnet18','resnet34','resnet50','resnet101','resnet152','alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
-                      'densenet121','densenet161','densenet169','densenet201''googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
-                'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7'                       
-                'squeezenet1_0','squeezenet1_1'
-                'resnext50_32x4d','resnext101_32x8d',
-                'inception_v3','xception']
-        
-        if model_name in commonModels:
-            model=self._ModelsZoo.create_model()
-        else:
-            raise AssertionError(f'Model "{model_name}" is not a valid model to specify as best! Valid models: {commonModels}')
-        
-        
+
+        model=self.pick_model()
+              
         criterion,optimizer,_=self._ModelsZoo.optimizer()
        
         use_gpu = torch.cuda.is_available()
@@ -279,21 +274,8 @@ class ImagePredictions:
             return model,best_acc
     
     def eval_model(self):
-        _,_,Testloader =Image_converter.image_tensor(self.saved_path )
-        model_name=self.model_type
-        
-        commonModels=['resnet18','resnet34','resnet50','resnet101','resnet152','alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
-                      'densenet121','densenet161','densenet169','densenet201''googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
-                'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7'                       
-                'squeezenet1_0','squeezenet1_1'
-                'resnext50_32x4d','resnext101_32x8d',
-                'inception_v3','xception']
-        
-        if model_name in commonModels:
-            model=self._ModelsZoo.create_model()
-        else:
-            raise AssertionError(f'Model "{model_name}" is not a valid model to specify as best! Valid models: {commonModels}')
-               
+        _,_,Testloader =Image_converter.image_tensor(self.saved_path)
+        model=self.pick_model()        
         criterion,_,_=self._ModelsZoo.optimizer()
         use_gpu = torch.cuda.is_available()
         since = time.time()
@@ -497,18 +479,43 @@ class ImagePredictions:
                 model=key#.__class__.__name__
         return model
     
-    def voting(self):
-        model=self.pick_model()#model=VotingClassifier(estimator=[('model1', model1), ('model2', model2)],n_estimators=2)
-        model5=VotingClassifier(estimator=model,n_estimators=4,cuda=True)
-        model5.set_optimizer('Adam', lr=5e-4)#, weight_decay=5e-4)
-        criterion = nn.CrossEntropyLoss()
-        #model.set_criterion(criterion)
+    def Ensemble(self):
+        model=self.pick_model() 
         trainloader,valloader,Testloader,=Image_converter.image_tensor(self.saved_path)
-        model5.fit(trainloader,epochs=20,test_loader=Testloader)
-        accuracy,return_loss = model5.evaluate(valloader,True)
-        return model5,accuracy,return_loss
-        
-        
+        model=None
+        score=[]
+        init=True
+        Ensemble_family={
+            'LeNet@MNIST':[VotingClassifier(estimator=model,n_estimators=4,cuda=True),BaggingClassifier(estimator=model,n_estimators=4,cuda=True)],
+            'LeNet@CIFAR-10':[GradientBoostingClassifier(estimator=model,n_estimators=4,cuda=True),FusionClassifier(estimator=model,n_estimators=4,cuda=True)],
+            'ResNet@CIFAR-10':[VotingClassifier(estimator=model,n_estimators=4,cuda=True),SnapshotEnsembleClassifier(estimator=model,n_estimators=4,cuda=True)],
+            'ResNet@CIFAR-100':[VotingClassifier(estimator=model,n_estimators=4,cuda=True),BaggingClassifier(estimator=model,n_estimators=4,cuda=True)]
+            
+            }
+        if init :
+            if self._Image_converter.len_dataset()<50000 and self.ImageShape<=50:
+                for i in range(len(Ensemble_family['LeNet@MNIST'])):   
+                    model=Ensemble_family['LeNet@MNIST'][i]
+                    model.set_optimizer('Adam', lr=1e-3, weight_decay=5e-4)
+                    criterion = nn.CrossEntropyLoss()
+                    #model.set_criterion(criterion)
+                    model.fit(trainloader,epochs=3,test_loader=Testloader)
+                    accuracy,return_loss = model.evaluate(valloader,True)
+                    score.append(accuracy)
+                    best_accuracy=score[0]
+                    for  i in score:                                          
+                        if i>best_accuracy:
+                            best_accuracy=i
+                            
+            init=False
+                    
+                
+                
+                
+                
+                
+                
+                        
         
 
     
