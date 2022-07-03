@@ -493,8 +493,8 @@ class ImagePredictions:
             
             }
         if init :
-            if self._Image_converter.len_dataset()<50000 and self.ImageShape<=50:
-                for i in range(len(Ensemble_family['LeNet@MNIST'])):   
+            for i in range(len(Ensemble_family['LeNet@MNIST'])): 
+                if self.ImageShape in [224,227,299] : 
                     model=Ensemble_family['LeNet@MNIST'][i]
                     model.set_optimizer('Adam', lr=1e-3, weight_decay=5e-4)
                     criterion = nn.CrossEntropyLoss()
@@ -506,6 +506,22 @@ class ImagePredictions:
                     for  i in score:                                          
                         if i>best_accuracy:
                             best_accuracy=i
+                elif self.ImageShape <=50: 
+                    model=Ensemble_family['LeNet@MNIST'][i]
+                    model.set_optimizer('Adam', lr=1e-3, weight_decay=5e-4)
+                    criterion = nn.CrossEntropyLoss()
+                    #model.set_criterion(criterion)
+                    model.fit(trainloader,epochs=3,test_loader=Testloader)
+                    accuracy,return_loss = model.evaluate(valloader,True)
+                    score.append(accuracy)
+                    best_accuracy=score[0]
+                    for  i in score:                                          
+                        if i>best_accuracy:
+                            best_accuracy=i
+                elif     self._Image_converter.len_dataset()>50000:
+                    model=Ensemble_family[ 'ResNet@CIFAR-100'][i]
+                    
+                                 
                             
             init=False
                     
