@@ -482,7 +482,7 @@ class ImagePredictions:
     def Ensemble(self):
         model=self.pick_model() 
         trainloader,valloader,Testloader,=Image_converter.image_tensor(self.saved_path)
-        model=None
+        init_model=None
         score=[]
         init=True
         Ensemble_family={
@@ -492,38 +492,44 @@ class ImagePredictions:
             'ResNet@CIFAR-100':[VotingClassifier(estimator=model,n_estimators=4,cuda=True),BaggingClassifier(estimator=model,n_estimators=4,cuda=True)]
             
             }
-        if init :
-            for i in range(len(Ensemble_family['LeNet@MNIST'])): 
-                if self.ImageShape in [224,227,299] : 
-                    model=Ensemble_family['LeNet@MNIST'][i]
-                    model.set_optimizer('Adam', lr=1e-3, weight_decay=5e-4)
-                    criterion = nn.CrossEntropyLoss()
-                    #model.set_criterion(criterion)
-                    model.fit(trainloader,epochs=3,test_loader=Testloader)
-                    accuracy,return_loss = model.evaluate(valloader,True)
-                    score.append(accuracy)
-                    best_accuracy=score[0]
-                    for  i in score:                                          
-                        if i>best_accuracy:
-                            best_accuracy=i
-                elif self.ImageShape <=50: 
-                    model=Ensemble_family['LeNet@MNIST'][i]
-                    model.set_optimizer('Adam', lr=1e-3, weight_decay=5e-4)
-                    criterion = nn.CrossEntropyLoss()
-                    #model.set_criterion(criterion)
-                    model.fit(trainloader,epochs=3,test_loader=Testloader)
-                    accuracy,return_loss = model.evaluate(valloader,True)
-                    score.append(accuracy)
-                    best_accuracy=score[0]
-                    for  i in score:                                          
-                        if i>best_accuracy:
-                            best_accuracy=i
-                elif     self._Image_converter.len_dataset()>50000:
-                    model=Ensemble_family[ 'ResNet@CIFAR-100'][i]
-                    
-                                 
-                            
-            init=False
+        for i in range(len(Ensemble_family['LeNet@MNIST'])): 
+            if self.ImageShape in [224,227,299] : 
+                init_model=Ensemble_family['LeNet@CIFAR-10'][i]
+                init_model.set_optimizer('Adam', lr=1e-3, weight_decay=5e-4)
+                criterion = nn.CrossEntropyLoss()
+                #model.set_criterion(criterion)
+                model.fit(trainloader,epochs=3,test_loader=Testloader)
+                accuracy,return_loss = model.evaluate(valloader,True)
+                score.append(accuracy)
+                best_accuracy=score[i]
+                for  j in score:                                          
+                    if j>best_accuracy:
+                        best_accuracy=j
+            elif self.ImageShape <=50: 
+                init_model=Ensemble_family['LeNet@MNIST'][i]
+                init_model.set_optimizer('Adam', lr=1e-3, weight_decay=5e-4)
+                criterion = nn.CrossEntropyLoss()
+                #model.set_criterion(criterion)
+                init_model.fit(trainloader,epochs=3,test_loader=Testloader)
+                accuracy,return_loss = model.evaluate(valloader,True)
+                score.append(accuracy)
+                best_accuracy=score[i]
+                for  j in score:                                          
+                    if j>best_accuracy:
+                        best_accuracy=j
+            elif     self._Image_converter.len_dataset()>50000:
+                init_model=Ensemble_family[ 'ResNet@CIFAR-100'][i]
+                init_model.set_optimizer('Adam', lr=1e-3, weight_decay=5e-4)
+                criterion = nn.CrossEntropyLoss()
+                #model.set_criterion(criterion)
+                model.fit(trainloader,epochs=3,test_loader=Testloader)
+                accuracy,return_loss = model.evaluate(valloader,True)
+                score.append(accuracy)
+                best_accuracy=score[i]
+                for  j in score:                                          
+                   if j>best_accuracy:
+                        best_accuracy=i
+ 
                     
                 
                 
