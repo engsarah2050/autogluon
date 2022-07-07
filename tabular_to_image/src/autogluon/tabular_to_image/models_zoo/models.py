@@ -128,12 +128,35 @@ class ModelsZoo():
                     model = models.densenet121(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
                         param.requires_grad = False 
-                    model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
+                    model.classifier = nn.Sequential(
+                                                nn.Linear(in_features=1024, out_features=256),
+                                                nn.Dropout(p=0.3),  
+                                                nn.ReLU(),
+                                                nn.Linear(in_features=256, out_features=32),  
+                                                nn.Dropout(p=0.3),
+                                                nn.ReLU(),  
+                                                nn.Linear(in_features=32, out_features=classes),
+                                                nn.LogSoftmax(dim=1)  
+                                                )
+
+                    model.classifier = classifier
+                    model.to(device)    
+                    #model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
                 elif self.model_type =='densenet161' :
                     model = models.densenet161(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
-                        param.requires_grad = False 
-                    model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
+                        param.requires_grad = False
+                    classifier = nn.Sequential(
+                                    nn.Linear(in_features=2208, out_features=1024),
+                                    nn.ReLU(),
+                                    nn.Dropout(p=0.4),
+                                    nn.Linear(in_features=1024, out_features=self.num_classes),
+                                    nn.LogSoftmax(dim=1)  
+                                    )
+                                        
+                    model.classifier = classifier
+                    model.to(device)     
+                    #model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
                 elif self.model_type == 'densenet169' :
                     model = models.densenet169(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
