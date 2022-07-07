@@ -50,6 +50,7 @@ class ModelsZoo():
                      'mobilenet','wide_resnet','efficientnet','squeezenet',
                      'mnasnet','resnext','inception']
         x=[i for i in models_list if i in self.model_type]
+        model=None
         if   self.imageShape==224:
             if x== 'resnet':
                 if self.model_type =='resnet18':
@@ -139,8 +140,7 @@ class ModelsZoo():
                                                 nn.LogSoftmax(dim=1)  
                                                 )
 
-                    model.classifier = classifier
-                    model.to(device)    
+                    model.classifier = classifier   
                     #model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
                 elif self.model_type =='densenet161' :
                     model = models.densenet161(pretrained=self.pretrained).to(device)
@@ -154,8 +154,7 @@ class ModelsZoo():
                                     nn.LogSoftmax(dim=1)  
                                     )
                                         
-                    model.classifier = classifier
-                    model.to(device)     
+                    model.classifier = classifier     
                     #model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
                 elif self.model_type == 'densenet169' :
                     model = models.densenet169(pretrained=self.pretrained).to(device)
@@ -283,7 +282,7 @@ class ModelsZoo():
                 for param in model.parameters():
                     param.requires_grad = False
                 model.AuxLogits.fc = nn.Linear(model.AuxLogits.fc.in_features, self.num_classes)
-                model.fc = nn.Linear(model.fc.in_features, self.num_classes)       
+                model.fc = nn.Linear(model.fc.in_features, self.num_classes)          
         else:
             raise AssertionError(f'ImageShape "{self.ImageShape}" is not a valid size for an image !,plase insert a Valid from : {commonShapes} more info check https://medium.com/analytics-vidhya/how-to-pick-the-optimal-image-size-for-training-convolution-neural-network-65702b880f05')
         return model.to(device)
