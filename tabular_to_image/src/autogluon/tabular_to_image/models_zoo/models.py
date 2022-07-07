@@ -18,8 +18,8 @@ from re import search
 #from autogluon.TablarToImage import  Utils
 
 class ModelsZoo():  
-    def __init__(self, imageShape:int,model_type, num_classes, pretrained,**kwargs):  
-        self.imageShape = imageShape 
+    def __init__(self, imageShape,model_type, num_classes, pretrained,**kwargs):  
+        self.imageShape = int(imageShape) 
         self.model_type=model_type
         self.num_classes=num_classes
         self.pretrained=pretrained

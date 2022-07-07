@@ -31,11 +31,11 @@ from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions:
     
     #image_data=Image_converter
-    def __init__(self,data,lable,imageShape:int,saved_path:str,model_type:str='efficientnet-b0',pretrained:bool=True,**kwargs):
+    def __init__(self,data,lable,imageShape,saved_path:str,model_type:str='efficientnet-b0',pretrained:bool=True,**kwargs):
         self._validate_init_kwargs(kwargs)
                      
         self.lable=lable
-        self.imageShape=imageShape
+        self.imageShape=int(imageShape)
         self.saved_path=saved_path
         Image_converter_type = kwargs.pop('Image_converter_type', Image_converter)
         Image_converter_kwargs = kwargs.pop('Image_converter_kwargs', dict())

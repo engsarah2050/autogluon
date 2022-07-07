@@ -48,11 +48,11 @@ class Image_converter:
     _convortor_version_file_name = '__version__'
     
         
-    def __init__(self,label_column,image_shape:int,saved_path:str,**kwargs):       
+    def __init__(self,label_column,image_shape,saved_path:str,**kwargs):       
         
                           
         self.label_column=label_column
-        self.image_shape=image_shape
+        self.image_shape=int(image_shape)
         self.saved_path =str(saved_path) #setup_outputdir(path)Path(saved_path).expanduser()
    
         self.store_type = kwargs.pop('store_type', Store)
