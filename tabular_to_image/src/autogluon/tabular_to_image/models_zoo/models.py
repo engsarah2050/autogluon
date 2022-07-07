@@ -26,7 +26,7 @@ class ModelsZoo():
         
         #use_gpu = torch.cuda.is_available() 
          
-    
+    commonShapes=[224,227,256,299]
     @property
     def ImageShape(self):
         return self.imageShape
@@ -45,13 +45,13 @@ class ModelsZoo():
     
     def create_model(self):
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        commonShapes=[224,227,256,299]
+        
         models_list=['resnet','alexnet','vgg','densenet','googlenet','shufflenet',
                      'mobilenet','wide_resnet','efficientnet','squeezenet',
                      'mnasnet','resnext','inception']
         x=[i for i in models_list if i in self.model_type]
         model=None
-        if   self.imageShape==224:
+        if self.imageShape==self.commonShapes[0]:
             if x== 'resnet':
                 if self.model_type =='resnet18':
                     model = models.resnet18(pretrained=self.pretrained).to(device)
@@ -250,7 +250,7 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad =True                     
                     model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)    
-        elif  self.imageShape==227:
+        elif self.imageShape==self.commonShapes[1]:
             if x=='squeezenet':
                 if self.model_type =='squeezenet1_0':
                     model = models.squeezenet1_0(pretrained=self.pretrained).to(device)
@@ -264,7 +264,7 @@ class ModelsZoo():
                     param.requires_grad = False 
                 model.classifier[1] = nn.Conv2d(512, self.num_classes, kernel_size=(1,1), stride=(1,1))
                 model.num_classes = self.num_classes
-        elif self.imageShape==256:
+        elif self.imageShape==self.commonShapes[2]:
             if x=='resnext':
                 if self.model_type=='resnext50_32x4d' :
                     model = models.resnext50_32x4d(pretrained=self.pretrained).to(device)
@@ -276,7 +276,7 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = False 
                     model.fc = nn.Linear(model.fc.in_features, self.num_classes)        
-        elif self.imageShape==299:
+        elif self.imageShape==self.commonShapes[3]:
             if x=='inception' :
                 model = models.inception_v3(pretrained=self.pretrained).to(device)
                 for param in model.parameters():
@@ -289,15 +289,15 @@ class ModelsZoo():
     
     def optimizer(self):
         criterion = nn.CrossEntropyLoss() 
-        if self.ImageShape==256 or self.ImageShape==299 :
+        if self.ImageShape in self.commonShapes[2:] :
             #optimizer = optim.SGD(net.parameters(), lr=1e-4, momentum=0.9)
             optimizer = optim.SGD(self.create_model().parameters(), lr=0.001, momentum=0.9)
             exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-        elif self.ImageShape==227:
+        elif self.ImageShape==self.commonShapes[1]:
             optimizer=torch.optim.RMSprop(self.create_model(), lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
             # Decay LR by a factor of 0.1 every 7 epochs
             exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-        elif self.ImageShape==224:
+        elif self.ImageShape==self.commonShapes[0]:
             optimizer = optim.Adam(self.create_model().parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-5)
             exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor = 0.1, patience =  5, mode = 'max', verbose=True)       
             criterion = nn.NLLLoss()

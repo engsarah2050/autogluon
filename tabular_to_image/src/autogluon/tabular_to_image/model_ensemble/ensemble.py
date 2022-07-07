@@ -17,7 +17,7 @@ from re import search
 
 #from autogluon.TablarToImage import  Utils
 
-class Emnseble():  
+class Ensemble():  
     def __init__(self, imageShape:int,model_type, num_classes, pretrained,**kwargs):  
         self.imageShape = imageShape 
         self.model_type=model_type
