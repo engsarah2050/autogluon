@@ -19,7 +19,7 @@ from re import search
 
 class ModelsZoo():  
     def __init__(self, imageShape,model_type, num_classes, pretrained,**kwargs):  
-        self.imageShape = int(imageShape) 
+        self.imageShape = imageShape 
         self.model_type=model_type
         self.num_classes=num_classes
         self.pretrained=pretrained
