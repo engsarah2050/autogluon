@@ -35,7 +35,7 @@ class ImagePredictions:
         self._validate_init_kwargs(kwargs)
                      
         self.lable=lable
-        self.imageShape=int(imageShape)
+        self.imageShape=imageShape
         self.saved_path=saved_path
         Image_converter_type = kwargs.pop('Image_converter_type', Image_converter)
         Image_converter_kwargs = kwargs.pop('Image_converter_kwargs', dict())
@@ -53,7 +53,7 @@ class ImagePredictions:
         num_classes =self._Image_converter.num_class(data)#self._Image_converter.num_class(data)
         self.pretrained = pretrained
               
-        self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=int(self.imageShape) ,model_type=self.model_type,
+        self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=self.imageShape ,model_type=self.model_type,
                                         num_classes=num_classes,pretrained=self.pretrained,**ModelsZoo_kwargs)
         self._ModelsZoo_type = type(self._ModelsZoo)
 
