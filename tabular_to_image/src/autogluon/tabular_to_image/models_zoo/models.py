@@ -31,8 +31,8 @@ class ModelsZoo():
          
     
     @property
-    def imageShape(self):
-        return self.imageShape
+    def ImageShape(self)-> int:
+        return int(self.imageShape)
  
     @property
     def MODEL(self):
@@ -55,7 +55,7 @@ class ModelsZoo():
         x=[i for i in models_list if i in self.model_type]
         model=None
         print(type(self.ImageShape))
-        if self.imageShape==self.commonShapes[0]:
+        if int(self.ImageShape)==self.commonShapes[0]:
             if x== 'resnet':
                 if self.model_type =='resnet18':
                     model = models.resnet18(pretrained=self.pretrained).to(device)
@@ -254,7 +254,7 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad =True                     
                     model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)    
-        elif self.imageShape==self.commonShapes[1]:
+        elif int(self.ImageShape)==self.commonShapes[1]:
             if x=='squeezenet':
                 if self.model_type =='squeezenet1_0':
                     model = models.squeezenet1_0(pretrained=self.pretrained).to(device)
@@ -268,7 +268,7 @@ class ModelsZoo():
                     param.requires_grad = False 
                 model.classifier[1] = nn.Conv2d(512, self.num_classes, kernel_size=(1,1), stride=(1,1))
                 model.num_classes = self.num_classes
-        elif self.imageShape==self.commonShapes[2]:
+        elif int(self.ImageShape)==self.commonShapes[2]:
             if x=='resnext':
                 if self.model_type=='resnext50_32x4d' :
                     model = models.resnext50_32x4d(pretrained=self.pretrained).to(device)
