@@ -154,7 +154,7 @@ class ImagePredictions:
 
         model=self.pick_model()
               
-        criterion,optimizer,_=self._ModelsZoo.optimizer()
+        criterion,optimizer,_=self._ModelsZoo.optimizer(model)
        
         use_gpu = torch.cuda.is_available()
         since = time.time()

@@ -280,7 +280,7 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = False 
                     model.fc = nn.Linear(model.fc.in_features, self.num_classes)        
-        elif self.imageShape==self.commonShapes[3]:
+        elif int(self.ImageShape)==self.commonShapes[3]:
             if x=='inception' :
                 model = models.inception_v3(pretrained=self.pretrained).to(device)
                 for param in model.parameters():
@@ -291,18 +291,18 @@ class ModelsZoo():
             raise AssertionError(f'ImageShape "{self.ImageShape}" is not a valid size for an image !,plase insert a Valid from : {commonShapes} more info check https://medium.com/analytics-vidhya/how-to-pick-the-optimal-image-size-for-training-convolution-neural-network-65702b880f05')
         return model
     
-    def optimizer(self):
+    def optimizer(self,model):
         criterion = nn.CrossEntropyLoss() 
-        if self.ImageShape in self.commonShapes[2:] :
+        if int(self.ImageShape) in self.commonShapes[2:] :
             #optimizer = optim.SGD(net.parameters(), lr=1e-4, momentum=0.9)
-            optimizer = optim.SGD(self.create_model().parameters(), lr=0.001, momentum=0.9)
+            optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
             exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-        elif self.ImageShape==self.commonShapes[1]:
-            optimizer=torch.optim.RMSprop(self.create_model(), lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
+        elif int(self.ImageShape)==self.commonShapes[1]:
+            optimizer=torch.optim.RMSprop(model, lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
             # Decay LR by a factor of 0.1 every 7 epochs
             exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-        elif self.ImageShape==self.commonShapes[0]:
-            optimizer = optim.Adam(self.create_model().parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-5)
+        elif int(self.ImageShape)==self.commonShapes[0]:
+            optimizer = optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-5)
             exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor = 0.1, patience =  5, mode = 'max', verbose=True)       
             criterion = nn.NLLLoss()
         return   criterion,optimizer,exp_lr_scheduler
