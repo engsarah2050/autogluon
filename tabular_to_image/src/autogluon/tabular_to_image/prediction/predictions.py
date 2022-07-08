@@ -342,7 +342,7 @@ class ImagePredictions:
             raise AssertionError(f'Model "{model_type}" is not a valid model to specify as best! Valid models: {commonModels}')
         
         
-        criterion,optimizer,_=self._ModelsZoo.optimizer()
+        criterion,optimizer,_=self._ModelsZoo.optimizer(model)
        
         use_gpu = torch.cuda.is_available()
         since = time.time()
