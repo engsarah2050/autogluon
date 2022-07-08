@@ -1,3 +1,4 @@
+from typing_extensions import IntVar
 import matplotlib.pyplot as plt
 from torchvision import datasets, models, transforms
 import torch.optim as optim
@@ -18,8 +19,8 @@ from re import search
 #from autogluon.TablarToImage import  Utils
 
 class ModelsZoo():  
-    def __init__(self, imageShape,model_type, num_classes, pretrained,**kwargs):  
-        self.imageShape = imageShape 
+    def __init__(self, imageShape:int,model_type, num_classes, pretrained,**kwargs):  
+        self.imageShape = int(imageShape) 
         self.model_type=model_type
         self.num_classes=num_classes
         self.pretrained=pretrained
@@ -51,7 +52,7 @@ class ModelsZoo():
                      'mnasnet','resnext','inception']
         x=[i for i in models_list if i in self.model_type]
         model=None
-        if self.imageShape==self.commonShapes[0]:
+        if int (self.imageShape)==self.commonShapes[0]:
             if x== 'resnet':
                 if self.model_type =='resnet18':
                     model = models.resnet18(pretrained=self.pretrained).to(device)
@@ -250,7 +251,7 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad =True                     
                     model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)    
-        elif self.imageShape==self.commonShapes[1]:
+        elif int(self.imageShape)==self.commonShapes[1]:
             if x=='squeezenet':
                 if self.model_type =='squeezenet1_0':
                     model = models.squeezenet1_0(pretrained=self.pretrained).to(device)
@@ -264,7 +265,7 @@ class ModelsZoo():
                     param.requires_grad = False 
                 model.classifier[1] = nn.Conv2d(512, self.num_classes, kernel_size=(1,1), stride=(1,1))
                 model.num_classes = self.num_classes
-        elif self.imageShape==self.commonShapes[2]:
+        elif int(self.imageShape)==self.commonShapes[2]:
             if x=='resnext':
                 if self.model_type=='resnext50_32x4d' :
                     model = models.resnext50_32x4d(pretrained=self.pretrained).to(device)
@@ -276,7 +277,7 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = False 
                     model.fc = nn.Linear(model.fc.in_features, self.num_classes)        
-        elif self.imageShape==self.commonShapes[3]:
+        elif int(self.imageShape)==self.commonShapes[3]:
             if x=='inception' :
                 model = models.inception_v3(pretrained=self.pretrained).to(device)
                 for param in model.parameters():
