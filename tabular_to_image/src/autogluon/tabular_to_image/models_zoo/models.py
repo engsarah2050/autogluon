@@ -19,7 +19,9 @@ from re import search
 #from autogluon.TablarToImage import  Utils
 
 class ModelsZoo():  
-    def __init__(self, imageShape,model_type, num_classes, pretrained,**kwargs):  
+    commonShapes=[224,227,256,299]
+    
+    def __init__(self,imageShape,model_type, num_classes, pretrained):  
         self.imageShape = imageShape 
         self.model_type=model_type
         self.num_classes=num_classes
@@ -27,7 +29,7 @@ class ModelsZoo():
         
         #use_gpu = torch.cuda.is_available() 
          
-    commonShapes=[224,227,256,299]
+    
     @property
     def imageShape(self):
         return self.imageShape
