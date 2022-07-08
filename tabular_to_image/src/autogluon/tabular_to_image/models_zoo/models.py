@@ -298,7 +298,7 @@ class ModelsZoo():
             optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
             exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
         elif int(self.ImageShape)==self.commonShapes[1]:
-            optimizer=torch.optim.RMSprop(model, lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
+            optimizer=torch.optim.RMSprop(model.parameters(), lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
             # Decay LR by a factor of 0.1 every 7 epochs
             exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
         elif int(self.ImageShape)==self.commonShapes[0]:
