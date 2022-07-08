@@ -52,7 +52,8 @@ class ModelsZoo():
                      'mnasnet','resnext','inception']
         x=[i for i in models_list if i in self.model_type]
         model=None
-        if int (self.imageShape)==self.commonShapes[0]:
+        print(type(self.ImageShape))
+        if self.ImageShape==self.commonShapes[0]:
             if x== 'resnet':
                 if self.model_type =='resnet18':
                     model = models.resnet18(pretrained=self.pretrained).to(device)
