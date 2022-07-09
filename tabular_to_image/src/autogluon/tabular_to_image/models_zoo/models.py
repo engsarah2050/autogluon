@@ -53,8 +53,10 @@ class ModelsZoo():
                      'mobilenet','wide_resnet','efficientnet','squeezenet',
                      'mnasnet','resnext','inception']
         x=[i for i in models_list if i in self.model_type]
-        model=None
-        print(type(self.ImageShape))
+        model = models.resnet18(pretrained=self.pretrained).to(device)
+        for param in model.parameters():
+                param.requires_grad = False
+        model.fc = nn.Linear(model.fc.in_features,self.num_classes )
         if int(self.ImageShape)==self.commonShapes[0]:
             if x== 'resnet':
                 if self.model_type =='resnet18':
