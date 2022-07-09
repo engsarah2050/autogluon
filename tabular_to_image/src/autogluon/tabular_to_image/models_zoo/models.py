@@ -132,7 +132,7 @@ class ModelsZoo():
                     model = models.densenet121(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
                         param.requires_grad = False 
-                    model.classifier = nn.Sequential(
+                    classifier = nn.Sequential(
                                                 nn.Linear(in_features=1024, out_features=256),
                                                 nn.Dropout(p=0.3),  
                                                 nn.ReLU(),
