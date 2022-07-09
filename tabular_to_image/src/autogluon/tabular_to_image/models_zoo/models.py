@@ -139,7 +139,7 @@ class ModelsZoo():
                                                 nn.Linear(in_features=256, out_features=32),  
                                                 nn.Dropout(p=0.3),
                                                 nn.ReLU(),  
-                                                nn.Linear(in_features=32, out_features=classes),
+                                                nn.Linear(in_features=32, out_features=self.num_classes),
                                                 nn.LogSoftmax(dim=1)  
                                                 )
 
