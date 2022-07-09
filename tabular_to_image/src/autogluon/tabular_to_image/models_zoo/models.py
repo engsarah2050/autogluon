@@ -53,12 +53,9 @@ class ModelsZoo():
                      'mobilenet','wide_resnet','efficientnet','squeezenet',
                      'mnasnet','resnext','inception']
         x=[i for i in models_list if i in self.model_type]
-        model = models.resnet18(pretrained=self.pretrained).to(device)
-        for param in model.parameters():
-                param.requires_grad = False
-        model.fc = nn.Linear(model.fc.in_features,self.num_classes )
+        model = None
         if int(self.ImageShape)==self.commonShapes[0]:
-            if x== 'resnet':
+            if x[0]== 'resnet':
                 if self.model_type =='resnet18':
                     model = models.resnet18(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
@@ -84,12 +81,12 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = False
                     model.fc = nn.Linear(model.fc.in_features, self.num_classes)
-            if x=='alexnet':
+            if x[0]=='alexnet':
                 model = models.alexnet(pretrained=self.pretrained).to(device)
                 for param in model.parameters():
                     param.requires_grad = False
                 model.classifier[6] = nn.Linear(4096, self.num_classes)
-            if x== 'vgg' :
+            if x[0]== 'vgg' :
                 if self.model_type=='vgg11' :
                     model = models.vgg11(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
@@ -130,7 +127,7 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = False 
                     model.classifier[6] = nn.Linear(model.classifier[6].in_features, self.num_classes)
-            if x== 'densenet':    
+            if x[0]== 'densenet':    
                 if self.model_type =='densenet121' :
                     model = models.densenet121(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
@@ -172,12 +169,12 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = False 
                     model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
-            if x=='googlenet':
+            if x[0]=='googlenet':
                 model = models.googlenet(pretrained=self.pretrained).to(device)
                 for param in model.parameters():
                     param.requires_grad = False 
                 model.fc = nn.Linear(model.fc.in_features, self.num_classes)
-            if x== 'shufflenet':
+            if x[0]== 'shufflenet':
                 if self.model_type==  'shufflenet_v2_x0_5' :
                     model = models.shufflenet_v2_x0_5(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
@@ -188,12 +185,12 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = False 
                     model.fc = nn.Linear(model.fc.in_features, self.num_classes)
-            if x=='mobilenet' :   
+            if x[0]=='mobilenet' :   
                 model = models.mobilenet_v2(pretrained=self.pretrained).to(device)
                 for param in model.parameters():
                     param.requires_grad = False 
                 model.classifier[1] = nn.Linear(model.classifier[1].in_features, self.num_classes)
-            if x=='wide_resnet':   
+            if x[0]=='wide_resnet':   
                 if 'wide_resnet50_2' == self.model_type:
                     model = models.wide_resnet50_2(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
@@ -204,7 +201,7 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = False
                     model.fc = nn.Linear(model.fc.in_features, self.num_classes)
-            if x=='mnasnet':   
+            if x[0]=='mnasnet':   
                 if self.model_type == 'mnasnet0_5':
                     model = models.mnasnet0_5(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
@@ -215,7 +212,7 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = False
                     model.classifier[1] = nn.Linear(model.classifier[1].in_features, self.num_classes).double()           
-            if x=='efficientnet':   
+            if x[0]=='efficientnet':   
                 if self.model_type=='efficientnet-b0':
                     model = EfficientNet.from_pretrained('efficientnet-b0',num_classes=self.num_classes).to(device)
                     for param in model.parameters():
