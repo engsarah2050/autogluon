@@ -276,7 +276,7 @@ class ImagePredictions:
     def eval_model(self):
         _,_,Testloader =Image_converter.image_tensor(self.saved_path)
         model=self.pick_model()        
-        criterion,_,_=self._ModelsZoo.optimizer()
+        criterion,_,_=self._ModelsZoo.optimizer(model)
         use_gpu = torch.cuda.is_available()
         since = time.time()
         avg_loss = 0
