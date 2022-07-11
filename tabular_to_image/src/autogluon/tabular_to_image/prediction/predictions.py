@@ -1,4 +1,6 @@
+from nis import cat
 from pydoc import pathdirs
+from warnings import catch_warnings
 import matplotlib.pyplot as plt
 import time
 import os
@@ -26,9 +28,10 @@ from torchensemble.gradient_boosting import GradientBoostingClassifier
 from torchensemble.snapshot_ensemble import SnapshotEnsembleClassifier
 from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
 from torchensemble.fusion import FusionClassifier
+from autogluon.core.models.abstract.abstract_nn_model import AbstractNeuralNetworkModel
 from autogluon.tabular_to_image.image_converter import Image_converter
 from autogluon.tabular_to_image.models_zoo import ModelsZoo
-class ImagePredictions:
+class ImagePredictions(AbstractNeuralNetworkModel):
     
     #image_data=Image_converter
     def __init__(self,data,lable,imageShape,saved_path:str,model_type:str='efficientnet-b0',pretrained:bool=True,**kwargs):
@@ -478,8 +481,50 @@ class ImagePredictions:
         res2=dict([res])  
         for key,value in  res2.items():    
             if round(value.item(),2)>=0.80:
-                model=key#.__class__.__name__
-        return model
+                model=key#.__class__.__name__      
+
+        savepath=self.save_model(model)
+        if savepath is not None:
+            return model   
+        else:
+            raise AssertionError(f'Model "{model}" is not saved')    
+        
+    
+    def save_model(self,model, verbose=True) -> str:
+        import torch
+        path=self.saved_path+'/init_saved_models'
+        if path is None:
+            path = self.saved_path
+            
+        params_file_name=model.__class__.__name__ 
+        params_filepath = path + params_file_name
+
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        temp_model = model
+        if model is not None:
+            torch.save(model, params_filepath)
+
+        model = None  # Avoiding pickling the weights.
+        modelobj_filepath = super().save(path=path, verbose=verbose)
+
+        model = temp_model
+
+        return modelobj_filepath
+
+    @classmethod
+    def load(cls, path: str, reset_paths=False, verbose=True):
+        import torch
+        obj: TabTransformerModel = load_pkl.load(path=path + cls.model_file_name, verbose=verbose)
+        if reset_paths:
+            obj.set_contexts(path)
+
+        obj.model = torch.load(path + cls.params_file_name)
+
+        return obj
+
+    
+    
     
     def Ensemble(self):
         model=self.pick_model() 
