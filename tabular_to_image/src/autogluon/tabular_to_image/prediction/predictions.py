@@ -485,10 +485,10 @@ class ImagePredictions(AbstractNeuralNetworkModel):
 
         savepath=self.save_model(model)
         if savepath is not None:
-            return model   
+            self
         else:
             raise AssertionError(f'Model "{model}" is not saved')    
-        
+        return model   ,savepath
     
     def save_model(self,model, verbose=True) -> str:
         import torch
@@ -497,14 +497,13 @@ class ImagePredictions(AbstractNeuralNetworkModel):
             path = self.saved_path
             
         params_file_name=model.__class__.__name__ 
-        params_filepath = path + params_file_name
+        #params_filepath = path + params_file_name
 
         os.makedirs(os.path.dirname(path), exist_ok=True)
-
+        
         temp_model = model
         if model is not None:
-            torch.save(model, params_filepath)
-
+            torch.save(model, os.path.join(str(path) ,params_file_name))   
         model = None  # Avoiding pickling the weights.
         modelobj_filepath = super().save(path=path, verbose=verbose)
 
@@ -524,7 +523,16 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         return obj
 
     
-    
+    def reduce_memory_size(self, data_files, remove_data=True, requires_save=True):
+        if remove_data or self.is_data_saved:
+            try:
+                del data_files
+            except NameError:
+                print('f Variable {data_files} is not defined')
+            except OSError:
+                pass
+        if requires_save:
+                self.is_data_saved = False   
     
     def Ensemble(self):
         model=self.pick_model() 
