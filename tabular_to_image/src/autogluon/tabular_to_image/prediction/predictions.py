@@ -40,6 +40,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         self.lable=lable
         self.imageShape=imageShape
         self.saved_path=saved_path
+        self.is_data_saved=False
         Image_converter_type = kwargs.pop('Image_converter_type', Image_converter)
         Image_converter_kwargs = kwargs.pop('Image_converter_kwargs', dict())
         lable = kwargs.get('lable', None)
@@ -485,10 +486,14 @@ class ImagePredictions(AbstractNeuralNetworkModel):
 
         savepath=self.save_model(model)
         if savepath is not None:
-            self
+            self.reduce_memory_size(res)
+            self.reduce_memory_size(res2)
         else:
-            raise AssertionError(f'Model "{model}" is not saved')    
-        return model   ,savepath
+            raise AssertionError(f'Model "{model}" is not saved') 
+        
+        model=self.load(savepath)
+            
+        return model   #,savepath
     
     def save_model(self,model, verbose=True) -> str:
         import torch
@@ -508,7 +513,9 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         modelobj_filepath = super().save(path=path, verbose=verbose)
 
         model = temp_model
-
+        self.is_data_saved=True
+        if modelobj_filepath is not None and self.is_data_saved:
+            self.reduce_memory_size(model)
         return modelobj_filepath
 
     @classmethod
@@ -535,56 +542,67 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                 self.is_data_saved = False   
     
     def Ensemble(self):
+        from torchensemble.fusion import FusionClassifier
+        from torchensemble.voting import VotingClassifier
+        from torchensemble.bagging import BaggingClassifier
+        from torchensemble.gradient_boosting import GradientBoostingClassifier
+        from torchensemble.snapshot_ensemble import SnapshotEnsembleClassifier
+        from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
+        from torchensemble.fusion import FusionClassifier
         model=self.pick_model() 
-        trainloader,valloader,Testloader,=Image_converter.image_tensor(self.saved_path)
+        trainloader,valloader,Testloader,=Image_converter.image_tensor(self.saved_path)     
         init_model=None
         score=[]
-        init=True
+        #epochs=3
+        initmodels={}
         Ensemble_family={
-            'LeNet@MNIST':[VotingClassifier(estimator=model,n_estimators=4,cuda=True),BaggingClassifier(estimator=model,n_estimators=4,cuda=True)],
-            'LeNet@CIFAR-10':[GradientBoostingClassifier(estimator=model,n_estimators=4,cuda=True),FusionClassifier(estimator=model,n_estimators=4,cuda=True)],
-            'ResNet@CIFAR-10':[VotingClassifier(estimator=model,n_estimators=4,cuda=True),SnapshotEnsembleClassifier(estimator=model,n_estimators=4,cuda=True)],
-            'ResNet@CIFAR-100':[VotingClassifier(estimator=model,n_estimators=4,cuda=True),BaggingClassifier(estimator=model,n_estimators=4,cuda=True)]
-            
-            }
-        for i in range(len(Ensemble_family['LeNet@MNIST'])): 
-            if self.ImageShape in [224,227,299] : 
-                init_model=Ensemble_family['LeNet@CIFAR-10'][i]
-                init_model.set_optimizer('Adam', lr=1e-3, weight_decay=5e-4)
+                'models':[FusionClassifier,VotingClassifier,BaggingClassifier,GradientBoostingClassifier,SnapshotEnsembleClassifier,SoftGradientBoostingClassifier],
+
+                    }
+        family='LeNet'
+        epochs=1#correct number is  5 and so do estimator or its multipls
+        lr=1e-3
+        maxvalue=0.0
+        optm='Adam'
+        maximum=''
+        tem=0.0
+        tem_est=' '
+        familes=['LeNet','ResNet']
+        i=1
+        last=[]
+        for _ in range(len(familes)) :
+            for l in range(len(Ensemble_family['models'])): 
+                init_model=Ensemble_family['models'][l](estimator=model,n_estimators=1,cuda=True)
+                init_model.set_optimizer(optm, lr=lr, weight_decay=5e-4)
                 criterion = nn.CrossEntropyLoss()
-                #model.set_criterion(criterion)
-                model.fit(trainloader,epochs=3,test_loader=Testloader)
-                accuracy,return_loss = model.evaluate(valloader,True)
+                init_model.set_criterion(criterion)
+                init_model.fit(trainloader,epochs=epochs,test_loader=Testloader)
+                accuracy,return_loss = init_model.evaluate(Testloader,True)
                 score.append(accuracy)
-                best_accuracy=score[i]
-                for  j in score:                                          
+                initmodels[init_model._get_name()]=accuracy
+                best_accuracy=score[0]
+                #del  trainloader
+                #del  Testloader
+                for j in score:                                          
                     if j>best_accuracy:
                         best_accuracy=j
-            elif self.ImageShape <=50: 
-                init_model=Ensemble_family['LeNet@MNIST'][i]
-                init_model.set_optimizer('Adam', lr=1e-3, weight_decay=5e-4)
-                criterion = nn.CrossEntropyLoss()
-                #model.set_criterion(criterion)
-                init_model.fit(trainloader,epochs=3,test_loader=Testloader)
-                accuracy,return_loss = model.evaluate(valloader,True)
-                score.append(accuracy)
-                best_accuracy=score[i]
-                for  j in score:                                          
-                    if j>best_accuracy:
-                        best_accuracy=j
-            elif     self._Image_converter.len_dataset()>50000:
-                init_model=Ensemble_family[ 'ResNet@CIFAR-100'][i]
-                init_model.set_optimizer('Adam', lr=1e-3, weight_decay=5e-4)
-                criterion = nn.CrossEntropyLoss()
-                #model.set_criterion(criterion)
-                model.fit(trainloader,epochs=3,test_loader=Testloader)
-                accuracy,return_loss = model.evaluate(valloader,True)
-                score.append(accuracy)
-                best_accuracy=score[i]
-                for  j in score:                                          
-                   if j>best_accuracy:
-                        best_accuracy=i
- 
+                maxvalue.append(initmodels[max(initmodels, key=initmodels.get)])
+                maximum.append(max(initmodels, key=initmodels.get) )          
+                i=i+1
+                #estimator=2
+                optm='SGD'
+                lr=1e-1
+                #epochs=2
+                score.clear()
+                tem=maxvalue 
+                tem_est=maximum
+                family='ResNet' 
+                last.append([maximum,maxvalue])
+
+        dup_free = []
+        for x in last:
+            if x not in dup_free:
+                dup_free.append(x)
                     
                 
                 
