@@ -29,10 +29,12 @@ from torchensemble.snapshot_ensemble import SnapshotEnsembleClassifier
 from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
 from torchensemble.fusion import FusionClassifier
 from autogluon.core.models.abstract.abstract_nn_model import AbstractNeuralNetworkModel
+from autogluon.core.utils.loaders import load_pkl, load_str,load_compress
 from autogluon.tabular_to_image.image_converter import Image_converter
 from autogluon.tabular_to_image.models_zoo import ModelsZoo
 class ImagePredictions(AbstractNeuralNetworkModel):
     
+        
     #image_data=Image_converter
     def __init__(self,data,lable,imageShape,saved_path:str,model_type:str='efficientnet-b0',pretrained:bool=True,**kwargs):
         self._validate_init_kwargs(kwargs)
@@ -491,43 +493,54 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         else:
             raise AssertionError(f'Model "{model}" is not saved') 
         
-        model=self.load(savepath)
-            
+        model=ImagePredictions.load(savepath)           
         return model   #,savepath
     
     def save_model(self,model, verbose=True) -> str:
-        import torch
-        path=self.saved_path+'/init_saved_models'
-        if path is None:
-            path = self.saved_path
-            
-        params_file_name=model.__class__.__name__ 
-        #params_filepath = path + params_file_name
-
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        import torch 
+        params_file_name=model.__class__.__name__
+        path,_,_=self.create_contexts(self.save_path,params_file_name)
         
-        temp_model = model
+        if path is None:
+            path = self.saved_path   
+                     
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         if model is not None:
-            torch.save(model, os.path.join(str(path) ,params_file_name))   
+            torch.save(model, (str(path) ))   
         model = None  # Avoiding pickling the weights.
-        modelobj_filepath = super().save(path=path, verbose=verbose)
-
-        model = temp_model
+        modelobj_filepath = super().save(path=path, verbose=verbose)    
+        
         self.is_data_saved=True
         if modelobj_filepath is not None and self.is_data_saved:
             self.reduce_memory_size(model)
+        
         return modelobj_filepath
 
     @classmethod
-    def load(cls, path: str, reset_paths=False, verbose=True):
+    def load(cls,path: str, reset_paths=False):
         import torch
-        obj: TabTransformerModel = load_pkl.load(path=path + cls.model_file_name, verbose=verbose)
+        obj.model = load_compress.load_model(path)
         if reset_paths:
             obj.set_contexts(path)
-
-        obj.model = torch.load(path + cls.params_file_name)
-
+        
         return obj
+    
+    def create_contexts(self, path_context: str,model_name:str):
+        """Create and return paths to save model objects, the learner object.
+
+        Parameters
+        ----------
+        path_context: str
+            Top-level directory where models and trainer will be saved.
+        """
+        model_context = os.path.join(path_context, "models") + os.path.sep
+        save_path = os.path.join(path_context, model_name)
+        return path_context, model_context, save_path
+
+    def set_contexts(self, path_context: str):
+        """Update the path where model, learner, and trainer objects will be saved.
+        Also see `create_contexts`."""
+        self.path, self.model_context, self.save_path = self.create_contexts(path_context)
 
     
     def reduce_memory_size(self, data_files, remove_data=True, requires_save=True):

@@ -1,5 +1,6 @@
 import logging
 import os
+from pickle import OBJ
 import time
 from collections import defaultdict
 from typing import List, Union, Tuple
@@ -28,3 +29,7 @@ def load_val(path: str) -> str:
 def load_test(path: str) -> str:
     
     return  torch.load(os.path.join(str(path),"test")) 
+
+def load_model(path: str) -> object:
+    
+    return  torch.load(str(path)) 
