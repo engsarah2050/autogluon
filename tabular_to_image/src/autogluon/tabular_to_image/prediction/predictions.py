@@ -562,9 +562,9 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         family='LeNet'
         epochs=1#correct number is  5 and so do estimator or its multipls
         lr=1e-3
-        maxvalue=0.0
+        maxvalue=[0.0]
         optm='Adam'
-        maximum=''
+        maximum=['']
         tem=0.0
         tem_est=' '
         familes=['LeNet','ResNet']
@@ -587,7 +587,8 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                     if j>best_accuracy:
                         best_accuracy=j
                 maxvalue.append(initmodels[max(initmodels, key=initmodels.get)])
-                maximum.append(max(initmodels, key=initmodels.get) )          
+                maximum.append(max(initmodels, key=initmodels.get) ) 
+                last.append([maximum,maxvalue,family,epochs,optm])         
                 i=i+1
                 #estimator=2
                 optm='SGD'
@@ -597,7 +598,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                 tem=maxvalue 
                 tem_est=maximum
                 family='ResNet' 
-                last.append([maximum,maxvalue])
+                
 
         dup_free = []
         for x in last:
