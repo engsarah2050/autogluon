@@ -26,30 +26,7 @@ from autogluon.common.utils.log_utils import set_logger_verbosity
 from autogluon.common.utils.utils import setup_outputdir
 
 from .constants import (
-<<<<<<< HEAD
-    LABEL, BINARY, MULTICLASS, REGRESSION, Y_PRED,
-<<<<<<< HEAD
-    Y_PRED_PROB, Y_TRUE, LOGITS, FEATURES, AUTOMM
-=======
-    Y_PRED_PROB, Y_TRUE, LOGITS, FEATURES, AUTOMM,
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    AUTOMM_TUTORIAL_MODE,
->>>>>>> upstream/master
-=======
-    AUTOMM_TUTORIAL_MODE, UNION_SOUP, GREEDY_SOUP, BEST_SOUP, MIN, MAX
->>>>>>> upstream/master
-=======
-    AUTOMM_TUTORIAL_MODE, UNION_SOUP, GREEDY_SOUP,
-    BEST_SOUP, MIN, MAX, TEXT,
->>>>>>> upstream/master
-=======
-    AUTOMM_TUTORIAL_MODE, UNIFORM_SOUP, GREEDY_SOUP,
-    BEST, MIN, MAX, TEXT,
->>>>>>> upstream/master
-=======
-    LABEL,
+   LABEL,
     BINARY,
     MULTICLASS,
     CLASSIFICATION,
@@ -67,27 +44,17 @@ from .constants import (
     MIN,
     MAX,
     TEXT,
-<<<<<<< HEAD
->>>>>>> upstream/master
-=======
     RAY_TUNE_CHECKPOINT,
     BEST_K_MODELS_FILE,
     LAST_CHECKPOINT,
     MODEL_CHECKPOINT,
     MODEL,
     DATA,
-<<<<<<< HEAD
->>>>>>> upstream/master
-=======
     PROBABILITY,
     MATCHER,
-<<<<<<< HEAD
->>>>>>> upstream/master
-=======
     COLUMN_FEATURES,
     MASKS,
     ZERO_SHOT,
->>>>>>> upstream/master
 )
 
 from .data.datamodule import BaseDataModule
@@ -156,20 +123,6 @@ class MultiModalPredictor:
     """
 
     def __init__(
-<<<<<<< HEAD
-            self,
-            label: str,
-            problem_type: Optional[str] = None,
-            eval_metric: Optional[str] = None,
-            path: Optional[str] = None,
-            verbosity: Optional[int] = 3,
-            warn_if_exist: Optional[bool] = True,
-<<<<<<< HEAD
-            enable_progress_bar: bool = None,
-=======
-            enable_progress_bar: Optional[bool] = None,
->>>>>>> upstream/master
-=======
         self,
         label: Optional[str] = None,
         problem_type: Optional[str] = None,
@@ -179,7 +132,6 @@ class MultiModalPredictor:
         verbosity: Optional[int] = 3,
         warn_if_exist: Optional[bool] = True,
         enable_progress_bar: Optional[bool] = None,
->>>>>>> upstream/master
     ):
         """
         Parameters
@@ -227,18 +179,7 @@ class MultiModalPredictor:
         enable_progress_bar
             Whether to show progress bar. It will be True by default and will also be
             disabled if the environment variable os.environ["AUTOMM_DISABLE_PROGRESS_BAR"] is set.
-<<<<<<< HEAD
-
         """
-        self.verbosity = verbosity
-        if self.verbosity is not None:
-            set_logger_verbosity(self.verbosity, logger=logger)
-
-        self._label_column = label
-
-=======
-        """
->>>>>>> upstream/master
         if eval_metric is not None and not isinstance(eval_metric, str):
             eval_metric = eval_metric.name
 
@@ -250,10 +191,6 @@ class MultiModalPredictor:
         ]:
             problem_type = REGRESSION
 
-<<<<<<< HEAD
-        self._problem_type = problem_type.lower() if problem_type is not None else None
-
-=======
         if os.environ.get(AUTOMM_TUTORIAL_MODE):
             verbosity = 1  # don't use 3, which doesn't suppress logger.info() in .load().
             enable_progress_bar = False
@@ -263,7 +200,6 @@ class MultiModalPredictor:
 
         self._label_column = label
         self._problem_type = problem_type.lower() if problem_type is not None else None
->>>>>>> upstream/master
         self._eval_metric_name = eval_metric
         self._validation_metric_name = None
         self._output_shape = None
@@ -276,23 +212,10 @@ class MultiModalPredictor:
         self._data_processors = None
         self._model = None
         self._resume = False
-<<<<<<< HEAD
-<<<<<<< HEAD
-        if enable_progress_bar is None:
-            if os.environ.get('AUTOMM_DISABLE_PROGRESS_BAR'):
-                self._enable_progress_bar = False
-            else:
-                self._enable_progress_bar = True
-        else:
-            self._enable_progress_bar = enable_progress_bar
-=======
-=======
         self._continuous_training = False
->>>>>>> upstream/master
         self._verbosity = verbosity
         self._warn_if_exist = warn_if_exist
         self._enable_progress_bar = enable_progress_bar if enable_progress_bar is not None else True
->>>>>>> upstream/master
 
         if problem_type is not None and problem_type.lower() == ZERO_SHOT:
             self._config, self._model, self._data_processors = init_zero_shot(hyperparameters=hyperparameters)
@@ -309,11 +232,6 @@ class MultiModalPredictor:
     def problem_type(self):
         return self._problem_type
 
-<<<<<<< HEAD
-    def set_verbosity(self, verbosity: int):
-        self.verbosity = verbosity
-        set_logger_verbosity(self.verbosity, logger=logger)
-=======
     # This func is required by the abstract trainer of TabularPredictor.
     def set_verbosity(self, verbosity: int):
         """Set the verbosity level of the log.
@@ -326,10 +244,8 @@ class MultiModalPredictor:
         """
         self._verbosity = verbosity
         set_logger_verbosity(verbosity, logger=logger)
->>>>>>> upstream/master
 
     def fit(
-<<<<<<< HEAD
             self,
             train_data: pd.DataFrame,
             config: Optional[dict] = None,
@@ -341,28 +257,8 @@ class MultiModalPredictor:
             holdout_frac: Optional[float] = None,
             teacher_predictor: Union[str, AutoMMPredictor] = None,
             seed: Optional[int] = 123,
-<<<<<<< HEAD
-            init_only: Optional[bool] = False,
-=======
->>>>>>> upstream/master
-=======
-        self,
-        train_data: pd.DataFrame,
-        presets: str = None,
-        config: Optional[dict] = None,
-        tuning_data: Optional[pd.DataFrame] = None,
-        time_limit: Optional[int] = None,
-        save_path: Optional[str] = None,
-        hyperparameters: Optional[Union[str, Dict, List[str]]] = None,
-        column_types: Optional[dict] = None,
-        holdout_frac: Optional[float] = None,
-        teacher_predictor: Union[str, MultiModalPredictor] = None,
-        seed: Optional[int] = 123,
-<<<<<<< HEAD
->>>>>>> upstream/master
-=======
-        hyperparameter_tune_kwargs: Optional[dict] = None,
->>>>>>> upstream/master
+            hyperparameter_tune_kwargs: Optional[dict] = None,
+
     ):
         """
         Fit MultiModalPredictor predict label column of a dataframe based on the other columns,
@@ -445,13 +341,6 @@ class MultiModalPredictor:
             knowledge to a student predictor, i.e., the current predictor.
         seed
             The random seed to use for this training run.
-<<<<<<< HEAD
-<<<<<<< HEAD
-        init_only
-            Whether to only initialize the model without training. This can be used when we want to
-            compare the model performance before and after training.
-=======
-=======
         hyperparameter_tune_kwargs
                 Hyperparameter tuning strategy and kwargs (for example, how many HPO trials to run).
                 If None, then hyperparameter tuning will not be performed.
@@ -469,9 +358,9 @@ class MultiModalPredictor:
                     scheduler_init_args: Optional[dict] = None
                         If provided str to `searcher`, you can optionally provide custom init_args to the searcher
                         You don't need to worry about `metric` and `mode`. AutoGluon will figure it out by itself.
->>>>>>> upstream/master
 
->>>>>>> upstream/master
+
+
         Returns
         -------
         An "MultiModalPredictor" object (itself).
@@ -504,11 +393,6 @@ class MultiModalPredictor:
         if not self._resume:
             save_path = setup_outputdir(
                 path=save_path,
-<<<<<<< HEAD
-                warn_if_exist=True,
-=======
-                warn_if_exist=self._warn_if_exist,
->>>>>>> upstream/master
             )
         else:
             assert hyperparameter_tune_kwargs is None, "You can not resume training with HPO"
@@ -598,85 +482,13 @@ class MultiModalPredictor:
         self._output_shape = output_shape
         self._column_types = column_types
 
-<<<<<<< HEAD
-        # save artifacts for the current running, except for model checkpoint, which will be saved in _fit()
-        self.save(save_path)
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-        if init_only:
-            return self
-
-=======
->>>>>>> upstream/master
-=======
-=======
-        if time_limit == timedelta(seconds=0):
-            self._top_k_average(
-                model=model,
-                save_path=save_path,
-                minmax_mode=minmax_mode,
-                is_distill=False,
-                config=config,
-                val_df=tuning_data,
-                validation_metric_name=validation_metric_name,
-            )
-            return self
-
->>>>>>> upstream/master
-        # need to assign the above attributes before setting up distillation
-        if teacher_predictor is not None:
-            (
-                teacher_model,
-                critics,
-                baseline_funcs,
-                soft_label_loss_func,
-                teacher_df_preprocessor,
-                teacher_data_processors,
-            ) = self._setup_distillation(
-                teacher_predictor=teacher_predictor,
-            )
-        else:
-            (
-                teacher_model,
-                critics,
-                baseline_funcs,
-                soft_label_loss_func,
-                teacher_df_preprocessor,
-                teacher_data_processors,
-            ) = (None, None, None, None, None, None)
-
->>>>>>> upstream/master
-        self._fit(
-=======
         _fit_args = dict(
->>>>>>> upstream/master
             train_df=train_data,
             val_df=tuning_data,
             validation_metric_name=validation_metric_name,
             minmax_mode=minmax_mode,
             max_time=time_limit,
             save_path=save_path,
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
-            ckpt_path=self._ckpt_path,
-            resume=self._resume,
->>>>>>> upstream/master
-            enable_progress_bar=self._enable_progress_bar,
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> upstream/master
-=======
-            mixup_fn=self.mixup_fn,
->>>>>>> upstream/master
-=======
-            mixup_fn=mixup_fn,
->>>>>>> upstream/master
-=======
             ckpt_path=None if hyperparameter_tune_kwargs is not None else self._ckpt_path,
             resume=False if hyperparameter_tune_kwargs is not None else self._resume,
             enable_progress_bar=False if hyperparameter_tune_kwargs is not None else self._enable_progress_bar,
@@ -685,7 +497,7 @@ class MultiModalPredictor:
             hyperparameters=hyperparameters,
             teacher_predictor=teacher_predictor,
             hpo_mode=(hyperparameter_tune_kwargs is not None),  # skip average checkpoint if in hpo mode
->>>>>>> upstream/master
+
         )
 
         if hyperparameter_tune_kwargs is not None:
@@ -920,41 +732,6 @@ class MultiModalPredictor:
         )
 
     def _fit(
-<<<<<<< HEAD
-            self,
-            train_df: pd.DataFrame,
-            val_df: pd.DataFrame,
-            df_preprocessor: MultiModalFeaturePreprocessor,
-            data_processors: dict,
-            model: nn.Module,
-            config: DictConfig,
-            loss_func: _Loss,
-            validation_metric: torchmetrics.Metric,
-            validation_metric_name: str,
-            custom_metric_func: Callable,
-            minmax_mode: str,
-            teacher_model: nn.Module,
-            critics: nn.ModuleList,
-            baseline_funcs: nn.ModuleList,
-            soft_label_loss_func: _Loss,
-            teacher_df_preprocessor: MultiModalFeaturePreprocessor,
-            teacher_data_processors: dict,
-            max_time: timedelta,
-            save_path: str,
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
-            ckpt_path: str,
-            resume: bool,
->>>>>>> upstream/master
-            enable_progress_bar: bool,
-<<<<<<< HEAD
->>>>>>> upstream/master
-=======
-            mixup_fn: MixupModule,
->>>>>>> upstream/master
-=======
         self,
         train_df: pd.DataFrame,
         val_df: pd.DataFrame,
@@ -965,24 +742,13 @@ class MultiModalPredictor:
         ckpt_path: str,
         resume: bool,
         enable_progress_bar: bool,
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-        mixup_fn: MixupModule,
->>>>>>> upstream/master
-=======
-=======
         preset: Optional[str] = None,
->>>>>>> upstream/master
-=======
         presets: Optional[str] = None,
->>>>>>> upstream/master
         config: Optional[dict] = None,
         hyperparameters: Optional[Union[str, Dict, List[str]]] = None,
         teacher_predictor: Union[str, MultiModalPredictor] = None,
         hpo_mode: bool = False,
         **hpo_kwargs,
->>>>>>> upstream/master
     ):
         if self._config is not None:  # continuous training
             config = self._config
@@ -1287,12 +1053,9 @@ class MultiModalPredictor:
                 strategy = None
                 num_gpus = min(num_gpus, 1)
 
-<<<<<<< HEAD
-        log_filter = LogFilter(["already configured with model summary"])
-=======
         blacklist_msgs = ["already configured with model summary"]
         log_filter = LogFilter(blacklist_msgs)
->>>>>>> upstream/master
+
         with apply_log_filter(log_filter):
             trainer = pl.Trainer(
                 gpus=num_gpus if not use_ray_lightning else None,  # ray lightning requires not specifying gpus
@@ -1312,16 +1075,8 @@ class MultiModalPredictor:
                     config, "optimization.gradient_clip_algorithm", default="norm"
                 ),
                 accumulate_grad_batches=grad_steps,
-<<<<<<< HEAD
-                log_every_n_steps=10,
-<<<<<<< HEAD
-                enable_progress_bar=self._enable_progress_bar,
-=======
-=======
                 log_every_n_steps=OmegaConf.select(config, "optimization.log_every_n_steps", default=10),
->>>>>>> upstream/master
                 enable_progress_bar=enable_progress_bar,
->>>>>>> upstream/master
                 fast_dev_run=config.env.fast_dev_run,
                 track_grad_norm=OmegaConf.select(config, "environment.track_grad_norm", default=2),
                 val_check_interval=config.optimization.val_check_interval,
@@ -1549,31 +1304,6 @@ class MultiModalPredictor:
                 loss_func=self._loss_func if hasattr(self, "_loss_func") else None,
             )
 
-<<<<<<< HEAD
-        evaluator = pl.Trainer(
-            gpus=num_gpus,
-            auto_select_gpus=self._config.env.auto_select_gpus if num_gpus != 0 else False,
-            num_nodes=self._config.env.num_nodes,
-            precision=precision,
-            strategy=strategy,
-            benchmark=False,
-            enable_progress_bar=self._enable_progress_bar,
-            deterministic=self._config.env.deterministic,
-            logger=False,
-        )
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                ".*does not have many workers which may be a bottleneck. "
-                "Consider increasing the value of the `num_workers` argument` "
-                ".* in the `DataLoader` init to improve performance.*"
-            )
-            outputs = evaluator.predict(
-                task,
-                datamodule=predict_dm,
-            )
-=======
         blacklist_msgs = []
         if self._verbosity <= 3:  # turn off logging in prediction
             blacklist_msgs.append("Automatic Mixed Precision")
@@ -1609,21 +1339,6 @@ class MultiModalPredictor:
                     task,
                     datamodule=predict_dm,
                 )
-<<<<<<< HEAD
->>>>>>> upstream/master
-        if ret_type == LOGITS:
-            logits = [ele[LOGITS] for ele in outputs]
-            ret = torch.cat(logits)
-        elif ret_type == PROBABILITY:
-            probability = [ele[PROBABILITY] for ele in outputs]
-            ret = torch.cat(probability)
-        elif ret_type == FEATURES:
-            features = [ele[FEATURES] for ele in outputs]
-            ret = torch.cat(features)
-        else:
-            raise ValueError(f"Unknown return type: {ret_type}")
-=======
->>>>>>> upstream/master
 
         return outputs
 
