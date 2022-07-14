@@ -583,7 +583,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         tem_est=' '
         familes=['LeNet','ResNet']
         i=1
-        last=[]
+        res={}
         for _ in range(len(familes)) :
             for l in range(len(Ensemble_family['models'])): 
                 init_model=Ensemble_family['models'][l](estimator=model,n_estimators=1,cuda=True)
@@ -602,7 +602,6 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                         best_accuracy=j
                 maxvalue.append(initmodels[max(initmodels, key=initmodels.get)])
                 maximum.append(max(initmodels, key=initmodels.get) ) 
-                last.append([maximum,maxvalue,family,epochs,optm])         
                 i=i+1
                 #estimator=2
                 optm='SGD'
@@ -614,10 +613,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                 family='ResNet' 
                 
 
-        dup_free = []
-        for x in last:
-            if x not in dup_free:
-                dup_free.append(x)
+        res = dict(zip(maximum, maxvalue))
                     
                 
                 
