@@ -335,7 +335,8 @@ class ImagePredictions(AbstractNeuralNetworkModel):
             #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
                 
-        commonModels=['resnet18','resnet34','resnet50','resnet101','resnet152', 'densenet121','densenet161','densenet169','densenet201',
+        commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
+                      'densenet121','densenet161'#,'densenet169','densenet201',
                     #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                     #  'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2', 'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
                     #  'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7' ,                      
@@ -468,7 +469,8 @@ class ImagePredictions(AbstractNeuralNetworkModel):
             return model,best_acc
         
     def pick_model(self):  
-        model_type=['resnet50','resnet101','resnet152','densenet121','densenet161','densenet169','densenet201',
+        model_type=[#'resnet50','resnet101','resnet152',
+                    'densenet121','densenet161'#,'densenet169','densenet201',
                #     'alexnet' ,'vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                #     'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
                #     'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7'                       
