@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 import copy
+import logging
 import torch
 #device = torch.device("cuda") #device = 'cuda'
 import torchvision.transforms as transforms
@@ -32,6 +33,12 @@ from autogluon.core.models.abstract.abstract_nn_model import AbstractNeuralNetwo
 from autogluon.core.utils.loaders import load_pkl, load_str,load_compress
 from autogluon.tabular_to_image.image_converter import Image_converter
 from autogluon.tabular_to_image.models_zoo import ModelsZoo
+
+__all__ = ['ImagePredictor']
+
+
+logger = logging.getLogger(__name__)  # return autogluon root logger
+
 class ImagePredictions(AbstractNeuralNetworkModel):
     
         
@@ -509,7 +516,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         if model_context is not None:
             torch.save(model, (str(save_path) ))   
-                
+        if verbose: logger.log(15, 'Loading: %s' % save_path)         
         self.is_data_saved=True
         if save_path is not None and self.is_data_saved:
             self.reduce_memory_size(model)
