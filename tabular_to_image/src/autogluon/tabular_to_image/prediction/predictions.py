@@ -501,7 +501,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
     def save_model(self,model, verbose=True) -> str:
         import torch 
         params_file_name=model.__class__.__name__ +".pt"
-        path_context, model_context, save_path=self.create_contexts(self.save_path,params_file_name)
+        path_context, model_context, save_path=self.create_contexts(self.saved_path,params_file_name)
         
         if path_context is None:
             path_context = self.saved_path   
@@ -517,7 +517,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         return save_path
 
     @classmethod
-    def load(cls,path: str, reset_paths=False):
+    def load(cls,path: str, reset_paths=False,verbose=True):
         import torch
         obj: ModelsZoo = load_pkl.load(path=path + cls.model_file_name, verbose=verbose)
         if reset_paths:
