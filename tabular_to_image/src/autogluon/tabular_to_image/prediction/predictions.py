@@ -498,31 +498,30 @@ class ImagePredictions(AbstractNeuralNetworkModel):
     
     def save_model(self,model, verbose=True) -> str:
         import torch 
-        params_file_name=model.__class__.__name__
-        path,_,_=self.create_contexts(self.save_path,params_file_name)
+        params_file_name=model.__class__.__name__ +".pt"
+        path_context, model_context, save_path=self.create_contexts(self.save_path,params_file_name)
         
-        if path is None:
-            path = self.saved_path   
+        if path_context is None:
+            path_context = self.saved_path   
                      
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        if model is not None:
-            torch.save(model, (str(path) ))   
-        model = None  # Avoiding pickling the weights.
-        modelobj_filepath = super().save(path=path, verbose=verbose)    
-        
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        if model_context is not None:
+            torch.save(model, (str(save_path) ))   
+                
         self.is_data_saved=True
-        if modelobj_filepath is not None and self.is_data_saved:
+        if save_path is not None and self.is_data_saved:
             self.reduce_memory_size(model)
         
-        return modelobj_filepath
+        return save_path
 
     @classmethod
     def load(cls,path: str, reset_paths=False):
         import torch
-        obj.model = load_compress.load_model(path)
+        obj: ModelsZoo = load_pkl.load(path=path + cls.model_file_name, verbose=verbose)
         if reset_paths:
             obj.set_contexts(path)
         
+        obj.model = load_compress.load_model(path)
         return obj
     
     def create_contexts(self, path_context: str,model_name:str):

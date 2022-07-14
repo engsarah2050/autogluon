@@ -30,6 +30,7 @@ def load_test(path: str) -> str:
     
     return  torch.load(os.path.join(str(path),"test")) 
 
-def load_model(path: str) -> object:
+def load_model(path: str,verbose=True) -> object:
+    if verbose: logger.log(15, 'Loading: %s' % path) 
     
     return  torch.load(str(path)) 
