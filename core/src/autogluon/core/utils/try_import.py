@@ -19,7 +19,9 @@ __all__ = [
     'try_import_autogluon_vision',
     'try_import_rapids_cuml',
     'try_import_imodels',
-]
+    'try_import_torchensemble',
+     
+    ]
 
 logger = logging.getLogger(__name__)
 
@@ -201,6 +203,19 @@ def try_import_torch():
         raise ImportError("Unable to import dependency torch\n"
                           "A quick tip is to install via `pip install torch`.\n"
                           "The minimum torch version is currently 1.6.")
+
+def try_import_torchensemble():
+    try:
+        from torchensemble.fusion import FusionClassifier
+        from torchensemble.voting import VotingClassifier
+        from torchensemble.bagging import BaggingClassifier
+        from torchensemble.gradient_boosting import GradientBoostingClassifier
+        from torchensemble.snapshot_ensemble import SnapshotEnsembleClassifier
+        from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
+    except ImportError as e:
+        raise ImportError("Unable to import dependency torchensemble\n"
+                          "A quick tip is to install via `pip install torchensemble`.\n"
+                          "The minimum torchensemble version is currently 1.6.")        
 
 
 def try_import_d8():

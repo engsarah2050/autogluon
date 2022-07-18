@@ -21,16 +21,9 @@ import numpy as np
 import torchvision
 from torchvision import datasets, models, transforms
 from autogluon.core.utils import get_memory_size, bytes_to_mega_bytes
-from torchensemble import VotingClassifier
-from torchensemble.fusion import FusionClassifier
-from torchensemble.voting import VotingClassifier
-from torchensemble.bagging import BaggingClassifier
-from torchensemble.gradient_boosting import GradientBoostingClassifier
-from torchensemble.snapshot_ensemble import SnapshotEnsembleClassifier
-from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
-from torchensemble.fusion import FusionClassifier
 from autogluon.core.models.abstract.abstract_nn_model import AbstractNeuralNetworkModel
-from autogluon.core.utils.loaders import load_pkl, load_str,load_compress
+from autogluon.core.utils import try_import_torch,try_import_torchensemble
+from autogluon.core.utils.loaders import load_compress
 from autogluon.tabular_to_image.image_converter import Image_converter
 from autogluon.tabular_to_image.models_zoo import ModelsZoo
 
@@ -44,8 +37,9 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         
     #image_data=Image_converter
     def __init__(self,data,lable,imageShape,saved_path:str,model_type:str='efficientnet-b0',pretrained:bool=True,**kwargs):
-        self._validate_init_kwargs(kwargs)
-                     
+        try_import_torch()
+        super().__init__(**kwargs)
+        self._validate_init_kwargs(kwargs)           
         self.lable=lable
         self.imageShape=imageShape
         self.saved_path=saved_path
@@ -337,7 +331,102 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         print('-' * 10)
         return avg_acc 
     
-    
+                
+    def epochs(model,trainloader,train_batches,use_gpu,valloader,optimizer,criterion,val_batches,num_epochs=3):    
+        
+        for i, data in enumerate(trainloader):
+            if i % 100 == 0:
+                print("\rTraining batch {}/{}".format(i, train_batches / 2), end='', flush=True)
+                    
+                # Use half training dataset
+                #if i >= train_batches / 2:
+                #    break
+                 
+            inputs, labels = data
+                
+            if use_gpu:
+                inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+            else:
+                inputs, labels = Variable(inputs), Variable(labels)
+                
+                
+            optimizer.zero_grad()
+                
+            outputs = model(inputs)
+                
+            _, preds = torch.max(outputs.data, 1)
+            loss = criterion(outputs, labels)
+                
+            loss.backward()
+            optimizer.step()
+                
+            #loss_train += loss.data[0]
+            loss_train += loss.item() * inputs.size(0)
+            acc_train += torch.sum(preds == labels.data)
+                
+            del inputs, labels, outputs, preds
+            torch.cuda.empty_cache()
+            
+        print()
+        # * 2 as we only used half of the dataset
+            
+        len_X_train_img,len_X_val_img,_=Image_converter.image_len(self.saved_path)
+        avg_loss = loss_train * 2 / len_X_train_img #dataset_sizes[TRAIN]
+        avg_acc = acc_train * 2 /len_X_train_img#dataset_sizes[TRAIN]
+            
+        model.train(False)
+        model.eval()
+                
+        for i, data in enumerate(valloader):
+            if i % 100 == 0:
+                print("\rValidation batch {}/{}".format(i, val_batches), end='', flush=True)
+                    
+            inputs, labels = data
+                
+            if use_gpu:
+                inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
+            else:
+                inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
+                
+            optimizer.zero_grad()
+                
+            outputs = model(inputs)
+                
+            _, preds = torch.max(outputs.data, 1)
+            loss = criterion(outputs, labels)
+                
+            #loss_val += loss.data[0]
+            loss_val += loss.item() * inputs.size(0)
+            acc_val += torch.sum(preds == labels.data)
+                
+            del inputs, labels, outputs, preds
+            torch.cuda.empty_cache()
+            
+        avg_loss_val = loss_val /len_X_val_img #dataset_sizes[VAL]
+        avg_acc_val = acc_val /len_X_val_img #dataset_sizes[VAL]
+            
+        print()
+        print("Epoch {} result: ".format(epoch))
+        print("Avg loss (train): {:.4f}".format(avg_loss))
+        print("Avg acc (train): {:.4f}".format(avg_acc))
+        print("Avg loss (val): {:.4f}".format(avg_loss_val))
+        print("Avg acc (val): {:.4f}".format(avg_acc_val))
+        print('-' * 10)
+        print()
+            
+        if avg_acc_val > best_acc:
+            best_acc = avg_acc_val
+            best_model_wts = copy.deepcopy(model.state_dict())
+                
+        since = time.time()
+        elapsed_time = time.time() - since
+        print()
+        print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
+        print("Best acc: {:.4f}".format(best_acc))
+            
+        model.load_state_dict(best_model_wts)
+        return model,avg_loss,best_acc
+        
     def init_train(self,model_type, num_epochs=3):
             #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
@@ -359,7 +448,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         criterion,optimizer,_=self._ModelsZoo.optimizer(model)
        
         use_gpu = torch.cuda.is_available()
-        since = time.time()
+        
         best_modefl_wts = copy.deepcopy(model.state_dict())
         best_acc = 0.0
         
@@ -367,113 +456,36 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         avg_acc = 0
         avg_loss_val = 0
         avg_acc_val = 0
+        loss_train = 0
+        loss_val = 0
+        acc_train = 0
+        acc_val = 0
         
+        best_val_metric = -np.inf  # higher = better
+        best_val_epoch = 0
+        best_loss = np.inf
+        epochs_wo_improve=5
         
         train_batches = len(trainloader)
-        val_batches = len(valloader)
-        
+        val_batches = len(valloader) 
         for epoch in range(num_epochs):
             print("Epoch {}/{}".format(epoch, num_epochs))
             print('-' * 10)
             
-            loss_train = 0
-            loss_val = 0
-            acc_train = 0
-            acc_val = 0
-            
-            model.train(True)
-            
-            for i, data in enumerate(trainloader):
-                if i % 100 == 0:
-                    print("\rTraining batch {}/{}".format(i, train_batches / 2), end='', flush=True)
+            if epoch==0:
+                logger.log(15, "TabTransformer architecture:")
+                logger.log(15, str(self.model))
+                model.train(True)
+                model,loss_train,best_acc=self.epoch(model,trainloader,train_batches,use_gpu,valloader,optimizer,criterion,val_batches,num_epochs)
+                if loss_train< best_loss or epoch==0:
+                    best_loss=loss_train
+                if epoch-best_val_epoch==epochs_wo_improve:
+                    break
+                   
                     
-                # Use half training dataset
-                #if i >= train_batches / 2:
-                #    break
-                    
-                inputs, labels = data
-                
-                if use_gpu:
-                    inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
-                else:
-                    inputs, labels = Variable(inputs), Variable(labels)
-                
-                
-                optimizer.zero_grad()
-                
-                outputs = model(inputs)
-                
-                _, preds = torch.max(outputs.data, 1)
-                loss = criterion(outputs, labels)
-                
-                loss.backward()
-                optimizer.step()
-                
-                #loss_train += loss.data[0]
-                loss_train += loss.item() * inputs.size(0)
-                acc_train += torch.sum(preds == labels.data)
-                
-                del inputs, labels, outputs, preds
-                torch.cuda.empty_cache()
-            
-            print()
-            # * 2 as we only used half of the dataset
-            
-            len_X_train_img,len_X_val_img,_=Image_converter.image_len(self.saved_path)
-            avg_loss = loss_train * 2 / len_X_train_img #dataset_sizes[TRAIN]
-            avg_acc = acc_train * 2 /len_X_train_img#dataset_sizes[TRAIN]
-            
-            model.train(False)
-            model.eval()
-                
-            for i, data in enumerate(valloader):
-                if i % 100 == 0:
-                    print("\rValidation batch {}/{}".format(i, val_batches), end='', flush=True)
-                    
-                inputs, labels = data
-                
-                if use_gpu:
-                    inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
-                else:
-                    inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
-                
-                optimizer.zero_grad()
-                
-                outputs = model(inputs)
-                
-                _, preds = torch.max(outputs.data, 1)
-                loss = criterion(outputs, labels)
-                
-                #loss_val += loss.data[0]
-                loss_val += loss.item() * inputs.size(0)
-                acc_val += torch.sum(preds == labels.data)
-                
-                del inputs, labels, outputs, preds
-                torch.cuda.empty_cache()
-            
-            avg_loss_val = loss_val /len_X_val_img #dataset_sizes[VAL]
-            avg_acc_val = acc_val /len_X_val_img #dataset_sizes[VAL]
-            
-            print()
-            print("Epoch {} result: ".format(epoch))
-            print("Avg loss (train): {:.4f}".format(avg_loss))
-            print("Avg acc (train): {:.4f}".format(avg_acc))
-            print("Avg loss (val): {:.4f}".format(avg_loss_val))
-            print("Avg acc (val): {:.4f}".format(avg_acc_val))
-            print('-' * 10)
-            print()
-            
-            if avg_acc_val > best_acc:
-                    best_acc = avg_acc_val
-                    best_model_wts = copy.deepcopy(model.state_dict())
-                
-            elapsed_time = time.time() - since
-            print()
-            print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
-            print("Best acc: {:.4f}".format(best_acc))
-            
-            model.load_state_dict(best_model_wts)
-            return model,best_acc
+        
+        
+        
         
     def pick_model(self):  
         model_type=[#'resnet50','resnet101','resnet152',
@@ -526,11 +538,12 @@ class ImagePredictions(AbstractNeuralNetworkModel):
     @classmethod
     def load(cls,path: str, reset_paths=False,verbose=True):
         import torch
-        obj: ModelsZoo = load_pkl.load(path=path + cls.model_file_name, verbose=verbose)
+        obj: ModelsZoo = load_compress.load_model(path,verbose=True)
+        #load_pkl.load(path=path + cls.model_file_name, verbose=verbose)
         if reset_paths:
             obj.set_contexts(path)
         
-        obj.model = load_compress.load_model(path)
+        #obj.model = load_compress.load_model(path)
         return obj
     
     def create_contexts(self, path_context: str,model_name:str):
@@ -563,13 +576,14 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                 self.is_data_saved = False   
     
     def Ensemble(self):
+        try_import_torchensemble()
         from torchensemble.fusion import FusionClassifier
         from torchensemble.voting import VotingClassifier
         from torchensemble.bagging import BaggingClassifier
         from torchensemble.gradient_boosting import GradientBoostingClassifier
         from torchensemble.snapshot_ensemble import SnapshotEnsembleClassifier
         from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
-        from torchensemble.fusion import FusionClassifier
+        
         model=self.pick_model() 
         trainloader,valloader,Testloader,=Image_converter.image_tensor(self.saved_path)     
         init_model=None
@@ -607,8 +621,9 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                 for j in score:                                          
                     if j>best_accuracy:
                         best_accuracy=j
-                maxvalue.append(initmodels[max(initmodels, key=initmodels.get)])
-                maximum.append(max(initmodels, key=initmodels.get) ) 
+                maxvalue.append((
+                    (max(initmodels, key=initmodels.get),initmodels[max(initmodels, key=initmodels.get)]),('#epochs'+epochs,family)))
+                maximum.append('#group'+i ) 
                 i=i+1
                 #estimator=2
                 optm='SGD'
@@ -620,6 +635,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                 family='ResNet' 
                 
 
+        #val=unzip(*maxvalue)
         res = dict(zip(maximum, maxvalue))
                     
                 
