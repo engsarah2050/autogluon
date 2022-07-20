@@ -448,7 +448,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         criterion,optimizer,_=self._ModelsZoo.optimizer(model)
        
         use_gpu = torch.cuda.is_available()
-        
+        since = time.time()
         best_modefl_wts = copy.deepcopy(model.state_dict())
         best_acc = 0.0
         
@@ -456,36 +456,217 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         avg_acc = 0
         avg_loss_val = 0
         avg_acc_val = 0
-        loss_train = 0
-        loss_val = 0
-        acc_train = 0
-        acc_val = 0
         
-        best_val_metric = -np.inf  # higher = better
-        best_val_epoch = 0
-        best_loss = np.inf
-        epochs_wo_improve=5
         
         train_batches = len(trainloader)
-        val_batches = len(valloader) 
+        val_batches = len(valloader)
+        
         for epoch in range(num_epochs):
             print("Epoch {}/{}".format(epoch, num_epochs))
             print('-' * 10)
             
-            if epoch==0:
-                logger.log(15, "TabTransformer architecture:")
-                logger.log(15, str(self.model))
-                model.train(True)
-                model,loss_train,best_acc=self.epoch(model,trainloader,train_batches,use_gpu,valloader,optimizer,criterion,val_batches,num_epochs)
-                if loss_train< best_loss or epoch==0:
-                    best_loss=loss_train
-                if epoch-best_val_epoch==epochs_wo_improve:
-                    break
+            loss_train = 0
+            loss_val = 0
+            acc_train = 0
+            acc_val = 0
+            
+            model.train(True)
+            
+            for i, data in enumerate(trainloader):
+                if i % 100 == 0:
+                    print("\rTraining batch {}/{}".format(i, train_batches / 2), end='', flush=True)
+                    
+                # Use half training dataset
+                #if i >= train_batches / 2:
+                #    break
+                    
+                inputs, labels = data
+                
+                if use_gpu:
+                    inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+                else:
+                    inputs, labels = Variable(inputs), Variable(labels)
+                
+                
+                optimizer.zero_grad()
+                
+                outputs = model(inputs)
+                
+                _, preds = torch.max(outputs.data, 1)
+                loss = criterion(outputs, labels)
+                
+                loss.backward()
+                optimizer.step()
+                
+                #loss_train += loss.data[0]
+                loss_train += loss.item() * inputs.size(0)
+                acc_train += torch.sum(preds == labels.data)
+                
+                del inputs, labels, outputs, preds
+                torch.cuda.empty_cache()
+            
+            print()
+            # * 2 as we only used half of the dataset
+            
+            len_X_train_img,len_X_val_img,_=Image_converter.image_len(self.saved_path)
+            avg_loss = loss_train * 2 / len_X_train_img #dataset_sizes[TRAIN]
+            avg_acc = acc_train * 2 /len_X_train_img#dataset_sizes[TRAIN]
+            
+            model.train(False)
+            model.eval()
+                
+            for i, data in enumerate(valloader):
+                if i % 100 == 0:
+                    print("\rValidation batch {}/{}".format(i, val_batches), end='', flush=True)
+                    
+                inputs, labels = data
+                
+                if use_gpu:
+                    inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
+                else:
+                    inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
+                
+                optimizer.zero_grad()
+                
+                outputs = model(inputs)
+                
+                _, preds = torch.max(outputs.data, 1)
+                loss = criterion(outputs, labels)
+                
+                #loss_val += loss.data[0]
+                loss_val += loss.item() * inputs.size(0)
+                acc_val += torch.sum(preds == labels.data)
+                
+                del inputs, labels, outputs, preds
+                torch.cuda.empty_cache()
+            
+            avg_loss_val = loss_val /len_X_val_img #dataset_sizes[VAL]
+            avg_acc_val = acc_val /len_X_val_img #dataset_sizes[VAL]
+            
+            print()
+            print("Epoch {} result: ".format(epoch))
+            print("Avg loss (train): {:.4f}".format(avg_loss))
+            print("Avg acc (train): {:.4f}".format(avg_acc))
+            print("Avg loss (val): {:.4f}".format(avg_loss_val))
+            print("Avg acc (val): {:.4f}".format(avg_acc_val))
+            print('-' * 10)
+            print()
+            
+            if avg_acc_val > best_acc:
+                    best_acc = avg_acc_val
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                
+            elapsed_time = time.time() - since
+            print()
+            print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
+            print("Best acc: {:.4f}".format(best_acc))
+            
+            model.load_state_dict(best_model_wts)
+            return model,best_acc
                    
                     
         
         
+    def traindata(self,model_type, epochs,  loss_function):
+        #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
+        trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
+                
+        commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
+                      'densenet121'#,'densenet161','densenet169','densenet201',
+                    #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
+                    #  'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2', 'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
+                    #  'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7' ,                      
+                    #  'squeezenet1_0','squeezenet1_1','resnext50_32x4d','resnext101_32x8d','inception_v3','xception'
+                    ]
         
+        if model_type in commonModels:
+            model=self._ModelsZoo.create_model()
+        else:
+            raise AssertionError(f'Model "{model_type}" is not a valid model to specify as best! Valid models: {commonModels}')
+        
+        
+        criterion,optimizer,_=self._ModelsZoo.optimizer(model)
+        
+        # Early stopping
+        last_loss = 100
+        patience = 2
+        triggertimes = 0
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        for epoch in range(1, epochs+1):
+            model.train()
+
+            for times, data in enumerate(trainloader, 1):
+                input = data[0].to(device)
+                label = data[1].to(device)
+
+                # Zero the gradients
+                optimizer.zero_grad()
+
+                # Forward and backward propagation
+                output = model(input.view(input.shape[0], -1))
+                loss = criterion(output, label)
+                loss.backward()
+                optimizer.step()
+
+                # Show progress
+                if times % 100 == 0 or times == len(trainloader):
+                    print('[{}/{}, {}/{}] loss: {:.8}'.format(epoch, epochs, times, len(trainloader), loss.item()))
+
+            # Early stopping       
+            # 
+        model.train(False)
+        model.eval()
+        loss_total = 0
+
+        # Test validation data
+        with torch.no_grad():
+            for data in valloader:
+                input = data[0].to(device)
+                label = data[1].to(device)
+
+                output = model(input.view(input.shape[0], -1))
+                loss = loss_function(output, label)
+                loss_total += loss.item()
+
+        current_loss= loss_total / len(valloader)
+            
+        print('The Current Loss:', current_loss)
+
+        if current_loss > last_loss:
+            trigger_times += 1
+            print('Trigger Times:', trigger_times)
+            if trigger_times >= patience:
+                print('Early stopping!\nStart to test process.')
+                return model
+
+            else:
+                print('trigger times: 0')
+                trigger_times = 0
+
+            last_loss = current_loss
+
+        return model
+    
+  
+    def test(device, model, test_loader):
+
+        model.eval()
+        total = 0
+        correct = 0
+
+        with torch.no_grad():
+            for data in test_loader:
+                input = data[0].to(device)
+                label = data[1].to(device)
+
+                output = model(input.view(input.shape[0], -1))
+                _, predicted = torch.max(output.data, 1)
+
+                total += label.size(0)
+                correct += (predicted == label).sum().item()
+
+        print('Accuracy:', correct / total)    
         
     def pick_model(self):  
         model_type=[#'resnet50','resnet101','resnet152',
