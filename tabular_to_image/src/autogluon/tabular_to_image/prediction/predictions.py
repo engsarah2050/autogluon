@@ -430,7 +430,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
     def init_train(self,model_type, num_epochs=3):
         # Early stopping
         last_loss = 10
-        patience = 1
+        patience = 3
         triggertimes = 0    
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
@@ -705,7 +705,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         res=set()
         res2={}
         model=None
-        epoch=1
+        epoch=5
         for i in range(len(model_type)):
            res=self.init_train(model_type[i], epoch)
         res2=dict([res])  
