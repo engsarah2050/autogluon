@@ -32,13 +32,13 @@ __all__ = ['ImagePredictor']
 
 logger = logging.getLogger(__name__)  # return autogluon root logger
 
-class ImagePredictions(AbstractNeuralNetworkModel):
+class ImagePredictions:#(AbstractNeuralNetworkModel):
     
         
     #image_data=Image_converter
     def __init__(self,data,lable,imageShape,saved_path:str,model_type:str='efficientnet-b0',pretrained:bool=True,**kwargs):
         try_import_torch()
-        super().__init__(**kwargs)
+        #super().__init__(**kwargs)
         self._validate_init_kwargs(kwargs)           
         self.lable=lable
         self.imageShape=imageShape
