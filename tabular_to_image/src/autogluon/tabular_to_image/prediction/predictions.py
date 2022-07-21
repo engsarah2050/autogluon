@@ -428,7 +428,11 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         return model,avg_loss,best_acc
         
     def init_train(self,model_type, num_epochs=3):
-            #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
+        # Early stopping
+        last_loss = 10
+        patience = 1
+        triggertimes = 0    
+        #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
                 
         commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
@@ -514,7 +518,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             
             model.train(False)
             model.eval()
-                
+            self.reduce_memory_size(trainloader)
+    
             for i, data in enumerate(valloader):
                 if i % 100 == 0:
                     print("\rValidation batch {}/{}".format(i, val_batches), end='', flush=True)
@@ -551,6 +556,24 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             print("Avg acc (val): {:.4f}".format(avg_acc_val))
             print('-' * 10)
             print()
+                # Early stopping
+            
+            current_loss = avg_loss_val
+            #print('The Current Loss:', current_loss)
+
+            if current_loss > last_loss:
+                trigger_times += 1
+                print('Trigger Times:', trigger_times)
+
+                if trigger_times >= patience:
+                    print('Early stopping!\nStart to test process.')
+                    return model
+
+            else:
+                print('trigger times: 0')
+                trigger_times = 0
+
+            last_loss = current_loss
             
             if avg_acc_val > best_acc:
                     best_acc = avg_acc_val
@@ -562,6 +585,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             print("Best acc: {:.4f}".format(best_acc))
             
             model.load_state_dict(best_model_wts)
+            self.reduce_memory_size(valloader)
             return model,best_acc
                    
                     
