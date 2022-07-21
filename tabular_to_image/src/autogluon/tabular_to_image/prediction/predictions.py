@@ -429,9 +429,10 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         
     def init_train(self,model_type, num_epochs=3):
         # Early stopping
-        last_loss = 50
+        #last_loss = 50
         patience = 3
         triggertimes = 0    
+        total=0
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
                 
@@ -460,7 +461,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         avg_acc = 0
         avg_loss_val = 0
         avg_acc_val = 0
-        
+        best_loss = np.inf
+        acurracy=0.0
         
         train_batches = len(trainloader)
         val_batches = len(valloader)
@@ -473,7 +475,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             loss_val = 0
             acc_train = 0
             acc_val = 0
-            
+            best_val_metric = -np.inf  # higher = better
             model.train(True)
             
             for i, data in enumerate(trainloader):
@@ -541,27 +543,32 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 #loss_val += loss.data[0]
                 loss_val += loss.item() * inputs.size(0)
                 acc_val += torch.sum(preds == labels.data)
+                total += labels.size(0)
                 
                 del inputs, labels, outputs, preds
                 torch.cuda.empty_cache()
             
             avg_loss_val = loss_val /len_X_val_img #dataset_sizes[VAL]
             avg_acc_val = acc_val /len_X_val_img #dataset_sizes[VAL]
-            
+            acurracy=acc_val/total
+
             print()
             print("Epoch {} result: ".format(epoch))
             print("Avg loss (train): {:.4f}".format(avg_loss))
             print("Avg acc (train): {:.4f}".format(avg_acc))
             print("Avg loss (val): {:.4f}".format(avg_loss_val))
             print("Avg acc (val): {:.4f}".format(avg_acc_val))
+            print("acurracy: {:.4f}".format(acurracy))
+
             print('-' * 10)
             print()
                 # Early stopping
             
-            current_loss = avg_loss_val
+            #current_loss = avg_loss_val
             #print('The Current Loss:', current_loss)
 
-            if current_loss > last_loss:
+            if avg_loss_val>= best_val_metric:
+                best_val_metric=avg_loss_val
                 trigger_times += 1
                 print('Trigger Times:', trigger_times)
 
@@ -573,7 +580,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 print('trigger times: 0')
                 trigger_times = 0
 
-            last_loss = current_loss
+            #last_loss = current_loss
             
             if avg_acc_val > best_acc:
                     best_acc = avg_acc_val
@@ -586,7 +593,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             
             model.load_state_dict(best_model_wts)
             self.reduce_memory_size(valloader)
-            return model,best_acc
+            return model,[avg_loss,avg_loss_val,acurracy]
                    
                     
         
@@ -705,12 +712,13 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         res=set()
         res2={}
         model=None
-        epoch=5
+        epoch=3
         for i in range(len(model_type)):
-           res=self.init_train(model_type[i], epoch)
-        res2=dict([res])  
+           k,v=self.init_train(model_type[i], epoch)
+        res2[k]=v
+        #res2=dict([res])  
         for key,value in  res2.items():    
-            if round(value.item(),2)>=0.80:
+            if round(value[0].item(),2)>=0.80:
                 model=key#.__class__.__name__      
 
         savepath=self.save_model(model)
