@@ -567,9 +567,9 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                     
         
         
-    def traindata(self,model_type, epochs,  loss_function):
+    def traindata(self,model_type, epochs):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
-        trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
+        trainloader,valloader,Testloader=Image_converter.image_tensor(self.saved_path)
                 
         commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
                       'densenet121'#,'densenet161','densenet169','densenet201',
@@ -615,6 +615,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
 
             # Early stopping       
             # 
+        self.reduce_memory_size(trainloader)
         model.train(False)
         model.eval()
         loss_total = 0
@@ -626,7 +627,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                 label = data[1].to(device)
 
                 output = model(input.view(input.shape[0], -1))
-                loss = loss_function(output, label)
+                loss = criterion(output, label)
                 loss_total += loss.item()
 
         current_loss= loss_total / len(valloader)
@@ -645,18 +646,15 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                 trigger_times = 0
 
             last_loss = current_loss
-
-        return model
-    
-  
-    def test(device, model, test_loader):
-
-        model.eval()
+        self.reduce_memory_size(valloader)           
+        #################
+        #   test        #    
+        #################
         total = 0
         correct = 0
-
+        Accuracy=0.0 
         with torch.no_grad():
-            for data in test_loader:
+            for data in Testloader:
                 input = data[0].to(device)
                 label = data[1].to(device)
 
@@ -666,7 +664,10 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                 total += label.size(0)
                 correct += (predicted == label).sum().item()
 
-        print('Accuracy:', correct / total)    
+        #print('Accuracy:', correct / total) 
+        Accuracy=correct / total
+        self.reduce_memory_size(Testloader)  
+        return model,Accuracy#,last_loss 
         
     def pick_model(self):  
         model_type=[#'resnet50','resnet101','resnet152',
@@ -682,7 +683,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         model=None
         epoch=1
         for i in range(len(model_type)):
-           res=self.init_train(model_type[i], epoch)
+           res=self.traindata(model_type[i], epoch)
         res2=dict([res])  
         for key,value in  res2.items():    
             if round(value.item(),2)>=0.80:
@@ -713,6 +714,8 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         self.is_data_saved=True
         if save_path is not None and self.is_data_saved:
             self.reduce_memory_size(model)
+            torch.cuda.empty_cache()
+        
         
         return save_path
 
@@ -786,7 +789,7 @@ class ImagePredictions(AbstractNeuralNetworkModel):
         familes=['LeNet','ResNet']
         i=1
         res={}
-        for _ in range(len(familes)) :
+        for t in range(len(familes)) :
             for l in range(len(Ensemble_family['models'])): 
                 init_model=Ensemble_family['models'][l](estimator=model,n_estimators=1,cuda=True)
                 init_model.set_optimizer(optm, lr=lr, weight_decay=5e-4)
@@ -803,8 +806,8 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                     if j>best_accuracy:
                         best_accuracy=j
                 maxvalue.append((
-                    (max(initmodels, key=initmodels.get),initmodels[max(initmodels, key=initmodels.get)]),('#epochs'+epochs,family)))
-                maximum.append('#group'+i ) 
+                    (max(initmodels, key=initmodels.get),initmodels[max(initmodels, key=initmodels.get)]),(f'no.epoch{epochs}',family)))
+                maximum.append(f'no.group{t}' ) 
                 i=i+1
                 #estimator=2
                 optm='SGD'
@@ -817,7 +820,10 @@ class ImagePredictions(AbstractNeuralNetworkModel):
                 
 
         #val=unzip(*maxvalue)
-        res = dict(zip(maximum, maxvalue))
+        import itertools
+        b=list(itertools.chain(*res['group1']))
+        res = dict(zip(maximum, b))
+        #torch.cuda.empty_cache()
                     
                 
                 
