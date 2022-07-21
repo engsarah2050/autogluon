@@ -462,6 +462,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         avg_loss_val = 0
         avg_acc_val = 0
         best_loss = np.inf
+        best_val_metric = -np.inf  # higher = better
         acurracy=0.0
         
         train_batches = len(trainloader)
@@ -475,7 +476,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             loss_val = 0
             acc_train = 0
             acc_val = 0
-            best_val_metric = -np.inf  # higher = better
+           
             model.train(True)
             
             for i, data in enumerate(trainloader):
