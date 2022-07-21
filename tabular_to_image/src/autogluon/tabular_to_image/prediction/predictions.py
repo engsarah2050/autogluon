@@ -707,7 +707,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         model=None
         epoch=1
         for i in range(len(model_type)):
-           res=self.traindata(model_type[i], epoch)
+           res=self.init_train(model_type[i], epoch)
         res2=dict([res])  
         for key,value in  res2.items():    
             if round(value.item(),2)>=0.80:
