@@ -727,7 +727,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         res2[k]=v
         #res2=dict([res])  
         for key,value in  res2.items():    
-            if round(value[0].item(),2)>=0.80:
+            if round(value[0],2)>=0.80:
                 model=key#.__class__.__name__      
 
         savepath=self.save_model(model)
