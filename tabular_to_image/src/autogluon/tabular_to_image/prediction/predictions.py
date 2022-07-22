@@ -428,11 +428,6 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         return model,avg_loss,best_acc
         
     def init_train(self,model_type, num_epochs=3):
-        # Early stopping
-        #last_loss = 50
-        patience = 3
-        triggertimes = 0    
-        total=0
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
                 
@@ -469,6 +464,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         val_batches = len(valloader)
         
         for epoch in range(num_epochs):
+            
             print("Epoch {}/{}".format(epoch, num_epochs))
             print('-' * 10)
             
@@ -476,7 +472,11 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             loss_val = 0
             acc_train = 0
             acc_val = 0
-           
+            # Early stopping
+            #last_loss = 50
+            patience = 3
+            triggertimes = 0    
+            total=0
             model.train(True)
             
             for i, data in enumerate(trainloader):
