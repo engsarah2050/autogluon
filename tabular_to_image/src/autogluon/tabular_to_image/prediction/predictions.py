@@ -459,6 +459,10 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         best_loss = np.inf
         best_val_metric = -np.inf  # higher = better
         acurracy=0.0
+        # Early stopping
+        #last_loss = 50
+        patience = 3
+        triggertimes = 0  
         
         train_batches = len(trainloader)
         val_batches = len(valloader)
@@ -472,10 +476,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             loss_val = 0
             acc_train = 0
             acc_val = 0
-            # Early stopping
-            #last_loss = 50
-            patience = 3
-            triggertimes = 0    
+             
             total=0
             model.train(True)
             
@@ -583,18 +584,15 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             #print('The Current Loss:', current_loss)
 
             if avg_loss_val>= best_val_metric:
-                print('trigger times: 0')
-                trigger_times = 0
-                best_val_metric=avg_loss_val
-                
-            else:
-                trigger_times += 1
-                print('Trigger Times:', trigger_times)
-
+                #best_val_metric=avg_loss_val
+                triggertimes+=1
                 if trigger_times >= patience:
                     print('Early stopping!\nStart to test process.')
                     return model
-
+            else:
+                #print('trigger times: 0')
+                early_stop = True
+                trigger_times = 0
             
                 
 
