@@ -583,7 +583,11 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             #print('The Current Loss:', current_loss)
 
             if avg_loss_val>= best_val_metric:
+                print('trigger times: 0')
+                trigger_times = 0
                 best_val_metric=avg_loss_val
+                
+            else:
                 trigger_times += 1
                 print('Trigger Times:', trigger_times)
 
@@ -591,9 +595,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                     print('Early stopping!\nStart to test process.')
                     return model
 
-            else:
-                print('trigger times: 0')
-                trigger_times = 0
+            
+                
 
             #last_loss = current_loss
             
