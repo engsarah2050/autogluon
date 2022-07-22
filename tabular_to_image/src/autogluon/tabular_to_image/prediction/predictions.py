@@ -548,6 +548,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 
                 del inputs, labels, outputs, preds
                 torch.cuda.empty_cache()
+                
+    
             
             avg_loss_val = loss_val /len_X_val_img #dataset_sizes[VAL]
             avg_acc_val = acc_val /len_X_val_img #dataset_sizes[VAL]
@@ -563,7 +565,19 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
 
             print('-' * 10)
             print()
-                # Early stopping
+
+            
+            if avg_acc_val > best_acc:
+                    best_acc = avg_acc_val
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                
+            elapsed_time = time.time() - since
+            print()
+            print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
+            print("Best acc: {:.4f}".format(best_acc))
+            
+            
+            # Early stopping
             
             #current_loss = avg_loss_val
             #print('The Current Loss:', current_loss)
@@ -582,15 +596,6 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 trigger_times = 0
 
             #last_loss = current_loss
-            
-            if avg_acc_val > best_acc:
-                    best_acc = avg_acc_val
-                    best_model_wts = copy.deepcopy(model.state_dict())
-                
-            elapsed_time = time.time() - since
-            print()
-            print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
-            print("Best acc: {:.4f}".format(best_acc))
             
             model.load_state_dict(best_model_wts)
             self.reduce_memory_size(valloader)
