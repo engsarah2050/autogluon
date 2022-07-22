@@ -26,6 +26,8 @@ from autogluon.core.utils import try_import_torch,try_import_torchensemble
 from autogluon.core.utils.loaders import load_compress
 from autogluon.tabular_to_image.image_converter import Image_converter
 from autogluon.tabular_to_image.models_zoo import ModelsZoo
+from autogluon.tabular_to_image.Early.earlyStopping import EarlyStopping
+
 
 __all__ = ['ImagePredictor']
 
@@ -105,51 +107,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 invalid_keys.append(key)
         if invalid_keys:
             raise ValueError(f'Invalid kwargs passed: {invalid_keys}\nValid kwargs: {list(valid_kwargs)}') 
-    
-    
-    """
-    def train(self,dataloader, model, num_epochs=20):
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Rprop(model.parameters(), lr=0.01)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
-
-        model.train(True)
-        results = []
-        for epoch in range(num_epochs):
-            optimizer.step()
-            scheduler.step()
-            model.train()
-
-            running_loss = 0.0
-            running_corrects = 0
-
-            n = 0
-            for inputs, labels in dataloader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-
-                optimizer.zero_grad()
-
-                with torch.set_grad_enabled(True):
-                    outputs = model(inputs)
-                    loss = criterion(outputs, labels)
-                    _, preds = torch.max(outputs, 1)
-
-                    loss.backward()
-                    optimizer.step()
-
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
-                n += len(labels)
-
-            epoch_loss = running_loss / float(n)
-            epoch_acc = running_corrects.double() / float(n)
-
-            print(f'epoch {epoch}/{num_epochs} : {epoch_loss:.5f}, {epoch_acc:.5f}')
-            results.append(EpochProgress(epoch, epoch_loss, epoch_acc.item()))
-        return pd.DataFrame(results)
-    """
-  
+       
     def generate_image(self,data):
         self._Image_converter.Image_Genartor(data=data)
      #.Image_Genartor(data) #_Image_converter_type.Image_Genartor(data)
@@ -575,35 +533,88 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             elapsed_time = time.time() - since
             print()
             print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
-            print("Best acc: {:.4f}".format(best_acc))
-            
-            
-            # Early stopping
-            
-            #current_loss = avg_loss_val
-            #print('The Current Loss:', current_loss)
-
-            if avg_loss_val>= best_val_metric:
-                #best_val_metric=avg_loss_val
-                triggertimes+=1
-                if trigger_times >= patience:
-                    print('Early stopping!\nStart to test process.')
-                    return model
-            else:
-                #print('trigger times: 0')
-                early_stop = True
-                trigger_times = 0
-            
-                
-
-            #last_loss = current_loss
-            
+            print("Best acc: {:.4f}".format(best_acc))                     
             model.load_state_dict(best_model_wts)
             self.reduce_memory_size(valloader)
             return model,[avg_loss,avg_loss_val,acurracy]
-                   
-                    
+    
+    def train_model2(model, batch_size, patience, n_epochs):
         
+        # to track the training loss as the model trains
+        train_losses = []
+        # to track the validation loss as the model trains
+        valid_losses = []
+        # to track the average training loss per epoch as the model trains
+        avg_train_losses = []
+        # to track the average validation loss per epoch as the model trains
+        avg_valid_losses = [] 
+        
+        # initialize the early_stopping object
+        early_stopping = EarlyStopping(patience=patience, verbose=True)
+        
+        for epoch in range(1, n_epochs + 1):
+
+            ###################
+            # train the model #
+            ###################
+            model.train() # prep model for training
+            for batch, (data, target) in enumerate(train_loader, 1):
+                # clear the gradients of all optimized variables
+                optimizer.zero_grad()
+                # forward pass: compute predicted outputs by passing inputs to the model
+                output = model(data)
+                # calculate the loss
+                loss = criterion(output, target)
+                # backward pass: compute gradient of the loss with respect to model parameters
+                loss.backward()
+                # perform a single optimization step (parameter update)
+                optimizer.step()
+                # record training loss
+                train_losses.append(loss.item())
+
+            ######################    
+            # validate the model #
+            ######################
+            model.eval() # prep model for evaluation
+            for data, target in valid_loader:
+                # forward pass: compute predicted outputs by passing inputs to the model
+                output = model(data)
+                # calculate the loss
+                loss = criterion(output, target)
+                # record validation loss
+                valid_losses.append(loss.item())
+
+            # print training/validation statistics 
+            # calculate average loss over an epoch
+            train_loss = np.average(train_losses)
+            valid_loss = np.average(valid_losses)
+            avg_train_losses.append(train_loss)
+            avg_valid_losses.append(valid_loss)
+            
+            epoch_len = len(str(n_epochs))
+            
+            print_msg = (f'[{epoch:>{epoch_len}}/{n_epochs:>{epoch_len}}] ' +
+                        f'train_loss: {train_loss:.5f} ' +
+                        f'valid_loss: {valid_loss:.5f}')
+            
+            print(print_msg)
+            
+            # clear lists to track next epoch
+            train_losses = []
+            valid_losses = []
+            
+            # early_stopping needs the validation loss to check if it has decresed, 
+            # and if it has, it will make a checkpoint of the current model
+            early_stopping(valid_loss, model)
+            
+            if early_stopping.early_stop:
+                print("Early stopping")
+                break
+            
+        # load the last checkpoint with the best model
+        model.load_state_dict(torch.load('checkpoint.pt'))
+
+        return  model, avg_train_losses, avg_valid_losses
         
     def traindata(self,model_type, epochs):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
