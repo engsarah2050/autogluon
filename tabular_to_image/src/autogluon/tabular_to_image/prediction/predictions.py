@@ -383,7 +383,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # initialize the early_stopping object
-        early_stopping =self._EarlyStopping_type(patience,,verbose=True,self.saved_path )
+        early_stopping =self._EarlyStopping_type(patience,verbose=True,self.saved_path )
 
         for epoch in range(1,+epochs+1):
             print("Epoch: {}/{}".format(epoch , epochs+1))
