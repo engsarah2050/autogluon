@@ -394,8 +394,45 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             #correct = 0
             Accuracy=0.0
             e_since = time.time()
-            train_loss=self.train(device,trainloader,model,optimizer,criterion)
-            valid_loss,correct,total=self.validate(device,valloader,model,criterion)
+             model.train()  # prep model for training
+
+            #train
+            for images, labels in train_loader:
+                # Move input and label tensors to the default device
+                images, labels = images.to(device), labels.to(device)
+                # clear the gradients of all optimized variables
+                optimizer.zero_grad()
+                # forward pass: compute predicted outputs by passing inputs to the model
+                log_ps = model(images)
+                # calculate the loss
+                loss = criterion(log_ps, labels)
+                # backward pass: compute gradient of the loss with respect to model parameters
+                loss.backward()
+                # perform a single optimization step (parameter update)
+                optimizer.step()
+                # update running training loss
+                train_loss += loss.item() * images.size(0)
+                print("\t\tGoing for validation")
+                model.eval()  # prep model for evaluation
+            #validate
+            for data, target in test_loader:
+                # Move input and label tensors to the default device
+                data, target = data.to(device), target.to(device)
+                # forward pass: compute predicted outputs by passing inputs to the model
+                output = model(data)
+                # calculate the loss
+                loss_p = criterion(output, target)
+                # update running validation loss
+                valid_loss += loss_p.item() * data.size(0)
+                # calculate accuracy
+                proba = torch.exp(output)
+                top_p, top_class = proba.topk(1, dim=1)
+                equals = top_class == target.view(*top_class.shape)
+                # accuracy += torch.mean(equals.type(torch.FloatTensor)).item()
+
+                _, predicted = torch.max(output.data, 1)
+                total += target.size(0)
+                correct += (predicted == target).sum().item()
             # print training/validation statistics
             # calculate average loss over an epoch
             train_loss = train_loss / len(trainloader.dataset)
