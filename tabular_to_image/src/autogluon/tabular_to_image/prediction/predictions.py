@@ -648,7 +648,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         epoch=4
         patience=2
         for i in range(len(model_type)):
-           k,v=self.init_train(model_type[i], epochs,patience)
+           k,v=self.init_train(model_type[i], epoch,patience)
         res2[k]=v
         #res2=dict([res])  
         for key,value in  res2.items():    
