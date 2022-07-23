@@ -38,7 +38,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
     
         
     #image_data=Image_converter
-    def __init__(self,data,lable,imageShape,saved_path:str,model_type:str='efficientnet-b0',pretrained:bool=True,**kwargs):
+    def __init__(self,data,lable,imageShape,saved_path:str,model_type:str,patience,delta:int=0,pretrained:bool=True,**kwargs):
         try_import_torch()
         #super().__init__(**kwargs)
         self._validate_init_kwargs(kwargs)           
@@ -46,15 +46,18 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         self.imageShape=imageShape
         self.saved_path=saved_path
         self.is_data_saved=False
+        self.patience=patience
+        self.delta=delta, 
+        #####################################
         Image_converter_type = kwargs.pop('Image_converter_type', Image_converter)
-        Image_converter_kwargs = kwargs.pop('Image_converter_kwargs', dict())
+        Image_converter_kwargs = kwargs.pop('', dict())
         lable = kwargs.get('lable', None)
         imageShape = kwargs.get('imageShape', None)
         saved_path = kwargs.get('saved_path', None)            
     
         self._Image_converter: Image_converter = Image_converter_type(label_column=self.lable,image_shape=self.imageShape,saved_path=self.saved_path,**Image_converter_kwargs)
         self._Image_converter_type = type(self._Image_converter)
-        ##################
+        ##################Image_converter_kwargs
         ModelsZoo_type = kwargs.pop('ModelsZoo_type', ModelsZoo)
         ModelsZoo_kwargs = kwargs.pop('ModelsZoo_kwargs', dict())  
         self.model_type=model_type   
@@ -65,6 +68,12 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         self._ModelsZoo: ModelsZoo = ModelsZoo_type(imageShape=self.imageShape ,model_type=self.model_type,
                                         num_classes=num_classes,pretrained=self.pretrained,**ModelsZoo_kwargs)
         self._ModelsZoo_type = type(self._ModelsZoo)
+        #####################################
+        EarlyStopping_type = kwargs.pop('EarlyStopping_type', EarlyStopping)
+        EarlyStopping_kwargs = kwargs.pop('EarlyStopping_kwargs', dict()) 
+        
+        self._EarlyStopping: EarlyStopping = EarlyStopping_type(patience=self.patience, verbose=False, delta=self.delta, path=self.path, trace_func=print,**EarlyStopping_kwargs)
+        self._EarlyStopping_type = type(self._EarlyStopping)
 
         
     @property
@@ -290,107 +299,56 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         return avg_acc 
     
                 
-    def epochs(model,trainloader,train_batches,use_gpu,valloader,optimizer,criterion,val_batches,num_epochs=3):    
-        
-        for i, data in enumerate(trainloader):
-            if i % 100 == 0:
-                print("\rTraining batch {}/{}".format(i, train_batches / 2), end='', flush=True)
-                    
-                # Use half training dataset
-                #if i >= train_batches / 2:
-                #    break
-                 
-            inputs, labels = data
-                
-            if use_gpu:
-                inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
-            else:
-                inputs, labels = Variable(inputs), Variable(labels)
-                
-                
+    def train(self,device,train_loader,model,optimizer,criterion):
+        model.train()  # prep model for training
+
+        for images, labels in train_loader:
+            # Move input and label tensors to the default device
+            images, labels = images.to(device), labels.to(device)
+            # clear the gradients of all optimized variables
             optimizer.zero_grad()
-                
-            outputs = model(inputs)
-                
-            _, preds = torch.max(outputs.data, 1)
-            loss = criterion(outputs, labels)
-                
+            # forward pass: compute predicted outputs by passing inputs to the model
+            log_ps = model(images)
+            # calculate the loss
+            loss = criterion(log_ps, labels)
+            # backward pass: compute gradient of the loss with respect to model parameters
             loss.backward()
+            # perform a single optimization step (parameter update)
             optimizer.step()
-                
-            #loss_train += loss.data[0]
-            loss_train += loss.item() * inputs.size(0)
-            acc_train += torch.sum(preds == labels.data)
-                
-            del inputs, labels, outputs, preds
-            torch.cuda.empty_cache()
-            
-        print()
-        # * 2 as we only used half of the dataset
-            
-        len_X_train_img,len_X_val_img,_=Image_converter.image_len(self.saved_path)
-        avg_loss = loss_train * 2 / len_X_train_img #dataset_sizes[TRAIN]
-        avg_acc = acc_train * 2 /len_X_train_img#dataset_sizes[TRAIN]
-            
-        model.train(False)
-        model.eval()
-                
-        for i, data in enumerate(valloader):
-            if i % 100 == 0:
-                print("\rValidation batch {}/{}".format(i, val_batches), end='', flush=True)
-                    
-            inputs, labels = data
-                
-            if use_gpu:
-                inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
-            else:
-                inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
-                
-            optimizer.zero_grad()
-                
-            outputs = model(inputs)
-                
-            _, preds = torch.max(outputs.data, 1)
-            loss = criterion(outputs, labels)
-                
-            #loss_val += loss.data[0]
-            loss_val += loss.item() * inputs.size(0)
-            acc_val += torch.sum(preds == labels.data)
-                
-            del inputs, labels, outputs, preds
-            torch.cuda.empty_cache()
-            
-        avg_loss_val = loss_val /len_X_val_img #dataset_sizes[VAL]
-        avg_acc_val = acc_val /len_X_val_img #dataset_sizes[VAL]
-            
-        print()
-        print("Epoch {} result: ".format(epoch))
-        print("Avg loss (train): {:.4f}".format(avg_loss))
-        print("Avg acc (train): {:.4f}".format(avg_acc))
-        print("Avg loss (val): {:.4f}".format(avg_loss_val))
-        print("Avg acc (val): {:.4f}".format(avg_acc_val))
-        print('-' * 10)
-        print()
-            
-        if avg_acc_val > best_acc:
-            best_acc = avg_acc_val
-            best_model_wts = copy.deepcopy(model.state_dict())
-                
-        since = time.time()
-        elapsed_time = time.time() - since
-        print()
-        print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
-        print("Best acc: {:.4f}".format(best_acc))
-            
-        model.load_state_dict(best_model_wts)
-        return model,avg_loss,best_acc
+            # update running training loss
+            train_loss += loss.item() * images.size(0)
+        return train_loss    
+    
+    def validate (self,device,test_loader,model,criterion):
+        print("\t\tGoing for validation")
+        model.eval()  # prep model for evaluation
+        for data, target in test_loader:
+            # Move input and label tensors to the default device
+            data, target = data.to(device), target.to(device)
+            # forward pass: compute predicted outputs by passing inputs to the model
+            output = model(data)
+            # calculate the loss
+            loss_p = criterion(output, target)
+            # update running validation loss
+            valid_loss += loss_p.item() * data.size(0)
+            # calculate accuracy
+            proba = torch.exp(output)
+            top_p, top_class = proba.topk(1, dim=1)
+            equals = top_class == target.view(*top_class.shape)
+            # accuracy += torch.mean(equals.type(torch.FloatTensor)).item()
+
+            _, predicted = torch.max(output.data, 1)
+            total += target.size(0)
+            correct += (predicted == target).sum().item()
+        return valid_loss,correct,total
+                     
         
-    def init_train(self,model_type, num_epochs=3):
+    def init_train(self,model_type, epochs,patience,scheduler=None):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
                 
         commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
-                      'densenet121'#,'densenet161','densenet169','densenet201',
+                      'densenet121','densenet161','densenet169','densenet201',
                     #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                     #  'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2', 'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
                     #  'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7' ,                      
@@ -400,143 +358,100 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         if model_type in commonModels:
             model=self._ModelsZoo.create_model()
         else:
-            raise AssertionError(f'Model "{model_type}" is not a valid model to specify as best! Valid models: {commonModels}')
-        
-        
+            raise AssertionError(f'Model "{model_type}" is not a valid model to specify as best! Valid models: {commonModels}')      
         criterion,optimizer,_=self._ModelsZoo.optimizer(model)
-       
-        use_gpu = torch.cuda.is_available()
+        """
+        Helper function for train model
+        :param model: current model
+        :param train_loader: train data loader
+        :param test_loader: test data loader
+        :param epochs: number of epoch
+        :param optimizer: optimizer
+        :param criterion: loss function
+        :param scheduler: scheduler, default None
+        :param name: model name, default model.pt
+        :param path: model saved location, default None
+        :return: model, list of train loss and test loss
+        """
+
+        # compare overfitted
+        train_loss_data, valid_loss_data = [], []
+        # check for validation loss
+        valid_loss_min = np.Inf
+        # calculate time
         since = time.time()
-        best_modefl_wts = copy.deepcopy(model.state_dict())
-        best_acc = 0.0
-        
-        avg_loss = 0
-        avg_acc = 0
-        avg_loss_val = 0
-        avg_acc_val = 0
-        best_loss = np.inf
-        best_val_metric = -np.inf  # higher = better
-        acurracy=0.0
-        # Early stopping
-        #last_loss = 50
-        patience = 3
-        triggertimes = 0  
-        
-        train_batches = len(trainloader)
-        val_batches = len(valloader)
-        
-        for epoch in range(num_epochs):
-            
-            print("Epoch {}/{}".format(epoch, num_epochs))
-            print('-' * 10)
-            
-            loss_train = 0
-            loss_val = 0
-            acc_train = 0
-            acc_val = 0
-             
-            total=0
-            model.train(True)
-            
-            for i, data in enumerate(trainloader):
-                if i % 100 == 0:
-                    print("\rTraining batch {}/{}".format(i, train_batches / 2), end='', flush=True)
-                    
-                # Use half training dataset
-                #if i >= train_batches / 2:
-                #    break
-                    
-                inputs, labels = data
-                
-                if use_gpu:
-                    inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
-                else:
-                    inputs, labels = Variable(inputs), Variable(labels)
-                
-                
-                optimizer.zero_grad()
-                
-                outputs = model(inputs)
-                
-                _, preds = torch.max(outputs.data, 1)
-                loss = criterion(outputs, labels)
-                
-                loss.backward()
-                optimizer.step()
-                
-                #loss_train += loss.data[0]
-                loss_train += loss.item() * inputs.size(0)
-                acc_train += torch.sum(preds == labels.data)
-                
-                del inputs, labels, outputs, preds
-                torch.cuda.empty_cache()
-            
-            print()
-            # * 2 as we only used half of the dataset
-            
-            len_X_train_img,len_X_val_img,_=Image_converter.image_len(self.saved_path)
-            avg_loss = loss_train * 2 / len_X_train_img #dataset_sizes[TRAIN]
-            avg_acc = acc_train * 2 /len_X_train_img#dataset_sizes[TRAIN]
-            
-            model.train(False)
-            model.eval()
-            self.reduce_memory_size(trainloader)
-    
-            for i, data in enumerate(valloader):
-                if i % 100 == 0:
-                    print("\rValidation batch {}/{}".format(i, val_batches), end='', flush=True)
-                    
-                inputs, labels = data
-                
-                if use_gpu:
-                    inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
-                else:
-                    inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
-                
-                optimizer.zero_grad()
-                
-                outputs = model(inputs)
-                
-                _, preds = torch.max(outputs.data, 1)
-                loss = criterion(outputs, labels)
-                
-                #loss_val += loss.data[0]
-                loss_val += loss.item() * inputs.size(0)
-                acc_val += torch.sum(preds == labels.data)
-                total += labels.size(0)
-                
-                del inputs, labels, outputs, preds
-                torch.cuda.empty_cache()
-                
-    
-            
-            avg_loss_val = loss_val /len_X_val_img #dataset_sizes[VAL]
-            avg_acc_val = acc_val /len_X_val_img #dataset_sizes[VAL]
-            acurracy=acc_val/total
 
-            print()
-            print("Epoch {} result: ".format(epoch))
-            print("Avg loss (train): {:.4f}".format(avg_loss))
-            print("Avg acc (train): {:.4f}".format(avg_acc))
-            print("Avg loss (val): {:.4f}".format(avg_loss_val))
-            print("Avg acc (val): {:.4f}".format(avg_acc_val))
-            print("acurracy: {:.4f}".format(acurracy))
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                # initialize the early_stopping object
+        early_stopping =self._EarlyStopping_type(patience,self.save_path ,verbose=True)
 
-            print('-' * 10)
-            print()
+        for epoch in range(1,+epochs+1):
+            print("Epoch: {}/{}".format(epoch , epochs+1))
+            # monitor training loss
+            #train_loss = 0.0
+            #valid_loss = 0.0
+            #total = 0
+            #correct = 0
+            Accuracy=0.0
+            e_since = time.time()
+            train_loss=self.train(device,trainloader,model,optimizer,criterion)
+            valid_loss,correct,total=self.validate(device,valloader,model,criterion)
+            # print training/validation statistics
+            # calculate average loss over an epoch
+            train_loss = train_loss / len(trainloader.dataset)
+            valid_loss = valid_loss / len(valloader.dataset)
 
+            # calculate train loss and running loss
+            train_loss_data.append(train_loss * 100)
+            valid_loss_data.append(valid_loss * 100)
+            Accuracy=correct / total * 100
+
+            print("\tTrain loss:{:.6f}..".format(train_loss),
+                "\tValid Loss:{:.6f}..".format(valid_loss),
+                "\tAccuracy: {:.4f}".format(correct / total * 100))
+
+            if scheduler is not None:
+                scheduler.step()  # step up scheduler
             
-            if avg_acc_val > best_acc:
-                    best_acc = avg_acc_val
-                    best_model_wts = copy.deepcopy(model.state_dict())
-                
-            elapsed_time = time.time() - since
-            print()
-            print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
-            print("Best acc: {:.4f}".format(best_acc))                     
-            model.load_state_dict(best_model_wts)
-            self.reduce_memory_size(valloader)
-            return model,[avg_loss,avg_loss_val,acurracy]
+            # save model if validation loss has decreased
+            if valid_loss <= valid_loss_min:
+                print('\tValidation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(
+                    valid_loss_min,
+                    valid_loss))
+                #torch.save(model.state_dict(), name)
+                valid_loss_min = valid_loss
+                # save to google drive
+                #if path is not None:
+                #    torch.save(model.state_dict(), path)
+
+            # Time take for one epoch
+            time_elapsed = time.time() - e_since
+            print('\tEpoch:{} completed in {:.0f}m {:.0f}s'.format(
+                epoch + 1, time_elapsed // 60, time_elapsed % 60))
+
+        # compare total time
+        time_elapsed = time.time() - since
+        print('Training completed in {:.0f}m {:.0f}s'.format(
+            time_elapsed // 60, time_elapsed % 60))
+
+        # load best model
+        #model = load_latest_model(model, name)
+        self.reduce_memory_size(trainloader)
+        self.reduce_memory_size(valloader)
+        
+        # clear lists to track next epoch
+        train_losses = []
+        valid_losses = []
+        
+        # early_stopping needs the validation loss to check if it has decresed, 
+        # and if it has, it will make a checkpoint of the current model
+        early_stopping(valid_loss, model)
+        if early_stopping.early_stop:
+            print("Early stopping")
+        # return the model
+        return model, [Accuracy,train_loss_data, valid_loss_data]
+        
+
     
     def train_model2(model, batch_size, patience, n_epochs):
         
@@ -720,7 +635,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         
     def pick_model(self):  
         model_type=[#'resnet50','resnet101','resnet152',
-                    'densenet121'#,'densenet161','densenet169','densenet201',
+                    'densenet121','densenet161','densenet169','densenet201',
                #     'alexnet' ,'vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                #     'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
                #     'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7'                       
@@ -887,18 +802,3 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
     
 
     
-       
-    """
-    def plot_results(df, figsize=(10, 5)):
-        fig, ax1 = plt.subplots(figsize=figsize)
-
-        ax1.set_xlabel('epoch')
-        ax1.set_ylabel('loss', color='tab:red')
-        ax1.plot(df['epoch'], df['loss'], color='tab:red')
-
-        ax2 = ax1.twinx()
-        ax2.set_ylabel('accuracy', color='tab:blue')
-        ax2.plot(df['epoch'], df['accuracy'], color='tab:blue')
-
-        fig.tight_layout()
-    """

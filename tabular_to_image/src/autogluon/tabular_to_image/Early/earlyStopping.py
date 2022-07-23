@@ -22,7 +22,7 @@ import torch
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt', trace_func=print):
+    def __init__(self, patience=7, verbose=False, delta=0, path, trace_func=print):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -66,5 +66,32 @@ class EarlyStopping:
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), self.path)
+        import torch 
+        params_file_name=model.__class__.__name__ +'_checkpoint.pt'
+        path_context, model_context, save_path=self.create_contexts(self.saved_path,params_file_name)
+        
+        if path_context is None:
+            path_context = self.saved_path   
+                     
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        if model_context is not None:
+            torch.save(model, (str(save_path) ))
+        #torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
+    
+    def create_contexts(self, path_context: str,model_name:str):
+        """Create and return paths to save model objects, the learner object.
+
+        Parameters
+        ----------
+        path_context: str
+            Top-level directory where models and trainer will be saved.
+        """
+        model_context = os.path.join(path_context, "models") + os.path.sep
+        save_path = os.path.join(path_context, model_name)
+        return path_context, model_context, save_path
+
+    def set_contexts(self, path_context: str):
+        """Update the path where model, learner, and trainer objects will be saved.
+        Also see `create_contexts`."""
+        self.path, self.model_context, self.save_path = self.create_contexts(path_context)     
