@@ -72,7 +72,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         EarlyStopping_type = kwargs.pop('EarlyStopping_type', EarlyStopping)
         EarlyStopping_kwargs = kwargs.pop('EarlyStopping_kwargs', dict()) 
         
-        self._EarlyStopping: EarlyStopping = EarlyStopping_type(patience=self.patience, verbose=False, delta=self.delta, save_path=self.save_path, trace_func=print,**EarlyStopping_kwargs)
+        self._EarlyStopping: EarlyStopping = EarlyStopping_type(patience=self.patience, verbose=False, delta=self.delta, saved_path=self.saved_path, trace_func=print,**EarlyStopping_kwargs)
         self._EarlyStopping_type = type(self._EarlyStopping)
 
         
