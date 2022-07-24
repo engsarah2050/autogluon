@@ -394,7 +394,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             #correct = 0
             Accuracy=0.0
             e_since = time.time()
-             model.train()  # prep model for training
+            model.train()  # prep model for training
 
             #train
             for images, labels in train_loader:
