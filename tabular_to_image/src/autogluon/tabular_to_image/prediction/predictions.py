@@ -388,10 +388,10 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         for epoch in range(1,+epochs+1):
             print("Epoch: {}/{}".format(epoch , epochs+1))
             # monitor training loss
-            #train_loss = 0.0
-            #valid_loss = 0.0
-            #total = 0
-            #correct = 0
+            train_loss = 0.0
+            valid_loss = 0.0
+            total = 0
+            correct = 0
             Accuracy=0.0
             e_since = time.time()
             model.train()  # prep model for training
