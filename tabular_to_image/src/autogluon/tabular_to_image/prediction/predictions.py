@@ -397,7 +397,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             model.train()  # prep model for training
 
             #train
-            for images, labels in train_loader:
+            for images, labels in trainloader:
                 # Move input and label tensors to the default device
                 images, labels = images.to(device), labels.to(device)
                 # clear the gradients of all optimized variables
@@ -415,7 +415,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 print("\t\tGoing for validation")
                 model.eval()  # prep model for evaluation
             #validate
-            for data, target in test_loader:
+            for data, target in valloader:
                 # Move input and label tensors to the default device
                 data, target = data.to(device), target.to(device)
                 # forward pass: compute predicted outputs by passing inputs to the model
