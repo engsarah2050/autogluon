@@ -120,235 +120,14 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
     def generate_image(self,data):
         self._Image_converter.Image_Genartor(data=data)
      #.Image_Genartor(data) #_Image_converter_type.Image_Genartor(data)
-    
-    
-    def train_model(self, num_epochs=3):
-        #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
-        trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
-
-        model=self.pick_model()
-              
-        criterion,optimizer,_=self._ModelsZoo.optimizer(model)
-       
-        use_gpu = torch.cuda.is_available()
-        since = time.time()
-        best_modefl_wts = copy.deepcopy(model.state_dict())
-        best_acc = 0.0
-        
-        avg_loss = 0
-        avg_acc = 0
-        avg_loss_val = 0
-        avg_acc_val = 0
-        
-        
-        train_batches = len(trainloader)
-        val_batches = len(valloader)
-        
-        for epoch in range(num_epochs):
-            print("Epoch {}/{}".format(epoch, num_epochs))
-            print('-' * 10)
-            
-            loss_train = 0
-            loss_val = 0
-            acc_train = 0
-            acc_val = 0
-            
-            model.train(True)
-            
-            for i, data in enumerate(trainloader):
-                if i % 100 == 0:
-                    print("\rTraining batch {}/{}".format(i, train_batches / 2), end='', flush=True)
-                    
-                # Use half training dataset
-                #if i >= train_batches / 2:
-                #    break
-                    
-                inputs, labels = data
-                
-                if use_gpu:
-                    inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
-                else:
-                    inputs, labels = Variable(inputs), Variable(labels)
-                
-                
-                optimizer.zero_grad()
-                
-                outputs = model(inputs)
-                
-                _, preds = torch.max(outputs.data, 1)
-                loss = criterion(outputs, labels)
-                
-                loss.backward()
-                optimizer.step()
-                
-                #loss_train += loss.data[0]
-                loss_train += loss.item() * inputs.size(0)
-                acc_train += torch.sum(preds == labels.data)
-                
-                del inputs, labels, outputs, preds
-                torch.cuda.empty_cache()
-            
-            print()
-            # * 2 as we only used half of the dataset
-            
-            len_X_train_img,len_X_val_img,_=Image_converter.image_len(self.saved_path)
-            avg_loss = loss_train * 2 / len_X_train_img #dataset_sizes[TRAIN]
-            avg_acc = acc_train * 2 /len_X_train_img#dataset_sizes[TRAIN]
-            
-            model.train(False)
-            model.eval()
-                
-            for i, data in enumerate(valloader):
-                if i % 100 == 0:
-                    print("\rValidation batch {}/{}".format(i, val_batches), end='', flush=True)
-                    
-                inputs, labels = data
-                
-                if use_gpu:
-                    inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
-                else:
-                    inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
-                
-                optimizer.zero_grad()
-                
-                outputs = model(inputs)
-                
-                _, preds = torch.max(outputs.data, 1)
-                loss = criterion(outputs, labels)
-                
-                #loss_val += loss.data[0]
-                loss_val += loss.item() * inputs.size(0)
-                acc_val += torch.sum(preds == labels.data)
-                
-                del inputs, labels, outputs, preds
-                torch.cuda.empty_cache()
-            
-            avg_loss_val = loss_val /len_X_val_img #dataset_sizes[VAL]
-            avg_acc_val = acc_val /len_X_val_img #dataset_sizes[VAL]
-            
-            print()
-            print("Epoch {} result: ".format(epoch))
-            print("Avg loss (train): {:.4f}".format(avg_loss))
-            print("Avg acc (train): {:.4f}".format(avg_acc))
-            print("Avg loss (val): {:.4f}".format(avg_loss_val))
-            print("Avg acc (val): {:.4f}".format(avg_acc_val))
-            print('-' * 10)
-            print()
-            
-            if avg_acc_val > best_acc:
-                    best_acc = avg_acc_val
-                    best_model_wts = copy.deepcopy(model.state_dict())
-                
-            elapsed_time = time.time() - since
-            print()
-            print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
-            print("Best acc: {:.4f}".format(best_acc))
-            
-            model.load_state_dict(best_model_wts)
-            return model,best_acc
-    
-    def eval_model(self):
-        _,_,Testloader =Image_converter.image_tensor(self.saved_path)
-        model=self.pick_model()        
-        criterion,_,_=self._ModelsZoo.optimizer(model)
-        use_gpu = torch.cuda.is_available()
-        since = time.time()
-        avg_loss = 0
-        avg_acc = 0
-        loss_test = 0
-        acc_test = 0
-        
-        test_batches = len(Testloader)
-        print("Evaluating model")
-        print('-' * 10)
-        
-        for i, data in enumerate(Testloader):
-            if i % 100 == 0:
-                print("\rTest batch {}/{}".format(i, test_batches), end='', flush=True)
-
-            model.train(False)
-            model.eval()
-            inputs, labels = data
-
-            if use_gpu:
-                inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
-            else:
-                inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
-
-            outputs = model(inputs)
-
-            _, preds = torch.max(outputs.data, 1)
-            loss = criterion(outputs, labels)
-
-            #loss_test += loss.data[0]
-            loss_test += loss.item() * inputs.size(0)
-            acc_test += torch.sum(preds == labels.data)
-
-            del inputs, labels, outputs, preds
-            torch.cuda.empty_cache()
-        _,_,len_X_test_img=Image_converter.image_len(self.saved_path)  
-        avg_loss = loss_test /len_X_test_img #dataset_sizes[TEST]
-        avg_acc = acc_test /len_X_test_img#dataset_sizes[TEST]
-        
-        elapsed_time = time.time() - since
-        print()
-        print("Evaluation completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
-        print("Avg loss (test): {:.4f}".format(avg_loss))
-        print("Avg acc (test): {:.4f}".format(avg_acc))
-        print('-' * 10)
-        return avg_acc 
-    
-                
-    def train(self,device,train_loader,model,optimizer,criterion):
-        model.train()  # prep model for training
-
-        for images, labels in train_loader:
-            # Move input and label tensors to the default device
-            images, labels = images.to(device), labels.to(device)
-            # clear the gradients of all optimized variables
-            optimizer.zero_grad()
-            # forward pass: compute predicted outputs by passing inputs to the model
-            log_ps = model(images)
-            # calculate the loss
-            loss = criterion(log_ps, labels)
-            # backward pass: compute gradient of the loss with respect to model parameters
-            loss.backward()
-            # perform a single optimization step (parameter update)
-            optimizer.step()
-            # update running training loss
-            train_loss += loss.item() * images.size(0)
-        return train_loss    
-    
-    def validate (self,device,test_loader,model,criterion):
-        print("\t\tGoing for validation")
-        model.eval()  # prep model for evaluation
-        for data, target in test_loader:
-            # Move input and label tensors to the default device
-            data, target = data.to(device), target.to(device)
-            # forward pass: compute predicted outputs by passing inputs to the model
-            output = model(data)
-            # calculate the loss
-            loss_p = criterion(output, target)
-            # update running validation loss
-            valid_loss += loss_p.item() * data.size(0)
-            # calculate accuracy
-            proba = torch.exp(output)
-            top_p, top_class = proba.topk(1, dim=1)
-            equals = top_class == target.view(*top_class.shape)
-            # accuracy += torch.mean(equals.type(torch.FloatTensor)).item()
-
-            _, predicted = torch.max(output.data, 1)
-            total += target.size(0)
-            correct += (predicted == target).sum().item()
-        return valid_loss,correct,total
-                     
+                       
         
     def init_train(self,model_type, epochs,patience,scheduler=None):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
                 
         commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
-                      'densenet121','densenet161','densenet169'#,'densenet201',
+                      'densenet121','densenet161'#,'densenet169'#,'densenet201',
                     #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                     #  'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2', 'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
                     #  'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7' ,                      
@@ -412,7 +191,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 optimizer.step()
                 # update running training loss
                 train_loss += loss.item() * images.size(0)
-                print("\t\tGoing for validation")
+                #print("\t\tGoing for validation")
                 model.eval()  # prep model for evaluation
             #validate
             for data, target in valloader:
@@ -486,8 +265,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         if early_stopping.early_stop:
             print("Early stopping")
         # return the model
-        return model, [Accuracy,train_loss_data, valid_loss_data]
-        
+        return model, [Accuracy,train_loss_data, valid_loss_data]       
 
     
     def train_model2(model, batch_size, patience, n_epochs):
@@ -672,7 +450,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         
     def pick_model(self):  
         model_type=[#'resnet50','resnet101','resnet152',
-                    'densenet121','densenet161','densenet169'#,'densenet201',
+                    'densenet121','densenet161'#,'densenet169'#,'densenet201',
                #     'alexnet' ,'vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                #     'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
                #     'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7'                       
