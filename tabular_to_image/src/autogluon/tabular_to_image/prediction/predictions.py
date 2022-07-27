@@ -268,8 +268,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         return model, [Accuracy,train_loss_data, valid_loss_data]       
 
     
-    def train_model2(model, batch_size, patience, n_epochs):
-        
+    def train_model(model,  patience, n_epochs):
+        trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
         # to track the training loss as the model trains
         train_losses = []
         # to track the validation loss as the model trains
@@ -340,9 +340,10 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
-            
+        self.reduce_memory_size(trainloader)
+        self.reduce_memory_size(valloader)    
         # load the last checkpoint with the best model
-        model.load_state_dict(torch.load('checkpoint.pt'))
+        #model.load_state_dict(torch.load('checkpoint.pt'))
 
         return  model, avg_train_losses, avg_valid_losses
         
@@ -540,7 +541,14 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         if requires_save:
                 self.is_data_saved = False   
     
-    def Ensemble(self):
+    def single_model(self):
+        model=self.pick_model() 
+        self.train_model(model,patience=2, n_epochs=3)
+        path= save_model(model, verbose=True)
+        model=ImagePredictions.load(path, reset_paths=False,verbose=True)
+        return model
+        
+    def init_Ensemble(self,model):
         try_import_torchensemble()
         from torchensemble.fusion import FusionClassifier
         from torchensemble.voting import VotingClassifier
@@ -549,10 +557,12 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         from torchensemble.snapshot_ensemble import SnapshotEnsembleClassifier
         from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
         
-        model=self.pick_model() 
+        
         trainloader,valloader,Testloader,=Image_converter.image_tensor(self.saved_path)     
         init_model=None
         score=[]
+        lose=0.0
+        return_losses=[]
         #epochs=3
         initmodels={}
         Ensemble_family={
@@ -564,23 +574,30 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         lr=1e-3
         maxvalue=[0.0]
         optm='Adam'
+        n_estimators=2
         maximum=['']
         tem=0.0
         tem_est=' '
-        familes=['LeNet','ResNet']
+        familes={["name":'LeNet_family',"optm":'Adam',"lr":1e-3,"n_estimators"=2,"epochs"=10]
+                 ["name":'ResNet_family',"optm":'SGD',"lr":1e-1,"n_estimators"=5,"epochs"=10]
+                                    
+        }
         i=1
         res={}
         for t in range(len(familes)) :
             for l in range(len(Ensemble_family['models'])): 
-                init_model=Ensemble_family['models'][l](estimator=model,n_estimators=1,cuda=True)
+                init_model=Ensemble_family['models'][l](estimator=model,n_estimators=n_estimators,cuda=True)
                 init_model.set_optimizer(optm, lr=lr, weight_decay=5e-4)
                 criterion = nn.CrossEntropyLoss()
                 init_model.set_criterion(criterion)
                 init_model.fit(trainloader,epochs=epochs,test_loader=Testloader)
                 accuracy,return_loss = init_model.evaluate(Testloader,True)
                 score.append(accuracy)
-                initmodels[init_model._get_name()]=accuracy
+                return_losses.append(return_loss)             
+                initmodels[init_model._get_name()]=[accuracy,return_loss]
+                #initmodels[init_model._get_name()]=return_loss
                 best_accuracy=score[0]
+                lose=return_losses[0]
                 #del  trainloader
                 #del  Testloader
                 for j in score:                                          
@@ -604,4 +621,49 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         import itertools
         b=list(itertools.chain(*res['group1']))
         res = dict(zip(maximum, b))
+        import itertools
+        #type(res.items())
+        #val0=list(itertools.chain(*res['no.group0']))
+        #val1=list(itertools.chain(*res['no.group1']))
+        res3={}
+        res3['LeNet_family']=list(res['no.group0'])
+        res3['ResNet_family']=list(res['no.group1'])
+        maz=res3['LeNet_family'][1]
+        if maz<res3['ResNet_family'][1]:
+            maz=res3['ResNet_family'][1]
+        key=([k for k,v in res3.items() if v[1] == maz]) 
+        for i in range(len(familes.items())):
+            if key[0]==familes["name"]:
+                return 
+        return [key[0]][0],key[0]
         #torch.cuda.empty_cache()
+    def final_train(self,ensmble_model,model) :
+        try_import_torchensemble()
+        from torchensemble.fusion import FusionClassifier
+        from torchensemble.voting import VotingClassifier
+        from torchensemble.bagging import BaggingClassifier
+        from torchensemble.gradient_boosting import GradientBoostingClassifier
+        from torchensemble.snapshot_ensemble import SnapshotEnsembleClassifier
+        from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
+        
+        
+        trainloader,valloader,Testloader,=Image_converter.image_tensor(self.saved_path)     
+        init_model=None
+        #epochs=3
+        Ensemble_family={
+                'models':[FusionClassifier,VotingClassifier,BaggingClassifier,GradientBoostingClassifier,SnapshotEnsembleClassifier,SoftGradientBoostingClassifier],
+        }
+        ensamble_name=eval(ensmble_model)
+        if ensamble_name in Ensemble_family:
+            init_model=ensamble_name(estimator=model,n_estimators=1,cuda=True)
+            init_model.set_optimizer(optm, lr=lr, weight_decay=5e-4)
+            criterion = nn.CrossEntropyLoss()
+            init_model.set_criterion(criterion)
+            init_model.fit(trainloader,epochs=epochs,test_loader=Testloader)
+            accuracy,return_loss = init_model.evaluate(Testloader,True)
+        else:
+            raise AssertionError(f'Model "{model_type}" is not a valid model to specify as best! Valid models: {commonModels}')
+        
+        
+        
+           
