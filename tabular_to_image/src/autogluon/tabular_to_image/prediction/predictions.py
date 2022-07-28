@@ -578,10 +578,10 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         maximum=['']
         tem=0.0
         tem_est=' '
-        familes={["name":'LeNet_family',"optm":'Adam',"lr":1e-3,"n_estimators"=2,"epochs"=10]
-                 ["name":'ResNet_family',"optm":'SGD',"lr":1e-1,"n_estimators"=5,"epochs"=10]
+        familes=[[{'name':'LeNet_family'},{"optm":'Adam'},{"lr":1e-3},{"n_estimators":2},{"epochs":10}],
+                 [{"name":'ResNet_family'},{"optm":'SGD'},{"lr":1e-1},{"n_estimators":5},{"epochs":10}]
                                     
-        }
+                ]
         i=1
         res={}
         for t in range(len(familes)) :
@@ -633,11 +633,11 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             maz=res3['ResNet_family'][1]
         key=([k for k,v in res3.items() if v[1] == maz]) 
         for i in range(len(familes.items())):
-            if key[0]==familes["name"]:
-                return 
-        return [key[0]][0],key[0]
+            if key[0]==(list(familes[i][0].values())[0]):
+                return familes[i]
+        return [key[0]][0]
         #torch.cuda.empty_cache()
-    def final_train(self,ensmble_model,model) :
+    def final_train(self,ensmble_model,family,model) :
         try_import_torchensemble()
         from torchensemble.fusion import FusionClassifier
         from torchensemble.voting import VotingClassifier
@@ -655,12 +655,13 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         }
         ensamble_name=eval(ensmble_model)
         if ensamble_name in Ensemble_family:
-            init_model=ensamble_name(estimator=model,n_estimators=1,cuda=True)
-            init_model.set_optimizer(optm, lr=lr, weight_decay=5e-4)
+            init_model=ensamble_name(estimator=model,n_estimators=family[3]["n_estimators"],cuda=True)
+            init_model.set_optimizer(family[1]["optm"], lr=family[2]["lr"], weight_decay=5e-4)
             criterion = nn.CrossEntropyLoss()
             init_model.set_criterion(criterion)
-            init_model.fit(trainloader,epochs=epochs,test_loader=Testloader)
+            init_model.fit(trainloader,epochs=one_familes[4]["epochs"],test_loader=Testloader)
             accuracy,return_loss = init_model.evaluate(Testloader,True)
+            return accuracy
         else:
             raise AssertionError(f'Model "{model_type}" is not a valid model to specify as best! Valid models: {commonModels}')
         
