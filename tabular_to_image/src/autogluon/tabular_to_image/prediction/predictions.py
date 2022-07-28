@@ -663,7 +663,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             accuracy,return_loss = init_model.evaluate(Testloader,True)
             return accuracy
         else:
-            raise AssertionError(f'Model "{model_type}" is not a valid model to specify as best! Valid models: {commonModels}')
+            raise AssertionError(f'Model "{ensamble_name}" is not a valid model to specify as best! Valid models: {Ensemble_family}')
         
         
         
