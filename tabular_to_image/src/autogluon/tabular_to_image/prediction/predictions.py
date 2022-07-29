@@ -558,7 +558,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
         
         
-        trainloader,valloader,Testloader,=Image_converter.image_tensor(self.saved_path)     
+        trainloader,valloader,Testloader=Image_converter.image_tensor(self.saved_path)     
         init_model=None
         score=[]
         lose=0.0
@@ -628,14 +628,22 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         res3={}
         res3['LeNet_family']=list(res['no.group0'])
         res3['ResNet_family']=list(res['no.group1'])
-        maz=res3['LeNet_family'][1]
-        if maz<res3['ResNet_family'][1]:
-            maz=res3['ResNet_family'][1]
-        key=([k for k,v in res3.items() if v[1] == maz]) 
+        maz=res3['LeNet_family'][1][0]
+        maz_lose=maz=res3['LeNet_family'][1][1]
+        if maz<res3['ResNet_family'][1][0]:
+            maz=res3['ResNet_family'][1][0]
+        elif maz==res3['ResNet_family'][1][0] :
+            if maz_lose>res3['ResNet_family'][1][1]:
+                maz_lose=res3['ResNet_family'][1][1]     
+        key=([k for k,v in res3.items() if v[1][0] == maz]) 
         for i in range(len(familes.items())):
             if key[0]==(list(familes[i][0].values())[0]):
                 return familes[i]
-        return [key[0]][0]
+        self.reduce_memory_size(init_model)
+        self.reduce_memory_size(trainloader)
+        self.reduce_memory_size(valloader)
+        self.reduce_memory_size(Testloader)         
+        return res3[key[0]][0]
         #torch.cuda.empty_cache()
     def train_ensamble(self,ensmble_model,family,model) :
         try_import_torchensemble()
@@ -667,7 +675,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         
     def final_ensamble(self):
         model=self.single_model()
-        ensamble_model,fiamly=self.init_Ensemble(model)    
+        ensamble_model,family=self.init_Ensemble(model)    
         
         
            
