@@ -127,7 +127,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
                 
         commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
-                      'densenet121'#,'densenet161'#,'densenet169'#,'densenet201',
+                      'densenet121','densenet161'#,'densenet169'#,'densenet201',
                     #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                     #  'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2', 'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
                     #  'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7' ,                      
@@ -637,7 +637,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 return familes[i]
         return [key[0]][0]
         #torch.cuda.empty_cache()
-    def final_train(self,ensmble_model,family,model) :
+    def train_ensamble(self,ensmble_model,family,model) :
         try_import_torchensemble()
         from torchensemble.fusion import FusionClassifier
         from torchensemble.voting import VotingClassifier
@@ -665,6 +665,9 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         else:
             raise AssertionError(f'Model "{ensamble_name}" is not a valid model to specify as best! Valid models: {Ensemble_family}')
         
+    def final_ensamble(self):
+        model=self.single_model()
+        ensamble_model,fiamly=self.init_Ensemble(model)    
         
         
            
