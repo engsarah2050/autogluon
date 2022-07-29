@@ -542,8 +542,10 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 self.is_data_saved = False   
     
     def single_model(self):
-        model=self.pick_model() 
-        self.train_model(model,patience=2, n_epochs=3)
+        model=self.pick_model()
+        epoch=4
+        patience=2 
+        self.train_model(model,patience, epoch)
         path= save_model(model, verbose=True)
         model=ImagePredictions.load(path, reset_paths=False,verbose=True)
         return model
