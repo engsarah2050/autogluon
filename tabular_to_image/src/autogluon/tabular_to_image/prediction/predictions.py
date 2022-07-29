@@ -677,7 +677,9 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         
     def final_ensamble(self):
         model=self.single_model()
-        ensamble_model,family=self.init_Ensemble(model)    
+        ensamble_model,family=self.init_Ensemble(model) 
+        accuracy=self.train_ensamble(ensamble_model,family,model)  
+        return  accuracy
         
         
            
