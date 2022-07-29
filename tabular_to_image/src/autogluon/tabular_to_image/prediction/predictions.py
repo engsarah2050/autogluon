@@ -288,7 +288,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             # train the model #
             ###################
             model.train() # prep model for training
-            for batch, (data, target) in enumerate(train_loader, 1):
+            for batch, (data, target) in enumerate(trainloader, 1):
                 # clear the gradients of all optimized variables
                 optimizer.zero_grad()
                 # forward pass: compute predicted outputs by passing inputs to the model
@@ -306,7 +306,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             # validate the model #
             ######################
             model.eval() # prep model for evaluation
-            for data, target in valid_loader:
+            for data, target in valloader:
                 # forward pass: compute predicted outputs by passing inputs to the model
                 output = model(data)
                 # calculate the loss
