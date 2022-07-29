@@ -268,7 +268,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         return model, [Accuracy,train_loss_data, valid_loss_data]       
 
     
-    def train_model(model,  patience, n_epochs):
+    def train_model(self,model,  patience, n_epochs):
         trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
         # to track the training loss as the model trains
         train_losses = []
