@@ -281,7 +281,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         
         # initialize the early_stopping object
         early_stopping = EarlyStopping(patience=patience, verbose=True)
-        
+        criterion,optimizer,_=self._ModelsZoo.optimizer(model)
         for epoch in range(1, n_epochs + 1):
 
             ###################
