@@ -164,8 +164,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         # initialize the early_stopping object
         early_stopping =self._EarlyStopping_type(patience,self.saved_path,verbose=True )
 
-        for epoch in range(1,+epochs+1):
-            print("Epoch: {}/{}".format(epoch , epochs+1))
+        for epoch in range(epochs):
+            print("Epoch: {}/{}".format(epoch+1 , epochs))
             # monitor training loss
             train_loss = 0.0
             valid_loss = 0.0
@@ -461,8 +461,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         res=set()
         res2={}
         model=None
-        epoch=4
-        patience=2
+        epoch=8
+        patience=3
         for i in range(len(model_type)):
            k,v=self.init_train(model_type[i], epoch,patience)
         res2[k]=v
@@ -544,7 +544,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
     def single_model(self):
         model=self.pick_model()
         epoch=10
-        patience=2 
+        patience=3 
         model2,avg_train_losses, avg_valid_losses=self.train_model(model,patience, epoch)
         path=self.save_model(model2, verbose=True)
         model3=ImagePredictions.load(path, reset_paths=False,verbose=True)
