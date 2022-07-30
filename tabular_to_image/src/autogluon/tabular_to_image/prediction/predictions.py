@@ -543,12 +543,12 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
     
     def single_model(self):
         model=self.pick_model()
-        epoch=4
+        epoch=10
         patience=2 
-        self.train_model(model,patience, epoch)
-        path= save_model(model, verbose=True)
-        model=ImagePredictions.load(path, reset_paths=False,verbose=True)
-        return model
+        model2,avg_train_losses, avg_valid_losses=self.train_model(model,patience, epoch)
+        path=self.save_model(model2, verbose=True)
+        model3=ImagePredictions.load(path, reset_paths=False,verbose=True)
+        return model3,avg_train_losses, avg_valid_losses
         
     def init_Ensemble(self,model):
         try_import_torchensemble()
