@@ -34,6 +34,7 @@ from .constants import (
 =======
     AUTOMM,
     AUTOMM_TUTORIAL_MODE,
+    BBOX,
     BEST,
     BEST_K_MODELS_FILE,
 >>>>>>> upstream/master
@@ -55,6 +56,7 @@ from .constants import (
     MODEL,
     MODEL_CHECKPOINT,
     MULTICLASS,
+    OBJECT_DETECTION,
     PROBABILITY,
     RAY_TUNE_CHECKPOINT,
     REGRESSION,
@@ -1610,6 +1612,9 @@ class MultiModalPredictor:
         else:
             ret_type = LOGITS
 
+        if self._pipeline == OBJECT_DETECTION:
+            ret_type = BBOX
+
         if candidate_data:
             pred = self._match_queries_and_candidates(
                 query_data=data,
@@ -1628,7 +1633,7 @@ class MultiModalPredictor:
                     y_pred=logits_or_prob,
                 )
             else:
-                if logits_or_prob.ndim == 2:
+                if isinstance(logits_or_prob, (torch.Tensor, np.ndarray)) and logits_or_prob.ndim == 2:
                     pred = logits_or_prob.argmax(axis=1)
                 else:
                     pred = logits_or_prob
