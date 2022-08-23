@@ -573,6 +573,7 @@ def init_df_preprocessor(
 
 def init_data_processors(
     config: DictConfig,
+    model: Optional[nn.Module] = None,
 ):
     """
     Create the data processors according to the model config. This function creates one processor for
@@ -587,6 +588,8 @@ def init_data_processors(
     ----------
     config
         A DictConfig object. The model config should be accessible by "config.model".
+    model
+        The model object.
 
     Returns
     -------
@@ -622,6 +625,7 @@ def init_data_processors(
                         size=model_config.image_size,
                         max_img_num_per_col=model_config.max_img_num_per_col,
                         missing_value_strategy=config.data.image.missing_value_strategy,
+                        model=model,
                     )
                 )
             elif d_type == TEXT:
@@ -705,6 +709,7 @@ def create_model(
                 prefix=model_name,
                 checkpoint_name=model_config.checkpoint_name,
                 num_classes=num_classes,
+                pretrained=pretrained,
             )
         elif model_name.lower().startswith(TIMM_IMAGE):
             model = TimmAutoModelForImagePrediction(
@@ -721,6 +726,7 @@ def create_model(
                 num_classes=num_classes,
                 pooling_mode=OmegaConf.select(model_config, "pooling_mode", default="cls"),
                 gradient_checkpointing=OmegaConf.select(model_config, "gradient_checkpointing"),
+                pretrained=pretrained,
             )
         elif model_name.lower().startswith(NUMERICAL_MLP):
             model = NumericalMLP(
@@ -872,15 +878,14 @@ def apply_model_adaptation(model: nn.Module, config: DictConfig) -> nn.Module:
     return model
 
 
-def save_pretrained_models(
+def save_pretrained_model_configs(
     model: nn.Module,
     config: DictConfig,
     path: str,
 ) -> DictConfig:
     """
-    Save the pretrained models and configs to local to make future loading not dependent on Internet access.
-    By loading local checkpoints, Huggingface doesn't need to download pretrained checkpoints from Internet.
-    It is called by setting "standalone=True" in "AutoMMPredictor.load()".
+    Save the pretrained model configs to local to make future loading not dependent on Internet access.
+    By initializing models with local configs, Huggingface doesn't need to download pretrained weights from Internet.
 
     Parameters
     ----------
@@ -889,7 +894,7 @@ def save_pretrained_models(
     config
         A DictConfig object. The model config should be accessible by "config.model".
     path
-        The path to save pretrained checkpoints.
+        The path to save pretrained model configs.
     """
     requires_saving = any([model_name.lower().startswith((CLIP, HF_TEXT)) for model_name in config.model.names])
     if not requires_saving:
@@ -901,25 +906,24 @@ def save_pretrained_models(
         model = model.model
     for per_model in model:
         if per_model.prefix.lower().startswith((CLIP, HF_TEXT)):
-            per_model.model.save_pretrained(os.path.join(path, per_model.prefix))
+            per_model.config.save_pretrained(os.path.join(path, per_model.prefix))
             model_config = getattr(config.model, per_model.prefix)
             model_config.checkpoint_name = os.path.join("local://", per_model.prefix)
 
     return config
 
 
-def convert_checkpoint_name(config: DictConfig, path: str) -> DictConfig:
+def get_local_pretrained_config_paths(config: DictConfig, path: str) -> DictConfig:
     """
-    Convert the checkpoint name from relative path to absolute path for
-    loading the pretrained weights in offline deployment.
-    It is called by setting "standalone=True" in "AutoMMPredictor.load()".
+    Get the local config paths of hugginface pretrained models. With a local config,
+    Hugginface can initialize a model without having to download its pretrained weights.
 
     Parameters
     ----------
     config
         A DictConfig object. The model config should be accessible by "config.model".
     path
-        The saving path to the pretrained Huggingface models.
+        The saving path to the pretrained model configs.
     """
     for model_name in config.model.names:
         if model_name.lower().startswith((CLIP, HF_TEXT)):
@@ -929,7 +933,6 @@ def convert_checkpoint_name(config: DictConfig, path: str) -> DictConfig:
                 assert os.path.exists(
                     os.path.join(model_config.checkpoint_name, "config.json")
                 )  # guarantee the existence of local configs
-                assert os.path.exists(os.path.join(model_config.checkpoint_name, "pytorch_model.bin"))
 
     return config
 
@@ -1674,6 +1677,7 @@ def init_pretrained(
 
     data_processors = init_data_processors(
         config=config,
+        model=model,
     )
 
     return config, model, data_processors
