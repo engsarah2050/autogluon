@@ -56,6 +56,7 @@ from .constants import (
     MASKS,
     METRIC_MODE_MAP,
     MMDET_IMAGE,
+    MMOCR_TEXT_DET,
     MULTICLASS,
     NUMERICAL,
     NUMERICAL_MLP,
@@ -89,6 +90,7 @@ from .models import (
     CLIPForImageText,
     HFAutoModelForTextPrediction,
     MMDetAutoModelForObjectDetection,
+    MMOCRAutoModelForTextDetection,
     MultimodalFusionMLP,
     MultimodalFusionTransformer,
     NumericalMLP,
@@ -290,6 +292,9 @@ def get_config(
     if config is None:
         config = {}
 
+    if not config and not presets:
+        presets = "default"
+
     if not isinstance(config, DictConfig):
         basic_config = get_basic_automm_config(is_distill=is_distill)
         if presets is None:
@@ -356,6 +361,9 @@ def verify_model_names(config: DictConfig):
     """
     # must have attribute `names`
     assert hasattr(config, "names")
+    # return if no names available
+    if not config.names:
+        return
     # assure no duplicate names
     assert len(config.names) == len(set(config.names))
     # verify that strings in `config.names` match the keys of `config`.
@@ -812,6 +820,11 @@ def create_model(
             )
         elif model_name.lower().startswith(MMDET_IMAGE):
             model = MMDetAutoModelForObjectDetection(
+                prefix=model_name,
+                checkpoint_name=model_config.checkpoint_name,
+            )
+        elif model_name.lower().startswith(MMOCR_TEXT_DET):
+            model = MMOCRAutoModelForTextDetection(
                 prefix=model_name,
                 checkpoint_name=model_config.checkpoint_name,
             )

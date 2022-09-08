@@ -58,6 +58,7 @@ from .constants import (
     MODEL_CHECKPOINT,
     MULTICLASS,
     OBJECT_DETECTION,
+    OCR_TEXT_DETECTION,
     PROBABILITY,
     RAY_TUNE_CHECKPOINT,
     REGRESSION,
@@ -276,6 +277,7 @@ class MultiModalPredictor:
         set_logger_verbosity(verbosity, logger=logger)
 
     def fit(
+<<<<<<< HEAD
             self,
             train_data: pd.DataFrame,
             config: Optional[dict] = None,
@@ -289,6 +291,21 @@ class MultiModalPredictor:
             seed: Optional[int] = 123,
             hyperparameter_tune_kwargs: Optional[dict] = None,
 
+=======
+        self,
+        train_data: pd.DataFrame,
+        presets: Optional[str] = None,
+        config: Optional[dict] = None,
+        tuning_data: Optional[pd.DataFrame] = None,
+        time_limit: Optional[int] = None,
+        save_path: Optional[str] = None,
+        hyperparameters: Optional[Union[str, Dict, List[str]]] = None,
+        column_types: Optional[dict] = None,
+        holdout_frac: Optional[float] = None,
+        teacher_predictor: Union[str, MultiModalPredictor] = None,
+        seed: Optional[int] = 123,
+        hyperparameter_tune_kwargs: Optional[dict] = None,
+>>>>>>> upstream/master
     ):
         """
         Fit MultiModalPredictor predict label column of a dataframe based on the other columns,
@@ -1259,30 +1276,32 @@ class MultiModalPredictor:
                     #  "Model soups: averaging weights of multiple fine-tuned models improves accuracy without
                     #  increasing inference time", https://arxiv.org/pdf/2203.05482.pdf
                     monitor_op = {MIN: operator.le, MAX: operator.ge}[minmax_mode]
-
-                    logger.info(f"Start to fuse {len(top_k_model_paths)} checkpoints via the greedy soup algorithm.")
-
                     ingredients = [top_k_model_paths[0]]
-                    self._model = self._load_state_dict(
-                        model=model,
-                        path=top_k_model_paths[0],
-                        prefix=prefix,
-                    )
-                    best_score = self.evaluate(val_df, [validation_metric_name])[validation_metric_name]
-                    for i in range(1, len(top_k_model_paths)):
-                        cand_avg_state_dict = average_checkpoints(
-                            checkpoint_paths=ingredients + [top_k_model_paths[i]],
+                    if len(top_k_model_paths) > 1:
+                        logger.info(
+                            f"Start to fuse {len(top_k_model_paths)} checkpoints via the greedy soup algorithm."
                         )
+
                         self._model = self._load_state_dict(
-                            model=self._model,
-                            state_dict=cand_avg_state_dict,
+                            model=model,
+                            path=top_k_model_paths[0],
                             prefix=prefix,
                         )
-                        cand_score = self.evaluate(val_df, [validation_metric_name])[validation_metric_name]
-                        if monitor_op(cand_score, best_score):
-                            # Add new ingredient
-                            ingredients.append(top_k_model_paths[i])
-                            best_score = cand_score
+                        best_score = self.evaluate(val_df, [validation_metric_name])[validation_metric_name]
+                        for i in range(1, len(top_k_model_paths)):
+                            cand_avg_state_dict = average_checkpoints(
+                                checkpoint_paths=ingredients + [top_k_model_paths[i]],
+                            )
+                            self._model = self._load_state_dict(
+                                model=self._model,
+                                state_dict=cand_avg_state_dict,
+                                prefix=prefix,
+                            )
+                            cand_score = self.evaluate(val_df, [validation_metric_name])[validation_metric_name]
+                            if monitor_op(cand_score, best_score):
+                                # Add new ingredient
+                                ingredients.append(top_k_model_paths[i])
+                                best_score = cand_score
                 elif top_k_average_method == BEST:
                     ingredients = [top_k_model_paths[0]]
                 else:
@@ -1614,7 +1633,7 @@ class MultiModalPredictor:
         else:
             ret_type = LOGITS
 
-        if self._pipeline == OBJECT_DETECTION:
+        if self._pipeline == OBJECT_DETECTION or self._pipeline == OCR_TEXT_DETECTION:
             ret_type = BBOX
 
         if candidate_data:
