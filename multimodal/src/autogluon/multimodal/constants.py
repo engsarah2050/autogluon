@@ -176,6 +176,10 @@ MMDET_IMAGE = "mmdet_image"
 >>>>>>> upstream/master
 =======
 MMOCR_TEXT_DET = "mmocr_text_detection"
+<<<<<<< HEAD
+>>>>>>> upstream/master
+=======
+HF_MODELS = (HF_TEXT, T_FEW, CLIP)
 >>>>>>> upstream/master
 
 # metric learning loss type

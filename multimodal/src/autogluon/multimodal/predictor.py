@@ -78,7 +78,7 @@ from .data.infer_types import (
 from .optimization.lit_distiller import DistillerLitModule
 from .optimization.lit_matcher import MatcherLitModule
 from .optimization.lit_module import LitModule
-from .optimization.rkd_loss import RKDLoss
+from .optimization.losses import RKDLoss
 from .optimization.utils import get_loss_func, get_metric
 from .utils import (
     AutoMMModelCheckpoint,
@@ -90,7 +90,7 @@ from .utils import (
     compute_num_gpus,
     compute_score,
     create_fusion_data_processors,
-    create_model,
+    create_fusion_model,
     data_to_df,
     extract_from_output,
     filter_search_space,
@@ -636,7 +636,7 @@ class MultiModalPredictor:
             # reload the predictor metadata
             predictor = MultiModalPredictor._load_metadata(predictor=self, path=best_trial_path)
             # construct the model
-            model = create_model(
+            model = create_fusion_model(
                 config=predictor._config,
                 num_classes=predictor._output_shape,
                 num_numerical_columns=len(predictor._df_preprocessor.numerical_feature_names),
@@ -884,7 +884,7 @@ class MultiModalPredictor:
         config = select_model(config=config, df_preprocessor=df_preprocessor)
 
         if self._model is None:
-            model = create_model(
+            model = create_fusion_model(
                 config=config,
                 num_classes=self._output_shape,
                 num_numerical_columns=len(df_preprocessor.numerical_feature_names),
@@ -1199,6 +1199,7 @@ class MultiModalPredictor:
                 check_val_every_n_epoch=config.optimization.check_val_every_n_epoch
                 if hasattr(config.optimization, "check_val_every_n_epoch")
                 else 1,
+                reload_dataloaders_every_n_epochs=1,
             )
 
         with warnings.catch_warnings():
@@ -1984,7 +1985,7 @@ class MultiModalPredictor:
         predictor = cls(label="dummy_label")
         predictor = cls._load_metadata(predictor=predictor, path=path, resume=resume, verbosity=verbosity)
 
-        model = create_model(
+        model = create_fusion_model(
             config=predictor._config,
             num_classes=predictor._output_shape,
             num_numerical_columns=len(predictor._df_preprocessor.numerical_feature_names),
