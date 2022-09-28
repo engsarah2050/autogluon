@@ -131,7 +131,7 @@ class ModelsZoo():
                 if self.model_type =='densenet121' :
                     model = models.densenet121(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
-                        param.requires_grad = False 
+                        param.requires_grad = True 
                     classifier = nn.Sequential(
                                                 nn.Linear(in_features=1024, out_features=256),
                                                 nn.Dropout(p=0.3),  
@@ -148,7 +148,7 @@ class ModelsZoo():
                 elif self.model_type =='densenet161' :
                     model = models.densenet161(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
-                        param.requires_grad = False
+                        param.requires_grad = True
                     classifier = nn.Sequential(
                                     nn.Linear(in_features=2208, out_features=1024),
                                     nn.ReLU(),
@@ -162,8 +162,20 @@ class ModelsZoo():
                 elif self.model_type == 'densenet169' :
                     model = models.densenet169(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
-                        param.requires_grad = False 
-                    model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
+                        param.requires_grad = True
+                    classifier = nn.Sequential(
+                                nn.Flatten(),
+                                nn.Linear(in_features=model.classifier.in_features, out_features=512, bias=True),
+                                nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
+                                #nn.Dropout(p=0.5, inplace=False),
+                                nn.Linear(in_features=512, out_features=256, bias=True),
+                                nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
+                                nn.Dropout(p=0.25, inplace=False),
+                                nn.Linear(in_features=256, out_features=2, bias=True),
+                                )     
+                    model.classifier = classifier #nn.Linear(model.classifier.in_features, self.num_classes)
                 elif self.model_type =='densenet201' :
                     model = models.densenet201(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
