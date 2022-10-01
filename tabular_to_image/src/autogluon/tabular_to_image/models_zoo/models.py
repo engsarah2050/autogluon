@@ -129,11 +129,14 @@ class ModelsZoo():
                     model.classifier[6] = nn.Linear(model.classifier[6].in_features, self.num_classes)
             if x[0]== 'densenet':    
                 if self.model_type =='densenet121' :
+                    from torchvision.models  import densenet121, DenseNet121_Weights
+                    weights=DenseNet121_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
                     model = models.densenet121(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
                         param.requires_grad = True 
                     classifier = nn.Sequential(
-                                                nn.Linear(in_features=1024, out_features=256),
+                                                nn.Linear(in_features=model.classifier.in_features, out_features=256),
                                                 nn.Dropout(p=0.3),  
                                                 nn.ReLU(),
                                                 nn.Linear(in_features=256, out_features=32),  
@@ -146,11 +149,14 @@ class ModelsZoo():
                     model.classifier = classifier   
                     #model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
                 elif self.model_type =='densenet161' :
-                    model = models.densenet161(pretrained=self.pretrained).to(device)
+                    from torchvision.models  import densenet161, DenseNet161_Weights
+                    weights=DenseNet161_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.densenet169(weights=(weights,pretrained)).to(device) 
                     for param in model.parameters():
                         param.requires_grad = True
                     classifier = nn.Sequential(
-                                    nn.Linear(in_features=2208, out_features=1024),
+                                    nn.Linear(in_features=model.classifier.in_features, out_features=1024),
                                     nn.ReLU(),
                                     nn.Dropout(p=0.4),
                                     nn.Linear(in_features=1024, out_features=self.num_classes),
@@ -162,7 +168,8 @@ class ModelsZoo():
                 elif self.model_type == 'densenet169' :
                     from torchvision.models  import densenet169, DenseNet169_Weights
                     weights=DenseNet169_Weights.IMAGENET1K_V1
-                    model = models.densenet169(weights=(weights,pretrained=self.pretrained)).to(device)    
+                    pretrained=self.pretrained
+                    model = models.densenet169(weights=(weights,pretrained)).to(device)    
                     #model = models.densenet169(pretrained=self.pretrained).to(device)
                     for param in model.parameters():
                         param.requires_grad = True
@@ -182,7 +189,8 @@ class ModelsZoo():
                 elif self.model_type =='densenet201' :
                     from torchvision.models  import densenet201, DenseNet201_Weights
                     weights=DenseNet201_Weights.IMAGENET1K_V1
-                    model = models.densenet201(weights=(weights,pretrained=self.pretrained)).to(device)    
+                    pretrained=self.pretrained
+                    model = models.densenet201(weights=(weights,pretrained)).to(device)    
                     for param in model.parameters():
                         param.requires_grad = True 
                     classifier = nn.Sequential(
