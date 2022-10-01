@@ -187,6 +187,10 @@ MMOCR_TEXT_DET = "mmocr_text_detection"
 MMOCR_TEXT_RECOG = "mmocr_text_recognition"
 >>>>>>> upstream/master
 HF_MODELS = (HF_TEXT, T_FEW, CLIP)
+<<<<<<< HEAD
+>>>>>>> upstream/master
+=======
+MMCV_MODELS = (MMDET_IMAGE, MMOCR_TEXT_DET, MMOCR_TEXT_RECOG)
 >>>>>>> upstream/master
 
 # metric learning loss type
