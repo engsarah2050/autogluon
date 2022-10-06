@@ -49,8 +49,8 @@ class ModelsZoo():
     def create_model(self):
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         
-        models_list=['resnet','alexnet','vgg','densenet','googlenet','shufflenet',
-                     'mobilenet','wide_resnet','efficientnet','squeezenet',
+        models_list=['resnet','regnet','alexnet','vgg','densenet','googlenet','shufflenet',
+                     'mobilenet','wide_resnet','efficientnet','efficientnet_v2','ConvNeXt','squeezenet',
                      'mnasnet','resnext','inception']
         x=[i for i in models_list if i in self.model_type]
         model = None
@@ -81,11 +81,118 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = False
                     model.fc = nn.Linear(model.fc.in_features, self.num_classes)
+            if x[0]== 'regnet':
+                if self.model_type =='regnet_x_16gf':
+                    from torchvision.models  import regnet_x_16gf, RegNet_X_16GF_Weights
+                    weights=RegNet_X_16GF_Weights.IMAGENET1K_V2
+                    pretrained=self.pretrained
+                    model = models.regnet_x_16gf(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                            param.requires_grad = True
+                    classifier = nn.Sequential(
+                                    nn.Linear(in_features=model.fc.in_features, out_features=1024, bias=True),
+                                    nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=1024, out_features=512, bias=True),
+                                    nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=512, out_features=256, bias=True),
+                                    nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=256, out_features=self.num_classes, bias=True),
+                                    nn.LogSoftmax(dim=1) ,
+                                    )
+                    model.fc = classifier                        
+                elif  self.model_type=='regnet_x_1_6gf':
+                    from torchvision.models  import regnet_x_1_6gf, RegNet_X_1_6GF_Weights
+                    weights=RegNet_X_1_6GF_Weights.IMAGENET1K_V2
+                    pretrained=self.pretrained
+                    model = models.regnet_x_1_6gf(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad = True
+                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)
+                elif self.model_type== 'regnet_x_32gf' :
+                    from torchvision.models  import regnet_x_32gf, RegNet_X_32GF_Weights
+                    weights=RegNet_X_32GF_Weights.IMAGENET1K_V2
+                    pretrained=self.pretrained
+                    model = models.regnet_x_32gf(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad = True
+                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)
+                elif self.model_type=='regnet_x_3_2gf':
+                    from torchvision.models  import regnet_x_3_2gf, RegNet_X_3_2GF_Weights
+                    weights=RegNet_X_3_2GF_Weights.IMAGENET1K_V2
+                    pretrained=self.pretrained
+                    model = models.regnet_x_3_2gf(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad = True
+                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)
+                elif self.model_type== 'regnet_x_400mf' :
+                    from torchvision.models  import regnet_x_400mf, RegNet_X_400MF_Weights
+                    weights=RegNet_X_400MF_Weights.IMAGENET1K_V2
+                    pretrained=self.pretrained
+                    model = models.regnet_x_400mf(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad = True
+                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)   
+                elif self.model_type== 'regnet_x_800mf' :
+                    from torchvision.models  import regnet_x_800mf, RegNet_X_800MF_Weights
+                    weights=RegNet_X_800MF_Weights.IMAGENET1K_V2
+                    pretrained=self.pretrained
+                    model = models.regnet_x_800mf(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad = True
+                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)
+                elif self.model_type=='regnet_x_8gf':
+                    from torchvision.models  import regnet_x_8gf, RegNet_X_8GF_Weights
+                    weights=RegNet_X_8GF_Weights.IMAGENET1K_V2
+                    pretrained=self.pretrained
+                    model = models.regnet_x_8gf(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad = True
+                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)
+                #####next to do################
+                elif self.model_type== 'regnet_x_400mf' :
+                    from torchvision.models  import regnet_x_400mf, RegNet_X_400MF_Weights
+                    weights=RegNet_X_400MF_Weights.IMAGENET1K_V2
+                    pretrained=self.pretrained
+                    model = models.regnet_x_400mf(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad = True
+                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)            
             if x[0]=='alexnet':
-                model = models.alexnet(pretrained=self.pretrained).to(device)
+                from torchvision.models  import densenet121, AlexNet_Weights
+                weights=AlexNet_Weights.IMAGENET1K_V1
+                pretrained=self.pretrained
+                model = models.alexnet(weights=(weights,pretrained)).to(device) 
                 for param in model.parameters():
-                    param.requires_grad = False
-                model.classifier[6] = nn.Linear(4096, self.num_classes)
+                    param.requires_grad = True
+                classifier = nn.Sequential(   
+                                nn.Linear(in_features=model.classifier[6].in_features, out_features=4096),
+                                nn.BatchNorm1d(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(),
+                                nn.Linear(in_features=4096, out_features=2048),
+                                nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(),  
+                                #nn.Dropout(p=0.5),    
+                                nn.Linear(in_features=2048, out_features=1024),
+                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
+                                nn.ReLU(),
+                                nn.Linear(in_features=1024, out_features=512),
+                                nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
+                                nn.ReLU(),  
+                                #nn.Dropout(p=0.5),
+                                nn.Linear(in_features=512, out_features=256),  
+                                nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
+                                nn.ReLU(),
+                                nn.Linear(in_features=256, out_features=128),  
+                                nn.BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
+                                nn.ReLU(),
+                                #nn.Dropout(p=0.5),  
+                                nn.Linear(in_features=128, out_features=self.num_classes), 
+                                )    
+                model.classifier[6]=classifier
+                model.to(device)    
             if x[0]== 'vgg' :
                 if self.model_type=='vgg11' :
                     model = models.vgg11(pretrained=self.pretrained).to(device)
@@ -218,7 +325,10 @@ class ModelsZoo():
                                     )
                     model.classifier = classifier
             if x[0]=='googlenet':
-                model = models.googlenet(pretrained=self.pretrained).to(device)
+                from torchvision.models import googlenet,GoogLeNet_Weights
+                weights=GoogLeNet_Weights.IMAGENET1K_V1
+                pretrained=self.pretrained
+                model = models.googlenet(weights=(weights,pretrained)).to(device) 
                 for param in model.parameters():
                     param.requires_grad = False 
                 model.fc = nn.Linear(model.fc.in_features, self.num_classes)
@@ -262,45 +372,262 @@ class ModelsZoo():
                     model.classifier[1] = nn.Linear(model.classifier[1].in_features, self.num_classes).double()           
             if x[0]=='efficientnet':   
                 if self.model_type=='efficientnet-b0':
-                    model = EfficientNet.from_pretrained('efficientnet-b0',num_classes=self.num_classes).to(device)
+                    from torchvision.models import efficientnet_b0,EfficientNet_B0_Weights
+                    weights=EfficientNet_B0_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_b0(weights=(weights,pretrained)).to(device) 
                     for param in model.parameters():
-                        param.requires_grad =True                     
-                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)
+                        param.requires_grad =True     
+                    classifier = nn.Sequential(
+                                    nn.Flatten(),
+                                    nn.Linear(in_features=model.classifier.in_features, out_features=512, bias=True),
+                                    nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=512, out_features=256, bias=True),
+                                    nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=256, out_features=self.N_class, bias=True),
+                                    nn.LogSoftmax(dim=1) ,
+                                    ) 
+                    model.classifier = classifier
+                    model.to(device)                  
                 elif self.model_type=='efficientnet-b1':
-                    model = EfficientNet.from_pretrained('efficientnet-b0',num_classes=self.num_classes).to(device)
+                    from torchvision.models import efficientnet_b1,EfficientNet_B1_Weights
+                    weights=EfficientNet_B1_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_b1(weights=(weights,pretrained)).to(device) 
                     for param in model.parameters():
                         param.requires_grad =True                     
-                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)   
+                    model._fc = nn.Linear(model.classifier.in_features,self.N_class).to(device)   
                 elif self.model_type=='efficientnet-b2':
-                    model = EfficientNet.from_pretrained('efficientnet-b2',num_classes=self.num_classes).to(device)
+                    from torchvision.models import efficientnet_b2,EfficientNet_B2_Weights
+                    weights=EfficientNet_B2_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_b2(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
                         param.requires_grad =True   
-                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)                                  
+                    model._fc = nn.Linear(model.classifier.in_features,self.N_class).to(device)                                  
                 elif self.model_type=='efficientnet-b3':
-                    model = EfficientNet.from_pretrained('efficientnet-b3',num_classes=self.num_classes).to(device)
+                    from torchvision.models import efficientnet_b3,EfficientNet_B3_Weights
+                    weights=EfficientNet_B3_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_b3(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
                         param.requires_grad =True                     
-                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)        
+                    model._fc = nn.Linear(model.classifier.in_features,self.N_class).to(device)        
                 elif self.model_type=='efficientnet-b4':
-                    model = EfficientNet.from_pretrained('efficientnet-b4',num_classes=self.num_classes).to(device)
+                    from torchvision.models import efficientnet_b4,EfficientNet_B4_Weights
+                    weights=EfficientNet_B4_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_b4(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
-                        param.requires_grad =True                     
-                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)
+                        param.requires_grad =True
+                    classifier = nn.Sequential(
+                                    nn.Flatten(),
+                                    nn.Linear(in_features=model.classifier.in_features, out_features=1024, bias=True),
+                                    nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=1024, out_features=512, bias=True),
+                                    nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=512, out_features=256, bias=True),
+                                    nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=256, out_features=self.N_class, bias=True),
+                                    nn.LogSoftmax(dim=1) ,
+                                    )                         
+                    efficientnet_b4.classifier = classifier
+                    efficientnet_b4.to(device)
                 elif self.model_type=='efficientnet-b5':
-                    model = EfficientNet.from_pretrained('efficientnet-b5',num_classes=self.num_classes).to(device)
+                    from torchvision.models import efficientnet_b5,EfficientNet_B5_Weights
+                    weights=EfficientNet_B5_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_b5(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
-                        param.requires_grad =True                     
-                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)                   
+                        param.requires_grad =True  
+                    classifier = nn.Sequential(
+                                    nn.Flatten(),
+                                    nn.Linear(in_features=model.classifier.in_features, out_features=1024, bias=True),
+                                    nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=1024, out_features=512, bias=True),
+                                    nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=512, out_features=256, bias=True),
+                                    nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=256, out_features=self.N_class, bias=True),
+                                    nn.LogSoftmax(dim=1) ,
+                                    )
+                    model.classifier = classifier
+                    model.to(device)                                         
                 elif self.model_type=='efficientnet-b6':
-                    model = EfficientNet.from_pretrained('efficientnet-b6',num_classes=self.num_classes).to(device)
+                    from torchvision.models import efficientnet_b6,EfficientNet_B6_Weights
+                    weights=EfficientNet_B6_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_b6(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
                         param.requires_grad =True                     
-                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)
+                    classifier = nn.Sequential(
+                                    nn.Flatten(),
+                                    nn.Linear(in_features=model.classifier.in_features, out_features=1024, bias=True),
+                                    nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=1024, out_features=512, bias=True),
+                                    nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=512, out_features=256, bias=True),
+                                    nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=256, out_features=self.N_class, bias=True),
+                                    nn.LogSoftmax(dim=1) ,
+                                    )
+                    model.classifier = classifier
+                    model.to(device)
                 elif self.model_type=='efficientnet-b7':
-                    model = EfficientNet.from_pretrained('efficientnet-b7',num_classes=self.num_classes).to(device)
+                    from torchvision.models import efficientnet_b7,EfficientNet_B7_Weights
+                    weights=EfficientNet_B7_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_b7(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
-                        param.requires_grad =True                     
-                    model._fc = nn.Linear(model._fc.in_features,self.N_class).to(device)    
+                        param.requires_grad =True  
+                    classifier = nn.Sequential(
+                                    nn.Flatten(),
+                                    nn.Linear(in_features=model.classifier.in_features, out_features=1024, bias=True),
+                                    nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=1024, out_features=512, bias=True),
+                                    nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=512, out_features=256, bias=True),
+                                    nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True), 
+                                    nn.Linear(in_features=256, out_features=self.N_class, bias=True),
+                                    nn.LogSoftmax(dim=1) ,
+                                    )
+                    model.classifier = classifier
+                    model.to(device)
+            if x[0]=='efficientnet_v2':  
+                if self.model_type=='efficientnet_v2_s':
+                    from torchvision.models import efficientnet_v2_s,EfficientNet_V2_S_Weights
+                    weights=EfficientNet_V2_S_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_v2_s(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True  
+                        classifier = nn.Sequential(
+                                        nn.Flatten(),
+                                        nn.Linear(in_features=model.classifier.in_features, out_features=512, bias=True),
+                                        nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=512, out_features=256, bias=True),
+                                        nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=256, out_features=self.N_class, bias=True),
+                                        nn.LogSoftmax(dim=1) ,
+                                        )
+                    model.classifier = classifier
+                    model.to(device)  
+                elif self.model_type=='efficientnet_v2_m':
+                    from torchvision.models import efficientnet_v2_m,EfficientNet_V2_M_Weights
+                    weights=EfficientNet_V2_M_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_v2_m(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True  
+                        classifier = nn.Sequential(
+                                        nn.Flatten(),
+                                        nn.Linear(in_features=model.classifier.in_features, out_features=512, bias=True),
+                                        nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=512, out_features=256, bias=True),
+                                        nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=256, out_features=self.N_class, bias=True),
+                                        nn.LogSoftmax(dim=1) ,
+                                        )
+                    model.classifier = classifier
+                    model.to(device)   
+                elif self.model_type=='efficientnet_v2_l':
+                    from torchvision.models import efficientnet_v2_l,EfficientNet_V2_L_Weights
+                    weights=EfficientNet_V2_L_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_v2_l(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True  
+                        classifier = nn.Sequential(#not correct
+                                        nn.Flatten(),
+                                        nn.Linear(in_features=model.classifier.in_features, out_features=512, bias=True),
+                                        nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=512, out_features=256, bias=True),
+                                        nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=256, out_features=self.N_class, bias=True),
+                                        nn.LogSoftmax(dim=1) ,
+                                        )
+                    model.classifier = classifier
+                    model.to(device)                    
+            if x[0]=='convnext':  
+                if self.model_type=='convnext_small':
+                    from torchvision.models import coconvnext_small,ConvNeXt_Small_Weights
+                    weights=ConvNeXt_Small_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.convnext_small(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True  
+                        classifier = nn.Sequential(
+                                        nn.Flatten(),
+                                        nn.Linear(in_features=768, out_features=512, bias=True),
+                                        nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=512, out_features=256, bias=True),
+                                        nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=256, out_features=2, bias=True),
+                                        
+                                        )
+                    model.classifier = classifier
+                    model.to(device)  
+                elif self.model_type=='convnext_base':
+                    from torchvision.models import convnext_base,ConvNeXt_Base_Weights
+                    weights=ConvNeXt_Base_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.convnext_base(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True  
+                        classifier = nn.Sequential(
+                                        nn.Flatten(),
+                                        nn.Linear(in_features=1024, out_features=512, bias=True),
+                                        nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=512, out_features=256, bias=True),
+                                        nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=256, out_features=2, bias=True),                                     
+                                        )
+                    model.classifier = classifier
+                    model.to(device)   
+                elif self.model_type=='convnext_large':
+                    from torchvision.models import convnext_large,ConvNeXt_Large_Weights
+                    weights=ConvNeXt_Large_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.convnext_large(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True  
+                        classifier = nn.Sequential(#not correct
+                                        nn.Flatten(),
+                                        nn.Linear(in_features=model.classifier.in_features, out_features=512, bias=True),
+                                        nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=512, out_features=256, bias=True),
+                                        nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=256, out_features=self.N_class, bias=True),
+                                        nn.LogSoftmax(dim=1) ,
+                                        )
+                    model.classifier = classifier
+                    model.to(device)                                        
         elif int(self.ImageShape)==self.commonShapes[1]:
             if x=='squeezenet':
                 if self.model_type =='squeezenet1_0':
@@ -329,19 +656,22 @@ class ModelsZoo():
                     model.fc = nn.Linear(model.fc.in_features, self.num_classes)        
         elif int(self.ImageShape)==self.commonShapes[3]:
             if x=='inception' :
-                model = models.inception_v3(pretrained=self.pretrained).to(device)
+                from torchvision.models import inception_v3,Inception_V3_Weights
+                weights=Inception_V3_Weights.IMAGENET1K_V1
+                pretrained=self.pretrained
+                model = models.inception_v3(weights=(weights,pretrained)).to(device)
                 for param in model.parameters():
-                    param.requires_grad = False
+                    param.requires_grad = True
                 model.AuxLogits.fc = nn.Linear(model.AuxLogits.fc.in_features, self.num_classes)
                 model.fc = nn.Linear(model.fc.in_features, self.num_classes)          
         else:
             raise AssertionError(f'ImageShape "{self.ImageShape}" is not a valid size for an image !,plase insert a Valid from : {commonShapes} more info check https://medium.com/analytics-vidhya/how-to-pick-the-optimal-image-size-for-training-convolution-neural-network-65702b880f05')
+        model.to(device)
         return model
     
     def optimizer(self,model):
         criterion = nn.CrossEntropyLoss() 
         if int(self.ImageShape) in self.commonShapes[2:] :
-            #optimizer = optim.SGD(net.parameters(), lr=1e-4, momentum=0.9)
             optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
             exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
         elif int(self.ImageShape)==self.commonShapes[1]:
@@ -351,7 +681,7 @@ class ModelsZoo():
         elif int(self.ImageShape)==self.commonShapes[0]:
             optimizer = optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-5)
             exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor = 0.1, patience =  5, mode = 'max', verbose=True)       
-            criterion = nn.NLLLoss()
+            #criterion = nn.NLLLoss()
         return   criterion,optimizer,exp_lr_scheduler
 
 #np.random.seed(37)
