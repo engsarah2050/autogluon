@@ -128,12 +128,13 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 
         commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
                       #'regnet_x_16gf',regnet_x_1_6gf,'regnet_x_32gf','regnet_x_3_2gf','regnet_x_400mf','regnet_x_800mf','regnet_x_8gf',
-                      #
+                      #'regnet_y_128gf','regnet_y_16gf','regnet_y_1_6gf','regnet_y_32gf','regnet_y_3_2gf','regnet_y_400mf','regnet_y_800mf',
                       'densenet121','densenet161','densenet169','densenet201'#,
                     #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                     #  'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2', 'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
                     #  'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7' ,
-                    #  'efficientnet_v2_s','efficientnet_v2_m','efficientnet_v2_l','convnext_small','convnext_base','convnext_large',                   
+                    #  'efficientnet_v2_s','efficientnet_v2_m','efficientnet_v2_l','convnext_small','convnext_base','convnext_large',  
+                    #'swin_t','swin_s','swin_b',                 
                     #  'squeezenet1_0','squeezenet1_1','resnext50_32x4d','resnext101_32x8d','inception_v3','xception'
                     ]
         
@@ -355,11 +356,14 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         trainloader,valloader,Testloader=Image_converter.image_tensor(self.saved_path)
                 
         commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
+                      #'regnet_x_16gf',regnet_x_1_6gf,'regnet_x_32gf','regnet_x_3_2gf','regnet_x_400mf','regnet_x_800mf','regnet_x_8gf',
+                      #'regnet_y_128gf','regnet_y_16gf','regnet_y_1_6gf','regnet_y_32gf','regnet_y_3_2gf','regnet_y_400mf','regnet_y_800mf',
                       'densenet121'#,'densenet161','densenet169','densenet201',
                     #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                     #  'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2', 'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
                     #  'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7' ,                      
                     #  'efficientnet_v2_s','efficientnet_v2_m','efficientnet_v2_l','convnext_small','convnext_base','convnext_large',
+                    #'swin_t','swin_s','swin_b', 
                     #  'squeezenet1_0','squeezenet1_1','resnext50_32x4d','resnext101_32x8d','inception_v3','xception'
                     ]
         
@@ -455,11 +459,14 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         
     def pick_model(self):  
         model_type=[#'resnet50','resnet101','resnet152',
+                    #'regnet_x_16gf',regnet_x_1_6gf,'regnet_x_32gf','regnet_x_3_2gf','regnet_x_400mf','regnet_x_800mf','regnet_x_8gf',
+                    #'regnet_y_128gf','regnet_y_16gf','regnet_y_1_6gf','regnet_y_32gf','regnet_y_3_2gf','regnet_y_400mf','regnet_y_800mf',                    
                     'densenet121','densenet161','densenet169','densenet201'#,
                #     'alexnet' ,'vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                #     'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','mobilenet_v2','wide_resnet50_2',    'wide_resnet101_2','mnasnet0_5','mnasnet1_0',
                #     'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7',                       
                #      'efficientnet_v2_s','efficientnet_v2_m','efficientnet_v2_l','convnext_small','convnext_base','convnext_large',
+               #'swin_t','swin_s','swin_b', 
                #     'squeezenet1_0','squeezenet1_1' , 'resnext50_32x4d','resnext101_32x8d',
                #     'inception_v3','xception'
                 ]
