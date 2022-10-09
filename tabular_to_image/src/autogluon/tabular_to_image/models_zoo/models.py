@@ -1238,7 +1238,10 @@ class ModelsZoo():
                             param.requires_grad =True                     
                         classifier =nn.Sequential(
                                     nn.Flatten(),
-                                    nn.Linear(in_features=model.classifier.in_features, out_features=512, bias=True),
+                                     nn.Linear(in_features=model.classifier.in_features, out_features=1024, bias=True),
+                                    nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True),
+                                    nn.Linear(in_features=model.1024, out_features=512, bias=True),
                                     nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                     nn.ReLU(inplace=True), 
                                     nn.Linear(in_features=512, out_features=256, bias=True),
