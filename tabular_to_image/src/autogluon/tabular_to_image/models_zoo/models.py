@@ -148,7 +148,21 @@ class ModelsZoo():
                     model = models.regnet_x_1_6gf(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
                         param.requires_grad = True
-                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)
+                    classifier =nn.Sequential(
+                                nn.Flatten(),
+                                nn.Linear(in_features=model.fc.in_features, out_features=912, bias=True),
+                                nn.BatchNorm1d(912, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=912, out_features=512, bias=True),
+                                nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=512, out_features=256, bias=True),
+                                nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
+                                nn.Linear(in_features=256, out_features=self.num_classes, bias=True),
+                                nn.LogSoftmax(dim=1) ,
+                                )
+                    model.fc = classifier
                 elif self.model_type== 'regnet_x_32gf' :
                     from torchvision.models  import regnet_x_32gf, RegNet_X_32GF_Weights
                     weights=RegNet_X_32GF_Weights.IMAGENET1K_V2
@@ -171,8 +185,22 @@ class ModelsZoo():
                     pretrained=self.pretrained
                     model = models.regnet_x_400mf(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
-                        param.requires_grad = True
-                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)   
+                        param.requires_grad = True  
+                    classifier =nn.Sequential(
+                                nn.Flatten(),
+                                nn.Linear(in_features=model.fc.in_features, out_features=400, bias=True),
+                                nn.BatchNorm1d(400, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=400, out_features=400, bias=True),
+                                nn.BatchNorm1d(400, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=400, out_features=256, bias=True),
+                                nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
+                                nn.Linear(in_features=256, out_features=self.num_classes, bias=True),
+                                nn.LogSoftmax(dim=1) ,
+                                )
+                    model.fc = classifier
                 elif self.model_type== 'regnet_x_800mf' :
                     from torchvision.models  import regnet_x_800mf, RegNet_X_800MF_Weights
                     weights=RegNet_X_800MF_Weights.IMAGENET1K_V2
@@ -180,7 +208,29 @@ class ModelsZoo():
                     model = models.regnet_x_800mf(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
                         param.requires_grad = True
-                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)
+                    classifier =nn.Sequential(
+                                nn.Flatten(),
+                                nn.Linear(in_features=model.fc.in_features, out_features=672, bias=True),
+                                nn.BatchNorm1d(672, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                ##nn.Dropout(p=0.50, inplace=False),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=672, out_features=672, bias=True),
+                                nn.BatchNorm1d(672, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                ##nn.Dropout(p=0.50, inplace=False),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=672, out_features=512, bias=True),
+                                nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                ##nn.Dropout(p=0.50, inplace=False),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=512, out_features=256, bias=True),
+                                nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
+                                #nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                #nn.Dropout(p=0.25, inplace=False),
+                                nn.Linear(in_features=256, out_features=self.num_classes, bias=True),
+                                nn.LogSoftmax(dim=1) ,
+                                )
+                    model.fc = classifier
                 elif self.model_type=='regnet_x_8gf':
                     from torchvision.models  import regnet_x_8gf, RegNet_X_8GF_Weights
                     weights=RegNet_X_8GF_Weights.IMAGENET1K_V2
@@ -196,7 +246,22 @@ class ModelsZoo():
                     model = models.regnet_y_128gf(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
                         param.requires_grad = True
-                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)
+                    classifier =nn.Sequential(
+                                nn.Linear(in_features=model.fc.in_features, out_features=4096, bias=True),
+                                nn.BatchNorm1d(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),   
+                                nn.Linear(in_features=2048, out_features=1024, bias=True),
+                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=1024, out_features=512, bias=True),
+                                nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
+                                nn.Linear(in_features=512, out_features=256, bias=True),
+                                nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.Dropout(p=0.25, inplace=False),
+                                nn.Linear(in_features=256, out_features=self.num_classes, bias=True),                      
+                                    )
+                    model.classifier = classifier    
                 elif self.model_type=='regnet_y_16gf':
                     from torchvision.models  import regnet_y_16gf, RegNet_Y_16GF_Weights
                     weights=RegNet_Y_16GF_Weights.IMAGENET1K_SWAG_LINEAR_V1
@@ -844,8 +909,44 @@ class ModelsZoo():
                 pretrained=self.pretrained
                 model = models.googlenet(weights=(weights,pretrained)).to(device) 
                 for param in model.parameters():
-                    param.requires_grad = False 
-                model.fc = nn.Linear(model.fc.in_features, self.num_classes)
+                    param.requires_grad = True 
+                classifier = nn.Sequential(
+                            nn.Flatten(),
+                            nn.BatchNorm1d(model.fc.in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                            nn.Linear(in_features=1024, out_features=1024, bias=True),
+                            nn.Dropout(p=0.8, inplace=False),
+                            nn.ReLU(inplace=True),  
+                            nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                            nn.Linear(in_features=1024, out_features=1024, bias=True),
+                            nn.ReLU(inplace=True),
+                            nn.Dropout(p=0.7, inplace=False),
+                            nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                            nn.Linear(in_features=1024, out_features=1024, bias=True),
+                            nn.ReLU(inplace=True),
+                            nn.Dropout(p=0.6, inplace=False),
+                            nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                            nn.Linear(in_features=1024, out_features=1024, bias=True),
+                            nn.ReLU(inplace=True),
+                            nn.Dropout(p=0.5, inplace=False),
+                            nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                            nn.Linear(in_features=1024, out_features=512, bias=True),
+                            nn.ReLU(inplace=True),
+                            nn.Dropout(p=0.40, inplace=False),
+                            nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                            nn.Linear(in_features=512, out_features=512, bias=True),
+                            nn.ReLU(inplace=True),
+                            nn.Dropout(p=0.10, inplace=False),
+                            #nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                            #nn.Linear(in_features=512, out_features=512, bias=True),
+                            #nn.ReLU(inplace=True), 
+                            #nn.Dropout(p=0.10, inplace=False),
+                            nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                            nn.Linear(in_features=512, out_features=256, bias=True),
+                            nn.ReLU(inplace=True), 
+                            nn.Dropout(p=0.10, inplace=False),
+                            nn.Linear(in_features=256, out_features=self.num_classes, bias=True),  
+                            nn.LogSoftmax(dim=1),
+                            )
             elif x[0]== 'shufflenet':
                 if self.model_type==  'shufflenet_v2_x0_5' :
                     from torchvision.models import shufflenet_v2_x0_5,ShuffleNet_V2_X0_5_Weights
@@ -1119,6 +1220,9 @@ class ModelsZoo():
                         param.requires_grad =True  
                     classifier= nn.Sequential(
                                 nn.Flatten(),
+                                nn.Linear(in_features=1024, out_features=1024, bias=True),
+                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
                                 nn.Linear(in_features=1024, out_features=512, bias=True),
                                 nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                 nn.ReLU(inplace=True), 
@@ -1137,7 +1241,10 @@ class ModelsZoo():
                         param.requires_grad =True  
                     classifier = nn.Sequential(#not correct
                                     nn.Flatten(),
-                                    nn.Linear(in_features=model.classifier.in_features, out_features=512, bias=True),
+                                    nn.Linear(in_features=model.classifier.in_features, out_features=1024, bias=True),
+                                    nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                    nn.ReLU(inplace=True),
+                                    nn.Linear(in_features=1024, out_features=512, bias=True),
                                     nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                     nn.ReLU(inplace=True), 
                                     nn.Linear(in_features=512, out_features=256, bias=True),
