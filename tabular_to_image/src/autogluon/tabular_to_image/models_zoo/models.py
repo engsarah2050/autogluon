@@ -275,9 +275,24 @@ class ModelsZoo():
                     weights=RegNet_Y_1_6GF_Weights.IMAGENET1K_V2
                     pretrained=self.pretrained
                     model = models.regnet_y_1_6gf(weights=(weights,pretrained)).to(device)
-                    for param in model.parameters():
+                    for param in model.fc.parameters():
                         param.requires_grad = True
-                    model.fc = nn.Linear(model.fc.in_features, self.num_classes) 
+                    classifier =nn.Sequential(
+                                nn.Linear(in_features=model.fc.in_features, out_features=888, bias=True),
+                                nn.BatchNorm1d(888, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
+                                nn.Linear(in_features=888, out_features=888, bias=True),
+                                nn.BatchNorm1d(888, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
+                                nn.Linear(in_features=888, out_features=512, bias=True),
+                                nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
+                                nn.Linear(in_features=512, out_features=256, bias=True),
+                                nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.Linear(in_features=256, out_features=self.num_classes, bias=True),
+                                
+                                )
+                    model.fc=classifier
                 elif self.model_type== 'regnet_y_32gf' :
                     from torchvision.models  import regnet_y_32gf, RegNet_Y_32GF_Weights
                     weights=RegNet_Y_32GF_Weights.IMAGENET1K_SWAG_LINEAR_V1

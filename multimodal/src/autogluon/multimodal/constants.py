@@ -4,6 +4,7 @@ CATEGORICAL = "categorical"
 TEXT = "text"
 NUMERICAL = "numerical"
 IMAGE_PATH = "image_path"
+IDENTIFIER = "identifier"
 
 # Problem types
 CLASSIFICATION = "classification"
@@ -13,6 +14,7 @@ REGRESSION = "regression"
 FEW_SHOT = "few_shot"
 DEFAULT_SHOT = "default_shot"
 DEPRECATED_ZERO_SHOT = "zero_shot"
+NER = "ner"
 
 # Pipelines
 FEATURE_EXTRACTION = "feature_extraction"
@@ -52,6 +54,7 @@ MAX = "max"
 MIN = "min"
 ACCURACY = "accuracy"
 ACC = "acc"
+OVERALL_ACCURACY = "overall_accuracy"
 RMSE = "rmse"
 ROOT_MEAN_SQUARED_ERROR = "root_mean_squared_error"
 R2 = "r2"
@@ -77,6 +80,7 @@ METRIC_MODE_MAP = {
     PEARSONR: MAX,
     SPEARMANR: MAX,
     F1: MAX,
+    OVERALL_ACCURACY: MAX,
 }
 VALID_METRICS = METRIC_MODE_MAP.keys()
 
@@ -155,6 +159,12 @@ IA3 = "ia3"
 IA3_BIAS = "ia3_bias"
 IA3_NORM = "ia3_norm"
 
+# DeepSpeed constants
+DEEPSPEED_OFFLOADING = "deepspeed_stage_3_offload"
+DEEPSPEED_STRATEGY = "deepspeed"
+DEEPSPEED_MODULE = "autogluon.multimodal.optimization.deepspeed"
+DEEPSPEED_MIN_PL_VERSION = "1.7.1"
+
 # registered model keys. TODO: document how to add new models.
 CLIP = "clip"
 TIMM_IMAGE = "timm_image"
@@ -164,6 +174,7 @@ NUMERICAL_MLP = "numerical_mlp"
 CATEGORICAL_MLP = "categorical_mlp"
 NUMERICAL_TRANSFORMER = "numerical_transformer"
 CATEGORICAL_TRANSFORMER = "categorical_transformer"
+<<<<<<< HEAD
 FUSION_MLP = "fusion_mlp"
 <<<<<<< HEAD
 >>>>>>> upstream/master
@@ -174,6 +185,11 @@ FUSION_TRANSFORMER = "fusion_transformer"
 >>>>>>> upstream/master
 =======
 =======
+=======
+FUSION = "fusion"
+FUSION_MLP = f"{FUSION}_mlp"
+FUSION_TRANSFORMER = f"{FUSION}_transformer"
+>>>>>>> upstream/master
 MMDET_IMAGE = "mmdet_image"
 <<<<<<< HEAD
 >>>>>>> upstream/master
@@ -185,21 +201,26 @@ MMOCR_TEXT_DET = "mmocr_text_detection"
 =======
 =======
 MMOCR_TEXT_RECOG = "mmocr_text_recognition"
+<<<<<<< HEAD
 >>>>>>> upstream/master
 HF_MODELS = (HF_TEXT, T_FEW, CLIP)
 <<<<<<< HEAD
 >>>>>>> upstream/master
 =======
+=======
+NER_TEXT = "ner_text"
+HF_MODELS = (HF_TEXT, T_FEW, CLIP, NER_TEXT)
+>>>>>>> upstream/master
 MMCV_MODELS = (MMDET_IMAGE, MMOCR_TEXT_DET, MMOCR_TEXT_RECOG)
 >>>>>>> upstream/master
 
-# metric learning loss type
+# matcher loss type
 CONTRASTIVE_LOSS = "contrastive_loss"
 
-# metric learning distance type
+# matcher distance type
 COSINE_SIMILARITY = "cosine_similarity"
 
-# metric learning miner type
+# matcher miner type
 PAIR_MARGIN_MINER = "pair_margin_miner"
 
 # checkpoints
@@ -218,4 +239,23 @@ S3_PREFIX = "s3://"
 =======
 SOURCEPROMPT_URL = "https://automl-mm-bench.s3.amazonaws.com/few_shot/templates.zip"
 SOURCEPROMPT_SHA1 = "c25cdf3730ff96ab4859b72e18d46ff117b62bd6"
+<<<<<<< HEAD
+>>>>>>> upstream/master
+=======
+
+# ner
+ENTITY_GROUP = "entity_group"
+START_OFFSET = "start"
+END_OFFSET = "end"
+TOKEN_WORD_MAPPING = "token_word_mapping"
+WORD_OFFSETS = "word_offsets"
+NER_RET = "ner_ret"
+NER_ANNOTATION = "ner_annotation"
+
+# matcher
+QUERY = "query"
+RESPONSE = "response"
+QUERY_RESPONSE = f"{QUERY}_{RESPONSE}"
+PAIR = "pair"
+TRIPLET = "triplet"
 >>>>>>> upstream/master
