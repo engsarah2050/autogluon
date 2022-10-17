@@ -1175,28 +1175,26 @@ class ModelsZoo():
                     weights=Wide_ResNet101_2_Weights.IMAGENET1K_V2
                     pretrained=self.pretrained
                     model = models.wide_resnet101_2(weights=(weights,pretrained)).to(device)
-                    for param in model.parameters():
+                    for param in model.fc.parameters():
                         param.requires_grad = True
                     classifier =nn.Sequential(
                                 nn.Linear(in_features=model.fc.in_features, out_features=2048),
                                 nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                nn.ReLU(),
+                                nn.ReLU(inplace=True),
                                 nn.Linear(in_features=2048, out_features=1024),
                                 nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                nn.ReLU(),
+                                nn.ReLU(inplace=True),
                                 nn.Linear(in_features=1024, out_features=1024),
                                 nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                nn.ReLU(),
+                                nn.ReLU(inplace=True),
                                 nn.Linear(in_features=1024, out_features=512),
                                 nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                nn.ReLU(), 
+                                nn.ReLU(inplace=True),
                                 nn.Linear(in_features=512, out_features=256),  
                                 nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
-                                nn.ReLU(),
-                                nn.Linear(in_features=256, out_features=128),
-                                nn.BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
-                                nn.ReLU(),
-                                nn.Linear(in_features=128, out_features=self.num_classes), 
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=256, out_features=self.num_classes),
+                                nn.LogSoftmax(dim=1),                   
                                 )    
                     model.fc=classifier    
             elif x[0]=='mnasnet':   
