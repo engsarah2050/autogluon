@@ -1146,7 +1146,45 @@ class ModelsZoo():
                     model = models.mobilenet_v3_large(weights=(weights,pretrained)).to(device) 
                     for param in model.parameters():
                         param.requires_grad = True
-                    model.classifier[1] = nn.Linear(model.classifier[1].in_features, self.num_classes)
+                    classifier = nn.Sequential(
+                            nn.Linear(in_features=model.classifier.in_features, out_features=1280, bias=True),
+                            nn.BatchNorm1d(1280, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),     
+                            nn.Hardswish(),
+                            nn.Dropout(p=0.6, inplace=True),
+                            nn.ReLU(inplace=True),     
+                            nn.Linear(in_features=1280, out_features=1280),
+                            nn.BatchNorm1d(1280, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),     
+                            nn.Hardswish(),
+                            nn.Dropout(p=0.4, inplace=True), 
+                            nn.ReLU(inplace=True),   
+                            nn.Linear(in_features=1280, out_features=1280),
+                            nn.BatchNorm1d(1280, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),     
+                            nn.Hardswish(),
+                            nn.Dropout(p=0.3, inplace=True), 
+                            nn.ReLU(inplace=True),      
+                            nn.Linear(in_features=1280, out_features=1024),
+                            nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
+                            nn.Hardswish(),
+                            nn.Dropout(p=0.3, inplace=True), 
+                            nn.ReLU(inplace=True),     
+                            nn.Linear(in_features=1024, out_features=512),
+                            nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),     
+                            nn.Hardswish(),
+                            nn.Dropout(p=0.2, inplace=True),
+                            nn.ReLU(inplace=True),   
+                            nn.Linear(in_features=512, out_features=256),
+                            nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),     
+                            nn.Hardswish(),
+                            #nn.Dropout(p=0.2, inplace=True),
+                            nn.ReLU(inplace=True),   
+                            nn.Linear(in_features=256, out_features=128),
+                            nn.BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),     
+                            nn.Hardswish(),
+                            #nn.Dropout(p=0.2, inplace=True),
+                            nn.ReLU(inplace=True),   
+                            nn.Linear(in_features=128, out_features=self.num_classes), 
+                            )    
+                    model.classifier=classifier
             elif x[0]=='wide_resnet':   
                 if self.model_type=='wide_resnet50_2' :
                     from torchvision.models import wide_resnet50_2,Wide_ResNet50_2_Weights
