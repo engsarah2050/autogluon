@@ -868,7 +868,7 @@ class ModelsZoo():
                                     nn.ReLU(),
                                     nn.Dropout(p=0.4),
                                     nn.Linear(in_features=1024, out_features=self.num_classes),
-                                    nn.LogSoftmax(dim=1)  
+                                    nn.LogSoftmax(dim=1),  
                                     )                     
                     model.fc = classifier     
                     #model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
@@ -1116,6 +1116,38 @@ class ModelsZoo():
                                 nn.Linear(in_features=256, out_features=self.num_classes), 
                                 )    
                     model.fc=classifier
+                elif self.model_type==  'shufflenet_v2_x1_0' :
+                    from torchvision.models import shufflenet_v2_x1_0,ShuffleNet_V2_X1_0_Weights
+                    weights=ShuffleNet_V2_X1_0_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.shufflenet_v2_x1_0(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad = True 
+                    classifier =nn.Sequential(
+                                nn.Linear(in_features=model.fc.in_features, out_features=1024),
+                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.Dropout(p=0.3),  
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=1024, out_features=1024),
+                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.Dropout(p=0.2),  
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=1024, out_features=1024),
+                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.Dropout(p=0.15),  
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=1024, out_features=1024),
+                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),  
+                                nn.Linear(in_features=1024, out_features=512),
+                                nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=512, out_features=256),
+                                nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=256, out_features=self.num_classes) , 
+                    ) 
+                    model.fc=classifier    
                 elif self.model_type== 'shufflenet_v2_x1_5':
                     from torchvision.models import shufflenet_v2_x1_5,ShuffleNet_V2_X1_0_Weights
                     weights=ShuffleNet_V2_X1_0_Weights.IMAGENET1K_V1
@@ -1152,16 +1184,40 @@ class ModelsZoo():
                     pretrained=self.pretrained
                     model = models.shufflenet_v2_x2_0(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
-                        param.requires_grad = True 
-                    model.fc = nn.Linear(model.fc.in_features, self.num_class)
-                elif self.model_type==  'shufflenet_v2_x2_0' :
-                    from torchvision.models import shufflenet_v2_x0_5,GoogLeNet_Weights
-                    weights=GoogLeNet_Weights.IMAGENET1K_V1
-                    pretrained=self.pretrained
-                    model = models.shufflenet_v2_x0_5(weights=(weights,pretrained)).to(device)
-                    for param in model.parameters():
-                        param.requires_grad = True 
-                    model.fc = nn.Linear(model.fc.in_features, self.num_classes)        
+                        param.requires_grad = True  
+                    classifier =nn.Sequential(
+                                nn.Flatten(),
+                                nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=model.fc.in_features, out_features=2048),  
+                                nn.Dropout(p=0.7),   
+                                nn.Linear(in_features=2048, out_features=2048),
+                                nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Dropout(p=0.7),   
+                                nn.Linear(in_features=2048, out_features=1024),
+                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Dropout(p=0.3), 
+                                #nn.Linear(in_features=1024, out_features=1024),
+                                #nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                #nn.ReLU(inplace=True),  
+                                nn.Dropout(p=0.2),
+                                nn.Linear(in_features=1024, out_features=1024),
+                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),  
+                                nn.Dropout(p=0.2),  
+                                nn.Linear(in_features=1024, out_features=512),
+                                nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
+                                nn.ReLU(inplace=True),
+                                #nn.Dropout(p=0.2),
+                                nn.Linear(in_features=512, out_features=256),
+                                nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),  
+                                nn.ReLU(inplace=True),
+                                #nn.Dropout(p=0.2),  
+                                nn.Linear(in_features=256, out_features=self.num_class), 
+                                )       
+                    model.fc = classifier
             elif x[0]=='mobilenet_v2' :   
                 from torchvision.models import mobilenet_v2,MobileNet_V2_Weights
                 weights=MobileNet_V2_Weights.IMAGENET1K_V2
@@ -1569,8 +1625,38 @@ class ModelsZoo():
                     pretrained=self.pretrained
                     model = models.squeezenet1_0(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
-                        param.requires_grad = True 
-                    model.classifier[1] = nn.Conv2d(512, self.num_classes, kernel_size=(1,1), stride=(1,1))
+                        param.requires_grad = True
+                    classifier= nn.Sequential(
+                                nn.Dropout(p=0.5,inplace=False),
+                                nn.Conv2d(512, 1024,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),   
+                                nn.Dropout(p=0.5,inplace=False),
+                                nn.Conv2d(512, 1024,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                                nn.Dropout(p=0.3,inplace=False),
+                                nn.Conv2d(1024, 1024,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                                nn.Conv2d(1024, 1024,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                                nn.Dropout(p=0.3,inplace=False),
+                                nn.Conv2d(1024, 1024,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                                nn.Dropout(p=0.3,inplace=False),
+                                nn.Conv2d(1024, 512,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                                #nn.Dropout(p=0.15,inplace=False),
+                                nn.Conv2d(512, 256,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)), 
+                                nn.Conv2d(256, self.num_classes,kernel_size=(1, 1), stride=(1, 1)),
+                            )
+                    model.classifier[1] = classifier   
                     model.num_classes = self.num_classes
                 elif self.model_type=='squeezenet1_1':
                     from torchvision.models import squeezenet1_1,SqueezeNet1_1_Weights
@@ -1579,7 +1665,41 @@ class ModelsZoo():
                     model = models.squeezenet1_1(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
                         param.requires_grad = True 
-                    model.classifier[1] = nn.Conv2d(512, self.num_classes, kernel_size=(1,1), stride=(1,1))
+                    classifier= nn.Sequential(
+                                nn.Dropout(p=0.5,inplace=False),
+                                nn.Conv2d(512, 1024,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),   
+                                nn.Dropout(p=0.5,inplace=False),
+                                nn.Conv2d(512, 1024,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                                nn.Dropout(p=0.5,inplace=False),
+                                nn.Conv2d(1024, 1024,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                                nn.Conv2d(1024, 1024,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                                nn.Dropout(p=0.2,inplace=False),
+                                nn.Conv2d(1024, 1024,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                                nn.Dropout(p=0.2,inplace=False),
+                                nn.Conv2d(1024, 512,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                                #nn.Dropout(p=0.2,inplace=False),
+                                nn.Conv2d(512, 512,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                                #nn.Dropout(p=0.15,inplace=False),
+                                nn.Conv2d(512, 256,kernel_size=(1, 1), stride=(1, 1)),
+                                nn.ReLU(inplace=True),
+                                nn.AdaptiveAvgPool2d(output_size=(1, 1)), 
+                                nn.Conv2d(256, self.num_classes ,kernel_size=(1, 1), stride=(1, 1)),
+                            )
+                    model.classifier[1]=classifier
                     model.num_classes = self.num_classes 
             elif x[0]=='resnext':
                 if self.model_type=='resnext50_32x4d' :
@@ -1806,12 +1926,19 @@ class ModelsZoo():
                         param.requires_grad = True 
                     classifier= nn.Sequential(
                                 nn.Flatten(),
-                                nn.Linear(in_features=model.fc.in_features, out_features=512, bias=True),
+                                nn.Linear(in_features=768, out_features=1024, bias=True),
+                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.Dropout(p=0.20, inplace=False),
+                                nn.ReLU(inplace=True), 
+                                nn.Linear(in_features=1024, out_features=1024, bias=True),
+                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=1024, out_features=512, bias=True),
                                 nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                 nn.ReLU(inplace=True), 
                                 nn.Linear(in_features=512, out_features=256, bias=True),
                                 nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                nn.ReLU(inplace=True), 
+                                nn.ReLU(inplace=True),
                                 nn.Linear(in_features=256, out_features=self.num_classes, bias=True),
                                 )
                     model.fc=classifier  
