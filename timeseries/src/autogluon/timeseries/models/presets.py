@@ -3,40 +3,27 @@ import logging
 from typing import Any, Dict, List, Union
 
 import autogluon.core as ag
+import autogluon.timeseries as agts
 
-from .abstract import AbstractTimeSeriesModel
-from .abstract.abstract_timeseries_model import AbstractTimeSeriesModelFactory
-from .autogluon_tabular import AutoGluonTabularModel
-from .gluonts import (
+from . import (
+    ARIMAModel,
+    AutoGluonTabularModel,
     DeepARModel,
-    DeepARMXNetModel,
-    MQCNNMXNetModel,
-    MQRNNMXNetModel,
+    ETSModel,
+    NaiveModel,
+    SeasonalNaiveModel,
     SimpleFeedForwardModel,
-    SimpleFeedForwardMXNetModel,
-    TemporalFusionTransformerMXNetModel,
-    TransformerMXNetModel,
+    ThetaModel,
 )
-from .local import NaiveModel, SeasonalNaiveModel
-from .sktime import SktimeARIMAModel, SktimeAutoARIMAModel, SktimeAutoETSModel
-from .statsmodels import ARIMAModel, ETSModel, ThetaModel
+from .abstract import AbstractTimeSeriesModel, AbstractTimeSeriesModelFactory
 
 logger = logging.getLogger(__name__)
 
-
+# define the model zoo with their aliases
 MODEL_TYPES = dict(
-    MQCNNMXNet=MQCNNMXNetModel,
-    MQRNNMXNet=MQRNNMXNetModel,
     SimpleFeedForward=SimpleFeedForwardModel,
-    SimpleFeedForwardMXNet=SimpleFeedForwardMXNetModel,
     DeepAR=DeepARModel,
-    DeepARMXNet=DeepARMXNetModel,
     # Prophet=ProphetModel,
-    TransformerMXNet=TransformerMXNetModel,
-    TemporalFusionTransformerMXNet=TemporalFusionTransformerMXNetModel,
-    SktimeARIMA=SktimeARIMAModel,
-    SktimeAutoARIMA=SktimeAutoARIMAModel,
-    SktimeAutoETS=SktimeAutoETSModel,
     ETS=ETSModel,
     ARIMA=ARIMAModel,
     Theta=ThetaModel,
@@ -44,25 +31,58 @@ MODEL_TYPES = dict(
     Naive=NaiveModel,
     SeasonalNaive=SeasonalNaiveModel,
 )
+if agts.MXNET_INSTALLED:
+    from .gluonts.mx import (
+        DeepARMXNetModel,
+        MQCNNMXNetModel,
+        MQRNNMXNetModel,
+        SimpleFeedForwardMXNetModel,
+        TemporalFusionTransformerMXNetModel,
+        TransformerMXNetModel,
+    )
+
+    MODEL_TYPES.update(
+        dict(
+            DeepARMXNet=DeepARMXNetModel,
+            SimpleFeedForwardMXNet=SimpleFeedForwardMXNetModel,
+            MQCNNMXNet=MQCNNMXNetModel,
+            MQRNNMXNet=MQRNNMXNetModel,
+            TransformerMXNet=TransformerMXNetModel,
+            TemporalFusionTransformerMXNet=TemporalFusionTransformerMXNetModel,
+        )
+    )
+
+if agts.SKTIME_INSTALLED:
+    from .sktime import ARIMASktimeModel, AutoARIMASktimeModel, AutoETSSktimeModel
+
+    MODEL_TYPES.update(
+        dict(
+            ARIMASktime=ARIMASktimeModel,
+            AutoARIMASktime=AutoARIMASktimeModel,
+            AutoETSSktime=AutoETSSktimeModel,
+        )
+    )
+
 DEFAULT_MODEL_NAMES = {v: k for k, v in MODEL_TYPES.items()}
 DEFAULT_MODEL_PRIORITY = dict(
-    MQCNNMXNet=20,
-    MQRNNMXNet=20,
-    SimpleFeedForward=30,
-    SimpleFeedForwardMXNet=25,
+    Naive=100,
+    SeasonalNaive=100,
+    ETS=90,
+    Theta=90,
+    ARIMA=80,
+    AutoGluonTabular=70,
+    DeepAR=60,
+    TemporalFusionTransformerMXNet=50,
+    SimpleFeedForward=40,
     TransformerMXNet=30,
-    TemporalFusionTransformerMXNet=30,
-    DeepAR=40,
-    DeepARMXNet=30,
-    SktimeAutoARIMA=20,
-    SktimeARIMA=50,
-    SktimeAutoETS=60,
-    ARIMA=50,
-    ETS=60,
-    Theta=60,
-    AutoGluonTabular=45,
-    Naive=70,
-    SeasonalNaive=70,
+    # Models below are not included in any presets
+    AutoETSSktime=60,
+    ARIMASktime=50,
+    DeepARMXNet=50,
+    SimpleFeedForwardMXNet=30,
+    AutoARIMASktime=20,
+    MQCNNMXNet=10,
+    MQRNNMXNet=10,
 )
 DEFAULT_CUSTOM_MODEL_PRIORITY = 0
 MINIMUM_CONTEXT_LENGTH = 10
@@ -78,28 +98,22 @@ def get_default_hps(key, prediction_length):
             "ETS": {},
             "Theta": {},
         },
-        "default": {
+        "medium_quality": {
             "Naive": {},
             "SeasonalNaive": {},
             "ARIMA": {},
             "ETS": {},
             "Theta": {},
-            "SimpleFeedForward": {
-                "context_length": context_length,
-            },
+            "AutoGluonTabular": {},
             "DeepAR": {
                 "context_length": context_length,
             },
-            "TemporalFusionTransformerMXNet": {
-                "context_length": context_length,
-            },
-            "AutoGluonTabular": {},
         },
-        "default_hpo": {
+        "high_quality": {
             "Naive": {},
             "SeasonalNaive": {},
             "ARIMA": {
-                "order": ag.Categorical((2, 0, 1), (2, 1, 0), (2, 1, 1), (1, 1, 1)),
+                "order": ag.Categorical((2, 1, 0), (2, 1, 1), (5, 1, 1)),
                 "seasonal_order": ag.Categorical((0, 0, 0), (1, 0, 0)),
             },
             "ETS": {
@@ -108,31 +122,59 @@ def get_default_hps(key, prediction_length):
             },
             "Theta": {
                 "deseasonalize": ag.Categorical(True, False),
-                "method": ag.Categorical("auto", "additive"),
             },
+            "AutoGluonTabular": {},
             "DeepAR": {
-                "cell_type": ag.Categorical("gru", "lstm"),
-                "num_layers": ag.Int(1, 3),
-                "num_cells": ag.Categorical(40, 80),
                 "context_length": context_length,
             },
             "SimpleFeedForward": {
-                "num_hidden_dimensions": ag.Categorical([40], [40, 40], [120]),
-                "batch_size": 64,
-                "context_length": context_length,
-            },
-            "TransformerMXNet": {
-                "model_dim": ag.Categorical(32, 64),
-                "batch_size": 64,
-                "context_length": context_length,
-            },
-            "TemporalFusionTransformerMXNet": {
-                "hidden_dim": ag.Categorical(32, 64),
-                "batch_size": 64,
                 "context_length": context_length,
             },
         },
+        "best_quality": {
+            "Naive": {},
+            "SeasonalNaive": {},
+            "ARIMA": {
+                "order": ag.Categorical((2, 1, 0), (2, 1, 1), (5, 1, 1)),
+                "seasonal_order": ag.Categorical((0, 0, 0), (1, 0, 0)),
+            },
+            "ETS": {
+                "trend": ag.Categorical("add", None),
+                "seasonal": ag.Categorical("add", None),
+            },
+            "Theta": {
+                "deseasonalize": ag.Categorical(True, False),
+            },
+            "DeepAR": {
+                "context_length": context_length,
+                "num_layers": ag.Int(1, 3, default=2),
+                "hidden_size": ag.Int(40, 80, default=40),
+            },
+            "SimpleFeedForward": {
+                "context_length": context_length,
+                "hidden_dimensions": ag.Categorical([40], [40, 40], [120]),
+            },
+        },
     }
+
+    # update with MXNet if installed
+    if agts.MXNET_INSTALLED:
+        mxnet_default_updates = {
+            "high_quality": {
+                "TemporalFusionTransformerMXNet": {"context_length": context_length},
+            },
+            "best_quality": {
+                "TemporalFusionTransformerMXNet": {"context_length": context_length},
+                "TransformerMXNet": {"context_length": context_length},
+            },
+        }
+        for k in default_model_hps:
+            default_model_hps[k] = dict(**default_model_hps[k], **mxnet_default_updates.get(k, {}))
+
+    # For backwards compatibility
+    default_model_hps["default"] = default_model_hps["medium_quality"]
+    default_model_hps["default_hpo"] = default_model_hps["best_quality"]
+
     return default_model_hps[key]
 
 

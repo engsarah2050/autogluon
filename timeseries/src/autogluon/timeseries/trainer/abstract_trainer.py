@@ -72,7 +72,7 @@ class SimpleAbstractTrainer:
         """Return the name of the best model by model performance on the validation set."""
         models = self.get_model_names()
         if not models:
-            raise ValueError("Trainer has no fit models that can infer.")
+            raise ValueError("Trainer has no fit models that can predict.")
         model_performances = self.get_models_attribute_dict(attribute="val_score")
         performances_list = [(m, model_performances[m]) for m in models if model_performances[m] is not None]
 
@@ -812,15 +812,16 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
     def predict(
         self,
         data: TimeSeriesDataFrame,
+        known_covariates: Optional[TimeSeriesDataFrame] = None,
         model: Optional[Union[str, AbstractTimeSeriesModel]] = None,
         **kwargs,
     ) -> Union[TimeSeriesDataFrame, None]:
         model_was_selected_automatically = model is None
         model = self._get_model_for_prediction(model)
         try:
-            return self._predict_model(data, model, **kwargs)
+            return self._predict_model(data, model, known_covariates=known_covariates, **kwargs)
         except Exception as err:
-            logger.error(f"\tWarning: Model {model.name} failed during prediction with exception: {err}")
+            logger.error(f"Warning: Model {model.name} failed during prediction with exception: {err}")
             other_models = [m for m in self.get_model_names() if m != model.name]
             if len(other_models) > 0 and model_was_selected_automatically:
                 logger.info(f"\tYou can call predict(data, model) with one of other available models: {other_models}")
@@ -844,10 +845,13 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
             model_preds = {}
             base_models = self.get_minimum_model_set(model, include_self=False)
             for base_model in base_models:
-                base_model_loaded = self._get_model_for_prediction(base_model)
-                model_preds[base_model] = base_model_loaded.predict_for_scoring(
-                    data, quantile_levels=self.quantile_levels
-                )
+                try:
+                    base_model_loaded = self._get_model_for_prediction(base_model)
+                    model_preds[base_model] = base_model_loaded.predict_for_scoring(
+                        data, quantile_levels=self.quantile_levels
+                    )
+                except Exception:
+                    model_preds[base_model] = None
             forecasts = model.predict(model_preds)
 
             model_score = evaluator(data, forecasts) * evaluator.coefficient
@@ -859,12 +863,13 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
         self,
         data: TimeSeriesDataFrame,
         model: Union[str, AbstractTimeSeriesModel],
+        known_covariates: Optional[TimeSeriesDataFrame] = None,
         **kwargs,
     ) -> TimeSeriesDataFrame:
         if isinstance(model, str):
             model = self.load_model(model)
         data = self.get_inputs_to_model(model=model, X=data)
-        return model.predict(data, **kwargs)
+        return model.predict(data, known_covariates=known_covariates, **kwargs)
 
     # TODO: experimental
     def refit_single_full(self, train_data=None, val_data=None, models=None):
