@@ -2,14 +2,20 @@ from abc import ABCMeta, abstractmethod
 from functools import partial
 import json
 
+import numpy as np
 import scipy
 import scipy.stats
 import sklearn.metrics
 
+try:
+    from sklearn.metrics._classification import _check_targets, type_of_target
+except:
+    from sklearn.metrics.classification import _check_targets, type_of_target
+
 from . import classification_metrics
-from ..constants import BINARY, MULTICLASS, REGRESSION, QUANTILE, SOFTCLASS
-from .classification_metrics import *
+from .classification_metrics import confusion_matrix
 from . import quantile_metrics
+from ..constants import BINARY, MULTICLASS, REGRESSION, QUANTILE, SOFTCLASS
 
 
 class Scorer(object, metaclass=ABCMeta):
@@ -478,7 +484,7 @@ mcc = make_scorer('mcc', sklearn.metrics.matthews_corrcoef)
 
 # Score functions that need decision values
 roc_auc = make_scorer('roc_auc',
-                      sklearn.metrics.roc_auc_score,
+                      classification_metrics.customized_binary_roc_auc_score,
                       greater_is_better=True,
                       needs_threshold=True)
 
@@ -499,7 +505,7 @@ recall = make_scorer('recall',
                      sklearn.metrics.recall_score)
 
 # Register other metrics
-quadratic_kappa = make_scorer('quadratic_kappa', quadratic_kappa, needs_proba=False)
+quadratic_kappa = make_scorer('quadratic_kappa', classification_metrics.quadratic_kappa, needs_proba=False)
 
 
 def customized_log_loss(y_true, y_pred, eps=1e-15):
@@ -524,7 +530,8 @@ def customized_log_loss(y_true, y_pred, eps=1e-15):
     assert y_true.ndim == 1
     if y_pred.ndim == 1:
         # First clip the y_pred which is also used in sklearn
-        y_pred = np.clip(y_pred, eps, 1 - eps)
+        # Convert to float64 to avoid rounding error on the clip operation with epsilon
+        y_pred = np.clip(y_pred.astype(float), eps, 1 - eps)
         return - (y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred)).mean()
     else:
         assert y_pred.ndim == 2, 'Only ndim=2 is supported'

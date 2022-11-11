@@ -347,25 +347,17 @@ class ModelsZoo():
                     model = models.regnet_y_16gf(weights=(weights,pretrained)).to(device)
                     for param in model.parameters():
                         param.requires_grad = True
-                    classifier =nn.Sequential(
-                                nn.Linear(in_features=model.fc.in_features, out_features=3024, bias=True),
-                                nn.BatchNorm1d(3024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                nn.ReLU(inplace=True),
-                                nn.Linear(in_features=3024, out_features=2048, bias=True),
-                                nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                nn.ReLU(inplace=True), 
-                                nn.Linear(in_features=2048, out_features=1024, bias=True),
-                                nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                nn.ReLU(inplace=True), 
-                                nn.Linear(in_features=1024, out_features=512, bias=True),
-                                nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                nn.ReLU(inplace=True),
-                                nn.Linear(in_features=512, out_features=256, bias=True),
-                                nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                nn.ReLU(inplace=True),
-                                nn.Linear(in_features=256, out_features=self.num_classes, bias=True),
-                                nn.LogSoftmax(dim=1) ,
-                                )
+                    classifier = nn.Sequential(
+                                        nn.Linear(in_features=3024, out_features=2048, bias=True),
+                                        nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Dropout(p=0.30, inplace=False),
+                                        nn.Linear(in_features=2048, out_features=512, bias=True),
+                                        nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True),
+                                        nn.Linear(in_features=512, out_features=2, bias=True),
+                                        nn.LogSoftmax(dim=1) ,
+                                        )
                     model.fc = classifier
                 elif self.model_type== 'regnet_y_1_6gf' :
                     from torchvision.models  import regnet_y_1_6gf, RegNet_Y_1_6GF_Weights.IMAGENET1K_V2.
@@ -1516,6 +1508,34 @@ class ModelsZoo():
                                     nn.LogSoftmax(dim=1) ,
                                     )
                     model.classifier = classifier          
+                elif self.model_type=='efficientnet-b4':
+                    from torchvision.models import efficientnet_b4,EfficientNet_B4_Weights
+                    weights=EfficientNet_B4_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.efficientnet_b4(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True
+                    classifier =nn.Sequential(
+                                        nn.Flatten(),
+                                        nn.Linear(in_features=1792, out_features=2048, bias=True),
+                                        nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True),
+                                        nn.Dropout(p=0.30, inplace=False),
+                                        nn.Linear(in_features=2048, out_features=2048, bias=True),
+                                        nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True),
+                                        nn.Dropout(p=0.20, inplace=False), 
+                                        nn.Linear(in_features=2048, out_features=1024, bias=True),
+                                        nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True),
+                                        nn.Dropout(p=0.10, inplace=False),
+                                        nn.Linear(in_features=1024, out_features=512, bias=True),
+                                        nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.ReLU(inplace=True), 
+                                        nn.Linear(in_features=512, out_features=2, bias=True),
+                                        nn.LogSoftmax(dim=1) ,
+                                        )                       
+                    model.classifier = classifier    
             elif x[0]=='efficientnet_v2':  
                 if self.model_type=='efficientnet_v2_s':
                     from torchvision.models import efficientnet_v2_s,EfficientNet_V2_S_Weights
@@ -1859,33 +1879,6 @@ class ModelsZoo():
                     param.requires_grad = True
                 model.AuxLogits.fc = nn.Linear(model.AuxLogits.fc.in_features, self.num_classes)
                 model.fc = nn.Linear(model.fc.in_features, self.num_classes)          
-        elif int(self.ImageShape)==self.commonShapes[5]:
-            if x[0]=='efficientnet':
-                if self.model_type=='efficientnet-b4':
-                    from torchvision.models import efficientnet_b4,EfficientNet_B4_Weights
-                    weights=EfficientNet_B4_Weights.IMAGENET1K_V1
-                    pretrained=self.pretrained
-                    model = models.efficientnet_b4(weights=(weights,pretrained)).to(device)
-                    for param in model.parameters():
-                        param.requires_grad =True
-                    classifier = nn.Sequential(
-                                    nn.Flatten(),
-                                    nn.Linear(in_features=model.classifier.in_features, out_features=1792, bias=True),
-                                    nn.BatchNorm1d(1792, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                    nn.ReLU(inplace=True),
-                                    nn.Linear(in_features=1024, out_features=1024, bias=True),
-                                    nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                    nn.ReLU(inplace=True), 
-                                    nn.Linear(in_features=1024, out_features=512, bias=True),
-                                    nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                    nn.ReLU(inplace=True), 
-                                    nn.Linear(in_features=512, out_features=256, bias=True),
-                                    nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                    nn.ReLU(inplace=True), 
-                                    nn.Linear(in_features=256, out_features=self.N_class, bias=True),
-                                    nn.LogSoftmax(dim=1) ,
-                                    )                         
-                    model.classifier = classifier
         elif int(self.ImageShape)==self.commonShapes[6]:
             if x[0]=='regnet' :
                 if self.model_type=='regnet_y_128gf':
@@ -1962,10 +1955,10 @@ class ModelsZoo():
                         param.requires_grad =True  
                     classifier = nn.Sequential(
                                     nn.Flatten(),
-                                    nn.Linear(in_features=model.classifier.in_features, out_features=2048, bias=True),
+                                    nn.Linear(in_features=2048, out_features=2048, bias=True),
                                     nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                     nn.ReLU(inplace=True),
-                                    nn.Linear(in_features=model.classifier.in_features, out_features=1024, bias=True),
+                                    nn.Linear(in_features=2048, out_features=1024, bias=True),
                                     nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                     nn.ReLU(inplace=True), 
                                     nn.Linear(in_features=1024, out_features=512, bias=True),

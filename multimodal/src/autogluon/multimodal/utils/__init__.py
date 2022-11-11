@@ -9,6 +9,7 @@ from .config import (
     parse_dotlist_conf,
     save_pretrained_model_configs,
     update_config_by_rules,
+    update_tabular_config_by_resources,
 )
 from .data import (
     assign_feature_column_names,
@@ -39,7 +40,7 @@ from .matcher import compute_semantic_similarity, convert_data_for_ranking, crea
 from .metric import compute_ranking_score, compute_score, get_minmax_mode, infer_metrics
 from .misc import logits_to_prob, tensor_to_ndarray
 from .mmcv import CollateMMCV, send_datacontainers_to_device, unpack_datacontainers
-from .model import create_fusion_model, create_model, modify_duplicate_model_names, select_model
+from .model import create_fusion_model, create_model, list_timm_models, modify_duplicate_model_names, select_model
 from .object_detection import (
     COCODataset,
     bbox_xyxy_to_xywh,
@@ -49,9 +50,12 @@ from .object_detection import (
     from_voc,
     get_detection_classes,
     get_image_name_num,
-    get_voc_classes,
     getCOCOCatIDs,
+    save_result_coco_format,
+    save_result_df,
+    save_result_voc_format,
+    visualize_detection,
 )
 from .onnx import get_onnx_input
 from .pipeline import init_pretrained, init_pretrained_matcher
-from .save import process_save_path, save_pretrained_model_configs, save_text_tokenizers
+from .save import process_save_path, save_pretrained_model_configs, save_text_tokenizers, setup_save_path

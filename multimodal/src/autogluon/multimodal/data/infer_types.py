@@ -17,6 +17,7 @@ from ..constants import (
     IMAGE,
     IMAGE_PATH,
     MULTICLASS,
+    NAMED_ENTITY_RECOGNITION,
     NER,
     NER_ANNOTATION,
     NULL,
@@ -282,7 +283,7 @@ def is_identifier_column(data: pd.Series, col_name: str, id_mappings: Dict[str, 
         return False
 
 
-def infer_id_mappings_types(id_mappings: Dict[str, Dict]) -> Dict:
+def infer_id_mappings_types(id_mappings: Union[Dict[str, Dict], Dict[str, pd.Series]]) -> Dict:
     """
     Infer the data types in id_mappings.
 
@@ -300,7 +301,14 @@ def infer_id_mappings_types(id_mappings: Dict[str, Dict]) -> Dict:
         return id_mappings_types
 
     for per_name, per_id_mappings in id_mappings.items():
-        per_id_mappings = pd.Series(per_id_mappings.values())
+        if isinstance(per_id_mappings, dict):
+            per_id_mappings = pd.Series(per_id_mappings.values())
+        elif isinstance(per_id_mappings, pd.Series):
+            pass
+        else:
+            raise ValueError(
+                f"Invalid per_id_mappings type: {type(per_id_mappings)}. Make sure the id_mappings is a dict of dicts or a dict of pd.Series."
+            )
         if is_imagepath_column(per_id_mappings, col_name=per_name):
             id_mappings_types[per_name] = IMAGE_PATH
         elif is_text_column(per_id_mappings):
@@ -319,7 +327,7 @@ def infer_column_types(
     provided_column_types: Optional[Dict] = None,
     allowable_column_types: Optional[List[str]] = None,
     fallback_column_type: Optional[str] = None,
-    id_mappings: Optional[Dict[str, Dict]] = None,
+    id_mappings: Optional[Union[Dict[str, Dict], Dict[str, pd.Series]]] = None,
 ) -> Dict:
     """
     Infer the column types of a multimodal pd.DataFrame.
@@ -426,11 +434,10 @@ def check_missing_values(
         )
 
 
-def infer_label_column_type_by_problem_type_and_pipeline(
+def infer_label_column_type_by_problem_type(
     column_types: Dict,
     label_columns: Union[str, List[str]],
     problem_type: Optional[str],
-    pipeline: Optional[str] = None,
     data: Optional[pd.DataFrame] = None,
     valid_data: Optional[pd.DataFrame] = None,
     allowable_label_types: Optional[List[str]] = (CATEGORICAL, NUMERICAL, NER_ANNOTATION, ROIS),
@@ -447,8 +454,6 @@ def infer_label_column_type_by_problem_type_and_pipeline(
         The label columns in a pd.DataFrame.
     problem_type
         Type of problem.
-    pipeline
-        Predictor pipeline, used when problem_type is None.
     data
         A pd.DataFrame.
     valid_data
@@ -487,10 +492,8 @@ def infer_label_column_type_by_problem_type_and_pipeline(
             column_types[col_name] = NUMERICAL
         elif problem_type == NER:
             column_types[col_name] = NER_ANNOTATION
-
-        if problem_type is None:
-            if pipeline == OBJECT_DETECTION:
-                column_types[col_name] = ROIS
+        elif problem_type == OBJECT_DETECTION:
+            column_types[col_name] = ROIS
 
         if column_types[col_name] not in allowable_label_types:
             column_types[col_name] = fallback_label_type
@@ -513,7 +516,6 @@ def infer_problem_type_output_shape(
     column_types: Optional[Dict] = None,
     data: Optional[pd.DataFrame] = None,
     provided_problem_type: Optional[str] = None,
-    pipeline: Optional[str] = None,
 ) -> Tuple[str, int]:
     """
     Infer the problem type and output shape based on the label column type and training data.
@@ -530,8 +532,6 @@ def infer_problem_type_output_shape(
         The multimodal pd.DataFrame for training.
     provided_problem_type
         The provided problem type.
-    pipeline
-        Predictor pipeline, used when problem_type is None.
 
     Returns
     -------
@@ -575,20 +575,15 @@ def infer_problem_type_output_shape(
                 for annot in json.loads(annotation[-1])
             ]
             return provided_problem_type, len(set(unique_entity_groups)) + 2
+        elif provided_problem_type == OBJECT_DETECTION:
+            return None, None
         else:
             raise ValueError(
                 f"Problem type '{provided_problem_type}' doesn't have a valid output shape "
                 f"for training. The supported problem types are"
-                f" '{BINARY}', '{MULTICLASS}', '{REGRESSION}', '{CLASSIFICATION}', '{NER}'"
-            )
-    elif pipeline is not None:
-        if pipeline == OBJECT_DETECTION:
-            return None, None
-        else:
-            raise ValueError(
-                f"The label column '{label_column}' has type"
-                f" '{column_types[label_column]}', which is not supported yet while"
-                f" provided problem type is None and pipeline is f{pipeline}."
+                f" '{BINARY}', '{MULTICLASS}', '{REGRESSION}',"
+                f" '{CLASSIFICATION}', '{NER}',"
+                f" '{OBJECT_DETECTION}'"
             )
     else:
         if column_types[label_column] == CATEGORICAL:
