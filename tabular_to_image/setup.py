@@ -44,9 +44,12 @@ test_requirements = [
 
 extras_require = {
     'torch': [
-        'torch>=1.0,<2.0',
- 
-],       
+        'torch>=1.12.0,<1.12.1',
+             ],
+    'torchvision':[ 
+        'torchvision>0.12,<=0.13',    
+    
+                  ],       
     'category_encoders':[
                'category_encoders>=2.4.0',
 ] ,
