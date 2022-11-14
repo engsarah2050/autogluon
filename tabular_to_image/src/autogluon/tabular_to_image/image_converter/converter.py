@@ -34,7 +34,7 @@ from torchvision import datasets, models, transforms
 from autogluon.core.dataset import TabularDataset
 from autogluon.core.utils.loaders import load_pkl, load_str,load_compress
 from autogluon.core.utils import get_cpu_count, get_gpu_count_all
-from autogluon.core.utils import get_memory_size, bytes_to_mega_bytes
+from autogluon.core.utils import  ResourceManager#.get_memory_size, bytes_to_mega_bytes
 from autogluon.core.utils.savers import save_pkl, save_str
 from autogluon.common.utils.utils import setup_outputdir
 from autogluon.DeepInsight_auto.pyDeepInsight import ImageTransformer,LogScaler
@@ -61,7 +61,7 @@ class Image_converter:
         self._store: Store = self.store_type(path=self.saved_path,low_memory=False,save_data=False,**store_kwargs)
         self._store_type = type(self._store)
         
-        memoery= math.floor((get_memory_size())/1000)
+        memoery= math.floor((ResourceManager.get_memory_size())/1000)
         if(memoery<15):
             raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	 
         

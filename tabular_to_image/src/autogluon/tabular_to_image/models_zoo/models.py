@@ -992,15 +992,25 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = True 
                     classifier = nn.Sequential(
-                                                nn.Linear(in_features=model.classifier.in_features, out_features=256),
-                                                nn.Dropout(p=0.3),  
-                                                nn.ReLU(),
-                                                nn.Linear(in_features=256, out_features=32),  
-                                                nn.Dropout(p=0.3),
-                                                nn.ReLU(),  
-                                                nn.Linear(in_features=32, out_features=self.num_classes),
-                                                nn.LogSoftmax(dim=1)  
-                                                )
+                        nn.Flatten(),
+                        nn.Linear(in_features=1024, out_features=4096, bias=True),
+                        nn.BatchNorm1d(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                        nn.ReLU(inplace=True),
+                        nn.Linear(in_features=4096, out_features=4096, bias=True),
+                        nn.BatchNorm1d(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                        nn.ReLU(inplace=True),
+                        nn.Linear(in_features=4096, out_features=4096, bias=True),
+                        nn.BatchNorm1d(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                        nn.ReLU(inplace=True),
+                        nn.Linear(in_features=4096, out_features=2048, bias=True),
+                        nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                        nn.ReLU(inplace=True),
+                        nn.Linear(in_features=2048, out_features=512, bias=True),
+                        nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                        nn.ReLU(inplace=True),
+                        nn.Linear(in_features=512, out_features=2, bias=True),
+                        nn.LogSoftmax(dim=1) ,
+                        )
 
                     model.classifier = classifier   
                     #model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
@@ -1008,7 +1018,7 @@ class ModelsZoo():
                     from torchvision.models  import densenet161, DenseNet161_Weights
                     weights=DenseNet161_Weights.IMAGENET1K_V1
                     pretrained=self.pretrained
-                    model = models.densenet169(weights=(weights,pretrained)).to(device) 
+                    model = models.densenet161(weights=(weights,pretrained)).to(device) 
                     for param in model.parameters():
                         param.requires_grad = True
                     classifier = nn.Sequential(
