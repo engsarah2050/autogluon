@@ -1021,14 +1021,26 @@ class ModelsZoo():
                     model = models.densenet161(weights=(weights,pretrained)).to(device) 
                     for param in model.parameters():
                         param.requires_grad = True
-                    classifier = nn.Sequential(
-                                    nn.Linear(in_features=model.classifier.in_features, out_features=1024),
-                                    nn.ReLU(),
-                                    nn.Dropout(p=0.4),
-                                    nn.Linear(in_features=1024, out_features=self.num_classes),
-                                    nn.LogSoftmax(dim=1)  
-                                    )
-                                        
+                    classifier =nn.Sequential(
+                                nn.Flatten(),
+                                nn.Linear(in_features=2208, out_features=4096, bias=True),
+                                nn.BatchNorm1d(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=4096, out_features=4096, bias=True),
+                                nn.BatchNorm1d(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=4096, out_features=4096, bias=True),
+                                nn.BatchNorm1d(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=4096, out_features=2048, bias=True),
+                                nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=2048, out_features=512, bias=True),
+                                nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(in_features=512, out_features=2, bias=True),
+                                nn.LogSoftmax(dim=1) ,
+                                )                                      
                     model.classifier = classifier     
                     #model.classifier = nn.Linear(model.classifier.in_features, self.num_classes)
                 elif self.model_type == 'densenet169' :
