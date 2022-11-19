@@ -20,7 +20,7 @@ from torch.autograd import Variable
 import numpy as np
 import torchvision
 from torchvision import datasets, models, transforms
-from autogluon.core.utils import get_memory_size, bytes_to_mega_bytes
+from autogluon.core.utils  import ResourceManager #get_memory_size, bytes_to_mega_bytes
 from autogluon.core.models.abstract.abstract_nn_model import AbstractNeuralNetworkModel
 from autogluon.core.utils import try_import_torch,try_import_torchensemble
 from autogluon.core.utils.loaders import load_compress
