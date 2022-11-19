@@ -1,5 +1,5 @@
 # AutoMM Detection - Fast Finetune on COCO Format Dataset
-:label:`sec_automm_detection_fast_finetune_coco`
+:label:`sec_automm_detection_fast_ft_coco`
 
 In this section, our goal is to fast finetune a pretrained model on VOC2017 training set, 
 and evaluate it in VOC2007 test set. Both training and test sets are in COCO format.
@@ -15,17 +15,15 @@ from autogluon.multimodal import MultiModalPredictor
 We select the YOLOv3 with MobileNetV2 as backbone,
 and input resolution is 320x320, pretrained on COCO dataset. With this setting, it is fast to finetune or inference,
 and easy to deploy.
-For more model choices, see :label:`sec_automm_detection_selecting_models`.
 While using COCO format dataset, the input is the json annotation file of the dataset split.
-In this example, `voc12_train.json` is the annotation file of train split of VOC2012 dataset,
-and `voc07_test.json` is the annotation file of train split of VOC2007 dataset.
+In this example, `voc07_train.json` and `voc07_test.json` are the annotation files of train and test split of VOC2007 dataset.
 And we use all the GPUs (if any):
 
 ```python
 checkpoint_name = "yolov3_mobilenetv2_320_300e_coco"
 num_gpus = -1  # use all GPUs
 
-train_path = "./VOCdevkit/VOC2012/Annotations/train_cocoformat.json" 
+train_path = "./VOCdevkit/VOC2007/Annotations/train_cocoformat.json" 
 test_path = "./VOCdevkit/VOC2007/Annotations/test_cocoformat.json"
 ```
 
@@ -66,10 +64,9 @@ Using a two-stage learning rate with high learning rate only on head layers make
 the model converge faster during finetuning. It usually gives better performance as well,
 especially on small datasets with hundreds or thousands of images.
 We also set the epoch to be 5 for fast finetuning and batch_size to be 32.
-For more information about how to tune those hyperparameters,
-see :ref:`sec_automm_detection_tune_hyperparameters`.
 We also compute the time of the fit process here for better understanding the speed.
 ```python
+import time
 start = time.time()
 predictor.fit(
     train_path,
@@ -99,8 +96,6 @@ Notice that at the end of each progress bar, if the checkpoint at current stage 
 it prints the model's save path.
 In this example, it's `/media/code/autogluon/examples/automm/object_detection/AutogluonModels/ag-20221104_185342`.
 You can also specify the `save_path` like below while creating the MultiModalPredictor.
-For more information about save and load the model,
-see :ref:`sec_automm_detection_save_and_load`. 
 
 ```
 predictor = MultiModalPredictor(
@@ -146,7 +141,7 @@ For more details about these metrics, see [COCO's evaluation guideline](https://
 
 Under this fast finetune setting, we reached `mAP50 = 0.755` on VOC with 100 seconds!
 For how to finetune with higher performance,
-see :ref:`sec_automm_detection_high_performance_finetune_coco`, where we finetuned a VFNet model with 
+see :ref:`sec_automm_detection_high_ft_coco`, where we finetuned a VFNet model with 
 5 hours and reached `mAP50 = 0.932` on VOC.
 
 ### Other Examples

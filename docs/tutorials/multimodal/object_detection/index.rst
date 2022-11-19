@@ -1,5 +1,5 @@
 Object Detection
-=========
+================
 
 Pre-requisite
 -------------
@@ -18,6 +18,7 @@ For additional support, please refer to official instructions for mmdet_ and mmc
 
 .. _mmdet: https://mmdetection.readthedocs.io/en/v2.2.1/install.html
 .. _mmcv-full: https://mmcv.readthedocs.io/en/latest/get_started/installation.html
+
 
 Quick Start
 ------------------
@@ -81,10 +82,16 @@ Inference
 .. container:: cards
 
    .. card::
-      :title: Load A Trained Detector
-      :link: inference/detection_load_predictor.html
+      :title: Inference using a pretrained model - COCO dataset
+      :link: inference/detection_inference_coco.html
 
-      How to load and evaluate a trained predictor
+      How to inference with a pretrained model on COCO dataset
+
+   .. card::
+      :title: Inference using a pretrained model - VOC dataset
+      :link: inference/detection_inference_voc.html
+
+      How to inference with a pretrained model on VOC dataset
 
 
 Evaluation
@@ -117,7 +124,7 @@ Evaluation
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :hidden:
 
    quick_start/index

@@ -767,7 +767,7 @@ class MultiModalPredictor:
             proposed_save_path=save_path,
             raise_if_exist=True,
             hyperparameter_tune_kwargs=hyperparameter_tune_kwargs,
-            warn_if_exist=self._warn_if_exist,
+            warn_if_exist=False,
             model_loaded=self._model_loaded,
             fit_called=fit_called,
         )
@@ -909,6 +909,7 @@ class MultiModalPredictor:
         self._fit(**_fit_args)
         training_end = time.time()
         self.elapsed_time = (training_end - training_start) / 60.0
+        logger.info(f"Models and intermediate outputs are saved to {self._save_path} ")
         return self
 
     def _verify_inference_ready(self):
@@ -1075,9 +1076,7 @@ class MultiModalPredictor:
         # verify that student and teacher configs are consistent.
         assert self._problem_type == teacher_predictor._problem_type
         assert self._label_column == teacher_predictor._label_column
-        assert self._eval_metric_name == teacher_predictor._eval_metric_name
         assert self._output_shape == teacher_predictor._output_shape
-        assert self._validation_metric_name == teacher_predictor._validation_metric_name
 
         # if teacher and student have duplicate model names, change teacher's model names
         # we don't change student's model names to avoid changing the names back when saving the model.
@@ -1979,6 +1978,7 @@ class MultiModalPredictor:
         self._save_path = setup_save_path(
             old_save_path=self._save_path,
             model_loaded=self._model_loaded,
+            warn_if_exist=False,
         )
         cocoeval_cache_path = os.path.join(self._save_path, "object_detection_result_cache.json")
 
@@ -2080,7 +2080,8 @@ class MultiModalPredictor:
         if strategy == "ddp" and self._fit_called:
             num_gpus = 1  # While using DDP, we can only use single gpu after fit is called
 
-        if num_gpus == 1:
+        if num_gpus <= 1:
+            # Force set strategy to be None if it's cpu-only or we have only one GPU.
             strategy = None
 
         precision = infer_precision(num_gpus=num_gpus, precision=self._config.env.precision, cpu_only_warning=False)
@@ -2436,6 +2437,7 @@ class MultiModalPredictor:
             self._save_path = setup_save_path(
                 old_save_path=self._save_path,
                 model_loaded=self._model_loaded,
+                warn_if_exist=False,
             )
 
             result_path = os.path.join(self._save_path, "result.txt")
