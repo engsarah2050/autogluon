@@ -370,7 +370,7 @@ class ModelsZoo():
                                         )
                     model.fc = classifier
                 elif self.model_type== 'regnet_y_1_6gf' :
-                    from torchvision.models  import regnet_y_1_6gf, RegNet_Y_1_6GF_Weights.IMAGENET1K_V2.
+                    from torchvision.models  import regnet_y_1_6gf, RegNet_Y_1_6GF_Weights
                     weights=RegNet_Y_1_6GF_Weights.IMAGENET1K_V2
                     pretrained=self.pretrained
                     model = models.regnet_y_1_6gf(weights=(weights,pretrained)).to(device)
