@@ -30,7 +30,7 @@ from torchvision import datasets, models, transforms
 
 from autogluon.core.dataset import TabularDataset
 from autogluon.core.utils.loaders import load_pkl, load_str
-from autogluon.core.utils import get_cpu_count, get_gpu_count_all
+from autogluon.core.utils.utils import ResourceManager#get_cpu_count, get_gpu_count_all
 from autogluon.core.utils import get_memory_size, bytes_to_mega_bytes
 from autogluon.core.utils.savers import save_pkl, save_str
 from autogluon.common.utils.utils import setup_outputdir
