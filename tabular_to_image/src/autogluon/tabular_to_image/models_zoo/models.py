@@ -1078,7 +1078,7 @@ class ModelsZoo():
                         param.requires_grad = True 
                     #model = Helper.freeze_parameters(model).to(device)
                     classifier = nn.Sequential(
-                                    nn.Linear(in_features=model.classifier.in_features, out_features=1920, bias=True),
+                                    nn.Linear(in_features=1920, out_features=1920, bias=True),
                                     nn.Linear(in_features=1920, out_features=1920, bias=True),
                                     nn.BatchNorm1d(1920, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                     nn.ReLU(inplace=True), 
@@ -1684,7 +1684,25 @@ class ModelsZoo():
                                         )
                     model.classifier = classifier                  
             elif x[0]=='convnext':  
-                if self.model_type=='convnext_small':
+                if self.model_type=='convnext_tiny':
+                    from torchvision.models import coconvnext_tiny,ConvNeXt_Tiny_Weights
+                    weights=ConvNeXt_Tiny_Weights.IMAGENET1K_V1
+                    pretrained=self.pretrained
+                    model = models.convnext_tiny(weights=(weights,pretrained)).to(device)
+                    for param in model.parameters():
+                        param.requires_grad =True  
+                    classifier=nn.Sequential(
+                                nn.Flatten(),
+                                nn.Linear(in_features=768, out_features=512, bias=True),
+                                nn.BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
+                                nn.Linear(in_features=512, out_features=256, bias=True),
+                                nn.BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                nn.ReLU(inplace=True), 
+                                nn.Linear(in_features=256, out_features=2, bias=True),         
+                                )
+                    model.classifier = classifier
+                elif self.model_type=='convnext_small':
                     from torchvision.models import coconvnext_small,ConvNeXt_Small_Weights
                     weights=ConvNeXt_Small_Weights.IMAGENET1K_V1
                     pretrained=self.pretrained
