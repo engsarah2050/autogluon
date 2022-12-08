@@ -48,7 +48,11 @@ extras_require = {
         'fastai>=2.3.1,<2.8',
     ],
     'skex': [
+<<<<<<< HEAD
               'scikit-learn-intelex>=2021.5,<2021.6',
+=======
+        'scikit-learn-intelex>=2021.6,<2021.8',
+>>>>>>> upstream/master
     ],
     'imodels': [
         'imodels>=1.3.0',
