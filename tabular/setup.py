@@ -47,12 +47,8 @@ extras_require = {
         'torch>=1.0,<1.13',
         'fastai>=2.3.1,<2.8',
     ],
-    'skex': [
-<<<<<<< HEAD
-              'scikit-learn-intelex>=2021.5,<2021.6',
-=======
-        'scikit-learn-intelex>=2021.6,<2021.8',
->>>>>>> upstream/master
+    'skex': [        
+     'scikit-learn-intelex>=2021.6,<2021.8',
     ],
     'imodels': [
         'imodels>=1.3.10,<1.4.0',  # 1.3.8/1.3.9 either remove/renamed attribute `complexity_` causing failures. https://github.com/csinva/imodels/issues/147
