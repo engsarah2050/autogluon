@@ -44,7 +44,7 @@ test_requirements = [
 
 extras_require = {
     'torch': [
-        'torch>=1.12.0,<1.12.1',
+        'torch>=1.12.0,<1.13.1',
              ],
     'torchvision':[ 
         'torchvision>0.12,<=0.13',    
