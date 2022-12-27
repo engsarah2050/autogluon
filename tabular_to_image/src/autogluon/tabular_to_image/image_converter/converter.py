@@ -62,7 +62,7 @@ class Image_converter:
         self._store_type = type(self._store)
         
         memoery= math.floor((ResourceManager.get_memory_size())/1000)
-        if(memoery<15):
+        if(memoery<12):
             raise AssertionError(f'memory size  is required to be large enough , but was instead: {len(memoery)}')   	 
         
         #super().__init__(data, **kwargs)
