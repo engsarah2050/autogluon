@@ -129,7 +129,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
                       #'regnet_x_16gf',regnet_x_1_6gf,'regnet_x_32gf','regnet_x_3_2gf','regnet_x_400mf','regnet_x_800mf','regnet_x_8gf',
                       #'regnet_y_128gf','regnet_y_16gf','regnet_y_1_6gf','regnet_y_32gf','regnet_y_3_2gf','regnet_y_400mf','regnet_y_800mf',
-                    #  'densenet121','densenet161','densenet169','densenet201',
+                      'densenet121',
+                    # 'densenet161','densenet169','densenet201',
                     #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                     #'vit_b_16','vit_b_32','vit_h_14','vit_l_16','vit_l_32',
                     #  'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','shufflenet_v2_x1_5','shufflenet_v2_x2_0','mobilenet_v2',
@@ -465,7 +466,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         model_type=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
                       #'regnet_x_16gf',regnet_x_1_6gf,'regnet_x_32gf','regnet_x_3_2gf','regnet_x_400mf','regnet_x_800mf','regnet_x_8gf',
                       #'regnet_y_128gf','regnet_y_16gf','regnet_y_1_6gf','regnet_y_32gf','regnet_y_3_2gf','regnet_y_400mf','regnet_y_800mf',
-                      #'densenet121','densenet161','densenet169','densenet201'#,
+                      'densenet121',
+                      # ,'densenet161','densenet169','densenet201'#,
                     #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                     #'vit_b_16','vit_b_32','vit_h_14','vit_l_16','vit_l_32',
                     #  'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','shufflenet_v2_x1_5','shufflenet_v2_x2_0','mobilenet_v2',
@@ -478,14 +480,14 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         res=set()
         res2={}
         model=None
-        epoch=10
-        patience=3
+        epoch=4
+        patience=2
         for i in range(len(model_type)):
            k,v=self.init_train(model_type[i], epoch,patience)
         res2[k]=v
         #res2=dict([res])  
         for key,value in  res2.items():    
-            if round(value[0],2)>=0.80:
+            if round(value[0],2)>=0.83:
                 model=key#.__class__.__name__      
 
         savepath=self.save_model(model)
@@ -560,12 +562,12 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
     
     def single_model(self):
         model=self.pick_model()
-        epoch=10
+        epoch=3
         patience=3 
         model2,avg_train_losses, avg_valid_losses=self.train_model(model,patience, epoch)
-        path=self.save_model(model2, verbose=True)
-        model3=ImagePredictions.load(path, reset_paths=False,verbose=True)
-        return model3,avg_train_losses, avg_valid_losses
+        #path=self.save_model(model2, verbose=True)
+        #model3=ImagePredictions.load(path, reset_paths=False,verbose=True)
+        return model2,avg_train_losses, avg_valid_losses
         
     def init_Ensemble(self,model):
         try_import_torchensemble()

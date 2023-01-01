@@ -988,7 +988,7 @@ class ModelsZoo():
                     from torchvision.models  import densenet121, DenseNet121_Weights
                     weights=DenseNet121_Weights.IMAGENET1K_V1
                     pretrained=self.pretrained
-                    model = models.densenet121(pretrained=self.pretrained).to(device)
+                    model = models.densenet121(weights=(weights,pretrained)).to(device) 
                     for param in model.parameters():
                         param.requires_grad = True 
                     classifier = nn.Sequential(
