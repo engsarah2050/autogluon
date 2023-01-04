@@ -2207,9 +2207,13 @@ class ModelsZoo():
                 criterion = criterion.to(device)
                 optimizer = optim.Adam(model.head.parameters(), lr=0.001)
             else:
-                optimizer = optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-5)
-                exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor = 0.1, patience =  5, mode = 'max', verbose=True)       
-                #criterion = nn.NLLLoss() 
+                if self.model_type=='mobilenet_v3' or self.model_type=='mobilenet_v2':
+                   optimizer = optim.Adam(model.parameters(), lr=0.0005, betas=(0.9, 0.999), )
+                   exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor = 0.1, patience =  5, mode = 'max', verbose=True)        
+                else:  
+                   optimizer = optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-5)
+                   exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor = 0.1, patience =  5, mode = 'max', verbose=True)       
+                   #criterion = nn.NLLLoss() 
         
         else:
            optimizer = optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-5)
