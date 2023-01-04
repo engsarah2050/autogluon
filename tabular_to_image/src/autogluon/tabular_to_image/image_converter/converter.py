@@ -265,13 +265,14 @@ class Image_converter:
         le = LabelEncoder()
         #num_classes = np.unique(le.fit_transform(self.y_train)).size
         
-        train,val,test=cls.load_data(path=path)
+        #train,val,test=cls.load_data(path=path)        
+        train,test=cls.load_data(path=path)
         
         X_train_tensor = torch.stack([preprocess(img) for img in train['X_train_img']])
         y_train_tensor = torch.from_numpy(le.fit_transform(train['y_train']))
 
-        X_val_tensor = torch.stack([preprocess(img) for img in val['X_val_img']])
-        y_val_tensor = torch.from_numpy(le.fit_transform(val['y_val'] ))
+        #X_val_tensor = torch.stack([preprocess(img) for img in val['X_val_img']])
+        #y_val_tensor = torch.from_numpy(le.fit_transform(val['y_val'] ))
 
         X_test_tensor = torch.stack([preprocess(img) for img in test['X_test_img']])
         y_test_tensor = torch.from_numpy(le.transform(test['y_test']))
@@ -279,14 +280,16 @@ class Image_converter:
         trainset = TensorDataset(X_train_tensor, y_train_tensor)
         trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
 
-        valset = TensorDataset(X_val_tensor, y_val_tensor)
-        valloader = DataLoader(valset, batch_size=batch_size, shuffle=True)
+        #valset = TensorDataset(X_val_tensor, y_val_tensor)
+        #valloader = DataLoader(valset, batch_size=batch_size, shuffle=True)
 
         Testset = TensorDataset(X_test_tensor, y_test_tensor)
         Testloader = DataLoader(Testset, batch_size=batch_size, shuffle=True)
         
         
-        return trainloader,valloader,Testloader
+        #return trainloader,valloader,Testloader
+        return trainloader,Testloader
+    
     
 
     

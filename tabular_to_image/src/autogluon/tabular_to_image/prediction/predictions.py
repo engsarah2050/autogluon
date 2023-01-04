@@ -124,7 +124,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         
     def init_train(self,model_type, epochs,patience,scheduler=None):
         #criterion = nn.CrossEntropyLoss() #optimizer = optim.Rprop(model.parameters(), lr=0.01) #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1)
-        trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
+        #trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
+        trainloader,valloader=Image_converter.image_tensor(self.saved_path)
                 
         commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
                       #'regnet_x_16gf',regnet_x_1_6gf,'regnet_x_32gf','regnet_x_3_2gf','regnet_x_400mf','regnet_x_800mf','regnet_x_8gf',
