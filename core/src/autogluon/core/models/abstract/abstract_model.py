@@ -19,6 +19,7 @@ from autogluon.common.features.feature_metadata import FeatureMetadata
 from autogluon.common.utils.pandas_utils import get_approximate_df_mem_usage
 from autogluon.common.utils.utils import setup_outputdir
 from autogluon.common.utils.log_utils import DuplicateFilter
+from autogluon.common.utils.resource_utils import ResourceManager
 
 from .model_trial import model_trial, skip_hpo
 from ._tags import _DEFAULT_TAGS
@@ -30,7 +31,6 @@ from ...hpo.constants import RAY_BACKEND, CUSTOM_BACKEND
 from ...hpo.executors import HpoExecutor, HpoExecutorFactory
 from ...ray.resources_calculator import ResourceCalculator
 from ...scheduler import LocalSequentialScheduler
-from ...utils import ResourceManager
 from ...utils import get_pred_from_proba, normalize_pred_probas, infer_eval_metric, infer_problem_type, \
     compute_permutation_feature_importance, compute_weighted_metric
 from ...utils.exceptions import TimeLimitExceeded, NoValidFeatures, NotEnoughMemoryError
@@ -589,8 +589,15 @@ class AbstractModel:
         )
         minimum_model_num_cpus = minimum_model_resources.get('num_cpus', 1)
         minimum_model_num_gpus = minimum_model_resources.get('num_gpus', 0)
-        assert num_cpus >= minimum_model_num_cpus, f'Specified num_cpus per {self.__class__.__name__} is less than minimum num_cpus requirement {minimum_model_num_cpus}'
-        assert num_gpus >= minimum_model_num_gpus, f'Specified num_gpus per {self.__class__.__name__} is less than minimum num_gpus requirement {minimum_model_num_gpus}'
+
+        assert system_num_cpus >= num_cpus
+        assert system_num_gpus >= num_gpus
+
+        assert system_num_cpus >= minimum_model_num_cpus, f'The total system num_cpus={system_num_cpus} is less than minimum num_cpus={minimum_model_num_cpus} to fit {self.__class__.__name__}. Consider using a machine with more CPUs.'
+        assert system_num_gpus >= minimum_model_num_gpus, f'The total system num_gpus={system_num_gpus} is less than minimum num_gpus={minimum_model_num_gpus} to fit {self.__class__.__name__}. Consider using a machine with more GPUs.'
+
+        assert num_cpus >= minimum_model_num_cpus, f'Specified num_cpus={num_cpus} per {self.__class__.__name__} is less than minimum num_cpus={minimum_model_num_cpus}'
+        assert num_gpus >= minimum_model_num_gpus, f'Specified num_gpus={num_gpus} per {self.__class__.__name__} is less than minimum num_gpus={minimum_model_num_gpus}'
         
         kwargs['num_cpus'] = num_cpus
         kwargs['num_gpus'] = num_gpus
