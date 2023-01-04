@@ -1319,6 +1319,7 @@ class ModelsZoo():
                     for param in model.parameters():
                         param.requires_grad = True
                     classifier = nn.Sequential(
+                                nn.Flatten(), 
                                 nn.Linear(in_features=576, out_features=4096, bias=True),
                                 nn.BatchNorm1d(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),     
                                 nn.Hardswish(),
