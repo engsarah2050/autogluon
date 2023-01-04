@@ -1357,7 +1357,7 @@ class ModelsZoo():
                                 nn.ReLU(inplace=True),   
                                 nn.Linear(in_features=128, out_features=self.num_classes), 
                                     )    
-                    model.classifier[1]=classifier    
+                    model.classifier=classifier    
                     model.to(device)
                 elif self.model_type == 'mobilenet_v3_large':
                     from torchvision.models import mobilenet_v3_large,MobileNet_V3_Large_Weights
