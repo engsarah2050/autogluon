@@ -236,9 +236,11 @@ class Image_converter:
     def load_data(cls,path:str, reset_paths=False):
         if not reset_paths:
             train =load_compress.load_train(path=path)
-            val =load_compress.load_val(path=path)
+            #val =load_compress.load_val(path=path)
             test =load_compress.load_test(path=path) 
-            return train,val,test
+            #return train,val,test
+            return train,test
+        
         else:
             obj_train =load_compress.load_train(path=path)
             obj_val =load_compress.load_val(path=path)
