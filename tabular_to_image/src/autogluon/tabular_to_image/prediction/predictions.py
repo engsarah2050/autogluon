@@ -280,6 +280,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         trainloader,valloader=Image_converter.image_tensor(self.saved_path)
         # to track the training loss as the model trains
         train_losses = []
+        valid_losses=[]
         avg_train_losses=[]
         avg_valid_losses=[]
         # initialize the early_stopping object
