@@ -476,7 +476,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         res=set()
         res2={}
         model=None
-        epoch=4
+        epoch=6
         patience=2
         for i in range(len(model_type)):
            k,v=self.init_train(model_type[i], epoch,patience)
@@ -558,7 +558,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
     
     def single_model(self):
         model=self.pick_model()
-        epoch=3
+        epoch=10
         patience=3 
         model2,avg_train_losses, avg_valid_losses=self.train_model(model,patience, epoch)
         #path=self.save_model(model2, verbose=True)
