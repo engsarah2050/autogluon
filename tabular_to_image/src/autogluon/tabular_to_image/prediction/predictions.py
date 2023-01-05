@@ -277,9 +277,11 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
 
     
     def train_model(self,model,  patience, n_epochs):
-        trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
+        trainloader,valloader=Image_converter.image_tensor(self.saved_path)
         # to track the training loss as the model trains
         train_losses = []
+        avg_train_losses=[]
+        avg_valid_losses=[]
         # initialize the early_stopping object
         early_stopping = EarlyStopping(patience=patience, verbose=True)
         criterion,optimizer,_=self._ModelsZoo.optimizer(model)
