@@ -285,6 +285,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         # initialize the early_stopping object
         early_stopping = EarlyStopping(patience=patience, verbose=True)
         criterion,optimizer,_=self._ModelsZoo.optimizer(model)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
         for epoch in range(1, n_epochs + 1):
 
             ###################
