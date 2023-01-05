@@ -285,15 +285,16 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         # initialize the early_stopping object
         early_stopping = EarlyStopping(patience=patience, verbose=True)
         criterion,optimizer,_=self._ModelsZoo.optimizer(model)
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         for epoch in range(1, n_epochs + 1):
 
             ###################
             # train the model #
             ###################
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             model.train() # prep model for training
             for batch, (data, target) in enumerate(trainloader, 1):
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 # clear the gradients of all optimized variables
                 optimizer.zero_grad()
                 # forward pass: compute predicted outputs by passing inputs to the model
@@ -312,6 +313,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             ######################
             model.eval() # prep model for evaluation
             for data, target in valloader:
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 # forward pass: compute predicted outputs by passing inputs to the model
                 output = model(data)
                 # calculate the loss
@@ -481,7 +483,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         epoch=6
         patience=2
         for i in range(len(model_type)):
-           k,v=self.init_train(model_type[i], epoch,patience)
+              k,v=self.init_train(model_type[i], epoch,patience)
+              
         res2[k]=v
         #res2=dict([res])  
         for key,value in  res2.items():    
