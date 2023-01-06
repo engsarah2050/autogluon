@@ -494,8 +494,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
 
         savepath=self.save_model(model)
         if savepath is not None:
-            self.reduce_memory_size(res)
-            self.reduce_memory_size(res2)
+            self.reduce_memory_size(results)
         else:
             raise AssertionError(f'Model "{model}" is not saved') 
         
