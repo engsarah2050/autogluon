@@ -273,7 +273,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         if early_stopping.early_stop:
             print("Early stopping")
         # return the model
-        return model, [Accuracy,train_loss_data, valid_loss_data]       
+        return model,Accuracy#,train_loss_data, valid_loss_data]       
 
     
     def train_model(self,model,  patience, n_epochs):
@@ -478,19 +478,19 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                     #'swin_t','swin_s','swin_b',                 
                     #  'squeezenet1_0','squeezenet1_1','resnext50_32x4d','resnext101_32x8d','inception_v3','xception'
                 ]
-        res=set()
-        res2={}
+        #res=set()
+        #res2={}
         model=None
         epoch=6
         patience=2
+        results=[]
         for i in range(len(model_type)):
-              k,v=self.init_train(model_type[i], epoch,patience)
+              results.append(self.init_train(model_type[i], epoch,patience))
               
-        res2[k]=v
-        #res2=dict([res])  
-        for key,value in  res2.items():    
-            if round(value[0],2)>=0.83:
-                model=key#.__class__.__name__      
+          
+        for  i in range(len(results)) :    
+            if round(results[i][1],2)>=0.70:
+                model=results[i][0]#.__class__.__name__      
 
         savepath=self.save_model(model)
         if savepath is not None:
