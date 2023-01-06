@@ -467,7 +467,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         model_type=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
                       #'regnet_x_16gf',regnet_x_1_6gf,'regnet_x_32gf','regnet_x_3_2gf','regnet_x_400mf','regnet_x_800mf','regnet_x_8gf',
                       #'regnet_y_128gf','regnet_y_16gf','regnet_y_1_6gf','regnet_y_32gf','regnet_y_3_2gf','regnet_y_400mf','regnet_y_800mf',
-                      'densenet121',
+                      #'densenet121',
                       # ,'densenet161','densenet169','densenet201'#,
                     #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                     #'vit_b_16','vit_b_32','vit_h_14','vit_l_16','vit_l_32',
