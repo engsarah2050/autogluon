@@ -481,7 +481,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         #res=set()
         #res2={}
         model=None
-        epoch=6
+        epoch=15
         patience=2
         results=[]
         for i in range(len(model_type)):
