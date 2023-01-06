@@ -1395,7 +1395,7 @@ class ModelsZoo():
                                     #nn.Dropout(p=0.5),  
                                     nn.Linear(in_features=128, out_features=self.num_classes), 
                                     )
-                    model.classifier[1]=classifier
+                    model.classifier=classifier
                     model.to(device)
             elif x[0]=='wide_resnet':   
                 if self.model_type=='wide_resnet50_2' :
