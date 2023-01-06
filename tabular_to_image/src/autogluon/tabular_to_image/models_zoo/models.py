@@ -1376,7 +1376,7 @@ class ModelsZoo():
                                     nn.ReLU(inplace=True), 
                                     #nn.Dropout(p=0.2, inplace=False), 
                                     nn.Linear(in_features=2048, out_features=1280),
-                                    nn.BatchNorm1d(1280, eps=1e-05, momentum=0.12801, affine=True, track_running_stats=True),
+                                    nn.BatchNorm1d(1280, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                     nn.ReLU(inplace=True),  
                                     nn.Linear(in_features=1280, out_features=1024),
                                     nn.BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
