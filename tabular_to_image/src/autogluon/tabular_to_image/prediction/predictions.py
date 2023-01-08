@@ -296,6 +296,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             model.train() # prep model for training
             for batch, (data, target) in enumerate(trainloader, 1):
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                data = data.to(device)
+                target =target.to(device)
                 # clear the gradients of all optimized variables
                 optimizer.zero_grad()
                 # forward pass: compute predicted outputs by passing inputs to the model
@@ -315,6 +317,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             model.eval() # prep model for evaluation
             for data, target in valloader:
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                data = data.to(device)
+                target =target.to(device)
                 # forward pass: compute predicted outputs by passing inputs to the model
                 output = model(data)
                 # calculate the loss
