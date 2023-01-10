@@ -567,7 +567,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
     
     def single_model(self):
         model=self.pick_model()
-        epoch=10
+        epoch=20
         patience=3 
         model2,avg_train_losses, avg_valid_losses=self.train_model(model,patience, epoch)
         #path=self.save_model(model2, verbose=True)
@@ -584,7 +584,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
         
         
-        trainloader,valloader,Testloader=Image_converter.image_tensor(self.saved_path)     
+        #trainloader,valloader,Testloader=Image_converter.image_tensor(self.saved_path)   
+        trainloader,valloader=Image_converter.image_tensor(self.saved_path)       
         init_model=None
         score=[]
         lose=0.0
@@ -616,8 +617,10 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 init_model.set_optimizer(optm, lr=lr, weight_decay=5e-4)
                 criterion = nn.CrossEntropyLoss()
                 init_model.set_criterion(criterion)
-                init_model.fit(trainloader,epochs=epochs,test_loader=Testloader)
-                accuracy,return_loss = init_model.evaluate(Testloader,True)
+                #init_model.fit(trainloader,epochs=epochs,test_loader=Testloader)
+                init_model.fit(trainloader,epochs=epochs,test_loader=valloader)
+                #accuracy,return_loss = init_model.evaluate(Testloader,True)
+                accuracy,return_loss = init_model.evaluate(valloader,True)
                 score.append(accuracy)
                 return_losses.append(return_loss)             
                 initmodels[init_model._get_name()]=[accuracy,return_loss]
@@ -668,7 +671,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         self.reduce_memory_size(init_model)
         self.reduce_memory_size(trainloader)
         self.reduce_memory_size(valloader)
-        self.reduce_memory_size(Testloader)         
+        #self.reduce_memory_size(Testloader)         
         return res3[key[0]][0]
         #torch.cuda.empty_cache()
     def train_ensamble(self,ensmble_model,family,model) :
@@ -681,7 +684,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
         
         
-        trainloader,valloader,Testloader,=Image_converter.image_tensor(self.saved_path)     
+        #trainloader,valloader,Testloader,=Image_converter.image_tensor(self.saved_path)   
+        trainloader,valloader=Image_converter.image_tensor(self.saved_path)    
         init_model=None
         #epochs=3
         Ensemble_family={
@@ -693,8 +697,10 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
             init_model.set_optimizer(family[1]["optm"], lr=family[2]["lr"], weight_decay=5e-4)
             criterion = nn.CrossEntropyLoss()
             init_model.set_criterion(criterion)
-            init_model.fit(trainloader,epochs=one_familes[4]["epochs"],test_loader=Testloader)
-            accuracy,return_loss = init_model.evaluate(Testloader,True)
+            #init_model.fit(trainloader,epochs=family[4]["epochs"],test_loader=Testloader)
+            init_model.fit(trainloader,epochs=family[4]["epochs"],test_loader=valloader)
+            #accuracy,return_loss = init_model.evaluate(Testloader,True)
+            accuracy,return_loss = init_model.evaluate(valloader,True)
             return accuracy
         else:
             raise AssertionError(f'Model "{ensamble_name}" is not a valid model to specify as best! Valid models: {Ensemble_family}')
