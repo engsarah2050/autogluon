@@ -127,7 +127,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         #trainloader,valloader,_=Image_converter.image_tensor(self.saved_path)
         trainloader,valloader=Image_converter.image_tensor(self.saved_path)
                 
-        commonModels=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
+        commonModels=[#'resnet18','resnet34','resnet50','resnet101',
+                      'resnet152', 
                       #'regnet_x_16gf',regnet_x_1_6gf,'regnet_x_32gf','regnet_x_3_2gf','regnet_x_400mf','regnet_x_800mf','regnet_x_8gf',
                       #'regnet_y_128gf','regnet_y_16gf','regnet_y_1_6gf','regnet_y_32gf','regnet_y_3_2gf','regnet_y_400mf','regnet_y_800mf',
                       'densenet121',
@@ -135,8 +136,9 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                     #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                     #'vit_b_16','vit_b_32','vit_h_14','vit_l_16','vit_l_32',
                     #  'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','shufflenet_v2_x1_5','shufflenet_v2_x2_0','mobilenet_v2',
-                    'mobilenet_v3_small','mobilenet_v3_large'#,#'wide_resnet50_2', 'wide_resnet101_2','mnasnet0_5','mnasnet0_75','mnasnet1_0','mnasnet1_3'
-                    #  'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7' ,
+                    'mobilenet_v3_small','mobilenet_v3_large',#'wide_resnet50_2', 'wide_resnet101_2','mnasnet0_5','mnasnet0_75','mnasnet1_0','mnasnet1_3'
+                    'efficientnet-b0'
+                     # ,'efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7' ,
                     #  'efficientnet_v2_s','efficientnet_v2_m','efficientnet_v2_l','convnext_tiny','convnext_small','convnext_base','convnext_large',  
                     #'swin_t','swin_s','swin_b',                 
                     #  'squeezenet1_0','squeezenet1_1','resnext50_32x4d','resnext101_32x8d','inception_v3','xception'
@@ -468,16 +470,18 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         return model,Accuracy#,last_loss 
         
     def pick_model(self):  
-        model_type=[#'resnet18','resnet34','resnet50','resnet101','resnet152', 
+        model_type=[#'resnet18','resnet34','resnet50','resnet101',
+                    'resnet152', 
                       #'regnet_x_16gf',regnet_x_1_6gf,'regnet_x_32gf','regnet_x_3_2gf','regnet_x_400mf','regnet_x_800mf','regnet_x_8gf',
                       #'regnet_y_128gf','regnet_y_16gf','regnet_y_1_6gf','regnet_y_32gf','regnet_y_3_2gf','regnet_y_400mf','regnet_y_800mf',
-                      #'densenet121',
+                      'densenet121',
                       # ,'densenet161','densenet169','densenet201'#,
                     #  'alexnet','vgg11','vgg11_bn','vgg13','vgg13_bn','vgg16','vgg16_bn','vgg19','vgg19_bn',
                     #'vit_b_16','vit_b_32','vit_h_14','vit_l_16','vit_l_32',
                     #  'googlenet','shufflenet_v2_x0_5','shufflenet_v2_x1_0','shufflenet_v2_x1_5','shufflenet_v2_x2_0','mobilenet_v2',
-                    'mobilenet_v3_small','mobilenet_v3_large'#,'wide_resnet50_2', 'wide_resnet101_2','mnasnet0_5','mnasnet0_75','mnasnet1_0','mnasnet1_3'
-                    #  'efficientnet-b0','efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7' ,
+                    'mobilenet_v3_small','mobilenet_v3_large',#'wide_resnet50_2', 'wide_resnet101_2','mnasnet0_5','mnasnet0_75','mnasnet1_0','mnasnet1_3'
+                    'efficientnet-b0'
+                    # ,'efficientnet-b1','efficientnet-b2','efficientnet-b3','efficientnet-b4','efficientnet-b5','efficientnet-b6','efficientnet-b7' ,
                     #  'efficientnet_v2_s','efficientnet_v2_m','efficientnet_v2_l','convnext_small','convnext_base','convnext_large',  
                     #'swin_t','swin_s','swin_b',                 
                     #  'squeezenet1_0','squeezenet1_1','resnext50_32x4d','resnext101_32x8d','inception_v3','xception'
@@ -485,7 +489,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         #res=set()
         #res2={}
         model=None
-        epoch=10
+        epoch=20
         patience=2
         results=[]
         for i in range(len(model_type)):
@@ -567,7 +571,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
     
     def single_model(self):
         model=self.pick_model()
-        epoch=20
+        epoch=15
         patience=3 
         model2,avg_train_losses, avg_valid_losses=self.train_model(model,patience, epoch)
         #path=self.save_model(model2, verbose=True)
@@ -597,7 +601,7 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
 
                     }
         family='LeNet'
-        epochs=1#correct number is  5 and so do estimator or its multipls
+        epochs=2#correct number is  5 and so do estimator or its multipls
         lr=1e-3
         maxvalue=[0.0]
         optm='Adam'
