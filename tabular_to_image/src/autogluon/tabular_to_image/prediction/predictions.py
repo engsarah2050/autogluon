@@ -586,20 +586,17 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         from torchensemble.gradient_boosting import GradientBoostingClassifier
         from torchensemble.snapshot_ensemble import SnapshotEnsembleClassifier
         from torchensemble.soft_gradient_boosting import SoftGradientBoostingClassifier
-        
-        
-        #trainloader,valloader,Testloader=Image_converter.image_tensor(self.saved_path)   
-        trainloader,valloader=Image_converter.image_tensor(self.saved_path)       
         init_model=None
+        trainloader,valloader=Image_converter.image_tensor(self.saved_path)    
         score=[]
         lose=0.0
         return_losses=[]
         #epochs=3
         initmodels={}
         Ensemble_family={
-                'models':[FusionClassifier,VotingClassifier,BaggingClassifier,GradientBoostingClassifier,SnapshotEnsembleClassifier,SoftGradientBoostingClassifier],
+                        'models':[FusionClassifier,VotingClassifier,BaggingClassifier,GradientBoostingClassifier,SnapshotEnsembleClassifier,SoftGradientBoostingClassifier],
 
-                    }
+                            }
         family='LeNet'
         epochs=2#correct number is  5 and so do estimator or its multipls
         lr=1e-3
@@ -610,8 +607,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         tem=0.0
         tem_est=' '
         familes=[[{'name':'LeNet_family'},{"optm":'Adam'},{"lr":1e-3},{"n_estimators":2},{"epochs":10}],
-                 [{"name":'ResNet_family'},{"optm":'SGD'},{"lr":1e-1},{"n_estimators":5},{"epochs":10}]
-                                    
+                [{"name":'ResNet_family'},{"optm":'SGD'},{"lr":1e-1},{"n_estimators":5},{"epochs":10}]
+                                            
                 ]
         i=1
         res={}
@@ -621,8 +618,8 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 init_model.set_optimizer(optm, lr=lr, weight_decay=5e-4)
                 criterion = nn.CrossEntropyLoss()
                 init_model.set_criterion(criterion)
-                #init_model.fit(trainloader,epochs=epochs,test_loader=Testloader)
                 init_model.fit(trainloader,epochs=epochs,test_loader=valloader)
+                #init_model.fit(valloader,epochs=epochs,test_loader=Testloader)
                 #accuracy,return_loss = init_model.evaluate(Testloader,True)
                 accuracy,return_loss = init_model.evaluate(valloader,True)
                 score.append(accuracy)
@@ -636,48 +633,50 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
                 for j in score:                                          
                     if j>best_accuracy:
                         best_accuracy=j
-                maxvalue.append((
-                    (max(initmodels, key=initmodels.get),initmodels[max(initmodels, key=initmodels.get)]),(f'no.epoch{epochs}',family)))
-                maximum.append(f'no.group{t}' ) 
-                i=i+1
-                #estimator=2
-                optm='SGD'
-                lr=1e-1
-                #epochs=2
-                score.clear()
-                tem=maxvalue 
-                tem_est=maximum
-                family='ResNet' 
-                
+                    maxvalue.append([
+        max(initmodels, key=initmodels.get),initmodels[max(initmodels, key=initmodels.get)],
+                        optm,lr])
+                    maximum.append(f'no.group{t}' ) 
+                    i=i+1
+                    #estimator=2
+                    optm='SGD'
+                    lr=1e-1
+                    #epochs=2
+                    score.clear()
+                    tem=maxvalue 
+                    tem_est=maximum
+                    family='ResNet' 
+                        
 
-        #val=unzip(*maxvalue)
+                #val=unzip(*maxvalue)
         import itertools
-        b=list(itertools.chain(*res['group1']))
-        res = dict(zip(maximum, b))
+        #b=list(itertools.chain(*maxvalue))
+        c=maxvalue[1:13]
+        res = dict(zip(maximum, c))
         import itertools
         #type(res.items())
         #val0=list(itertools.chain(*res['no.group0']))
         #val1=list(itertools.chain(*res['no.group1']))
         res3={}
-        res3['LeNet_family']=list(res['no.group0'])
-        res3['ResNet_family']=list(res['no.group1'])
-        maz=res3['LeNet_family'][1][0]
-        maz_lose=maz=res3['LeNet_family'][1][1]
-        if maz<res3['ResNet_family'][1][0]:
-            maz=res3['ResNet_family'][1][0]
-        elif maz==res3['ResNet_family'][1][0] :
-            if maz_lose>res3['ResNet_family'][1][1]:
-                maz_lose=res3['ResNet_family'][1][1]     
-        key=([k for k,v in res3.items() if v[1][0] == maz]) 
-        for i in range(len(familes.items())):
-            if key[0]==(list(familes[i][0].values())[0]):
-                return familes[i]
+        res3['LeNet_family']=flatten(list(res['no.group0']))
+        res3['ResNet_family']=flatten(list(res['no.group1']))
+        maz=res3['LeNet_family'][1]
+        maz_lose=maz=res3['LeNet_family'][2]
+        if maz<res3['ResNet_family'][1]:
+            maz=res3['ResNet_family'][1]
+        elif maz==res3['ResNet_family'][1] :
+            if maz_lose>res3['ResNet_family'][2]:
+                    maz_lose=res3['ResNet_family'][2]   
+        key = [k for k in res3 if res3[k][1] == maz]
+        for i in range(len(familes)):
+            if key[0]==familes[i][0]['name']:
+                    return familes[i]
         self.reduce_memory_size(init_model)
         self.reduce_memory_size(trainloader)
         self.reduce_memory_size(valloader)
         #self.reduce_memory_size(Testloader)         
         return res3[key[0]][0]
-        #torch.cuda.empty_cache()
+    
     def train_ensamble(self,ensmble_model,family,model) :
         try_import_torchensemble()
         from torchensemble.fusion import FusionClassifier
@@ -714,6 +713,15 @@ class ImagePredictions:#(AbstractNeuralNetworkModel):
         ensamble_model,family=self.init_Ensemble(model) 
         accuracy=self.train_ensamble(ensamble_model,family,model)  
         return  accuracy
-        
+    
+    def flatten(xs):
+        result = []
+        if isinstance(xs, (list, tuple)):
+            for x in xs:
+                result.extend(flatten(x))
+        else:
+            result.append(xs)
+        return result
+            
         
            
