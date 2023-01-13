@@ -28,7 +28,6 @@ from packaging import version
 from sklearn.model_selection import train_test_split
 from torch import nn
 
-import autogluon.multimodal.utils.object_detection
 from autogluon.common.utils.log_utils import set_logger_verbosity, verbosity2loglevel
 from autogluon.core.utils.utils import default_holdout_frac
 from autogluon.multimodal.utils import save_result_df
@@ -159,6 +158,7 @@ from .utils import (
     list_timm_models,
     load_text_tokenizers,
     logits_to_prob,
+    merge_bio_format,
     modify_duplicate_model_names,
     move_to_device,
     predict,
@@ -820,7 +820,7 @@ class MultiModalPredictor:
             column_types = self._column_types
 
         if self._problem_type != OBJECT_DETECTION:
-            if self._output_shape is not None:
+            if self._output_shape is not None and output_shape is not None:
                 assert self._output_shape == output_shape, (
                     f"Inferred output shape {output_shape} is different from " f"the previous {self._output_shape}"
                 )
@@ -1072,6 +1072,10 @@ class MultiModalPredictor:
             num_categorical_columns=len(df_preprocessor.categorical_num_categories),
         )
         config = select_model(config=config, df_preprocessor=df_preprocessor)
+
+        # Update output_shape with label_generator.
+        if self._problem_type == NER:
+            self._output_shape = len(df_preprocessor.label_generator.unique_entity_groups)
 
         if self._model is None:
             model = create_fusion_model(
@@ -2135,14 +2139,14 @@ class MultiModalPredictor:
                 realtime=realtime,
             )
         if self._problem_type == OBJECT_DETECTION:
-            if isinstance(data, (str, dict, list)):
-                data = autogluon.multimodal.utils.object_detection.convert_data_to_df(data)
+            if isinstance(data, str):
+                data = from_coco_or_voc(data, "test")
+            elif isinstance(data, dict):
+                data = from_dict(data)
             else:
                 assert isinstance(
                     data, pd.DataFrame
-                ), "TypeError: Expected data type to be of type dict, list, or str, but got {} of type {}".format(
-                    data, type(data)
-                )
+                ), "TypeError: Expected data type to be a filepath, a folder or a dictionary, but got {}".format(data)
 
             if self._label_column not in data:
                 self._label_column = None
@@ -2191,6 +2195,8 @@ class MultiModalPredictor:
                 else:
                     pred = logits
 
+            if self._problem_type == NER:
+                pred = merge_bio_format(data[self._df_preprocessor.ner_feature_names[0]], pred)
         if save_results:
             ## Dumping Result for detection only now
             assert (
