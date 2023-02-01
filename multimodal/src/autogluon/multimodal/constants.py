@@ -307,4 +307,14 @@ RESPONSE = "response"
 QUERY_RESPONSE = f"{QUERY}_{RESPONSE}"
 PAIR = "pair"
 TRIPLET = "triplet"
+<<<<<<< HEAD
+>>>>>>> upstream/master
+=======
+
+# presets
+DEFAULT = "default"
+HIGH_QUALITY = "high_quality"
+MEDIUM_QUALITY = "medium_quality"
+BEST_QUALITY = "best_quality"
+ALL_MODEL_QUALITIES = [HIGH_QUALITY, MEDIUM_QUALITY, BEST_QUALITY, DEFAULT]
 >>>>>>> upstream/master

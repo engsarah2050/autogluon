@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import autogluon.eda as eda
 from autogluon.eda import AnalysisState
 from autogluon.eda.analysis import Namespace
 from autogluon.eda.analysis.base import BaseAnalysis
@@ -30,6 +31,7 @@ from autogluon.eda.visualization import (
     DatasetTypeMismatch,
     FeatureImportance,
     FeatureInteractionVisualization,
+    LabelInsightsVisualization,
     MarkdownSectionComponent,
     ModelLeaderboard,
     PropertyRendererComponent,
@@ -169,7 +171,7 @@ def test_dataset_overview(monkeypatch):
     call_md_render.assert_has_calls(
         [
             call("### Feature Distance"),
-            call("### Near duplicate group analysis: `education-num`, `near_duplicate` - distance `0.0`"),
+            call("### Near duplicate group analysis: `education-num`, `near_duplicate` - distance `0.0000`"),
         ]
     )
     call_ds_render.assert_called_once()
@@ -211,25 +213,35 @@ def test_get_empty_dict_if_none():
 
 
 @pytest.mark.parametrize(
-    "hyperparameters_present, presets_present",
+    "hyperparameters_present, lgbm_present, presets_present",
     [
-        (True, True),
-        (True, False),
-        (False, True),
-        (False, False),
+        (True, False, True),
+        (True, False, False),
+        (False, False, True),
+        (False, False, False),
+        (True, True, True),
+        (True, True, False),
+        (False, True, True),
+        (False, True, False),
     ],
 )
-def test_get_default_estimator_if_not_specified(hyperparameters_present, presets_present):
+def test_get_default_estimator_if_not_specified(monkeypatch, hyperparameters_present, lgbm_present, presets_present):
     fit_args = {}
     if hyperparameters_present:
         fit_args["hyperparameters"] = "some_params"
     if presets_present:
         fit_args["presets"] = "some_presets"
 
-    if (not hyperparameters_present) and (not presets_present):
-        assert "RF" in get_default_estimator_if_not_specified(fit_args)["hyperparameters"]
-    else:
-        assert get_default_estimator_if_not_specified(fit_args) == fit_args
+    with monkeypatch.context() as m:
+        m.setattr(eda.auto.simple, "_is_lightgbm_available", lambda: lgbm_present)
+
+        if (not hyperparameters_present) and (not presets_present):
+            if lgbm_present:
+                assert "GBM" in get_default_estimator_if_not_specified(fit_args)["hyperparameters"]
+            else:
+                assert "RF" in get_default_estimator_if_not_specified(fit_args)["hyperparameters"]
+        else:
+            assert get_default_estimator_if_not_specified(fit_args) == fit_args
 
 
 @pytest.mark.parametrize(
@@ -295,17 +307,20 @@ def test_target_analysis__classification(monkeypatch):
     call_ds_render = MagicMock()
     call_cv_render = MagicMock()
     call_fiv_render = MagicMock()
+    call_liv_render = MagicMock()
     with monkeypatch.context() as m:
         m.setattr(MarkdownSectionComponent, "render_markdown", call_md_render)
         m.setattr(DatasetStatistics, "render", call_ds_render)
         m.setattr(CorrelationVisualization, "render", call_cv_render)
         m.setattr(FeatureInteractionVisualization, "render", call_fiv_render)
+        m.setattr(LabelInsightsVisualization, "render", call_liv_render)
 
         state = target_analysis(train_data=df_train, label="class", return_state=True)
 
     call_md_render.assert_has_calls(
         [
             call("## Target variable analysis"),
+            call("### Label Insights"),
             call(
                 "### Target variable correlations\n"
                 " - absolute correlation greater than `0.5` found for target variable `class`"
@@ -314,6 +329,7 @@ def test_target_analysis__classification(monkeypatch):
     )
     call_ds_render.assert_called_once()
     call_cv_render.assert_called_once()
+    call_liv_render.assert_called_once()
     assert call_fiv_render.call_count == 2
     assert sorted(set(state.keys())) == [
         "correlations",
@@ -323,7 +339,9 @@ def test_target_analysis__classification(monkeypatch):
         "correlations_method",
         "dataset_stats",
         "interactions",
+        "label_insights",
         "missing_statistics",
+        "problem_type",
         "raw_type",
         "special_types",
         "variable_type",
@@ -341,11 +359,13 @@ def test_target_analysis__regression(monkeypatch):
     call_ds_render = MagicMock()
     call_cv_render = MagicMock()
     call_fiv_render = MagicMock()
+    call_liv_render = MagicMock()
     with monkeypatch.context() as m:
         m.setattr(MarkdownSectionComponent, "render_markdown", call_md_render)
         m.setattr(DatasetStatistics, "render", call_ds_render)
         m.setattr(CorrelationVisualization, "render", call_cv_render)
         m.setattr(FeatureInteractionVisualization, "render", call_fiv_render)
+        m.setattr(LabelInsightsVisualization, "render", call_liv_render)
 
         state = target_analysis(train_data=df_train, label="fnlwgt", return_state=True)
 
@@ -379,6 +399,7 @@ def test_target_analysis__regression(monkeypatch):
     call_ds_render.assert_called_once()
     call_cv_render.assert_called_once()
     call_fiv_render.assert_called_once()
+    call_liv_render.assert_called_once()
     assert sorted(set(state.keys())) == [
         "correlations",
         "correlations_focus_field",
@@ -390,6 +411,7 @@ def test_target_analysis__regression(monkeypatch):
         "distributions_fit_pvalue_min",
         "interactions",
         "missing_statistics",
+        "problem_type",
         "raw_type",
         "special_types",
         "variable_type",

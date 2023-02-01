@@ -13,7 +13,6 @@ import sys
 import time
 import warnings
 from collections import namedtuple
-from dataclasses import dataclass
 from datetime import timedelta
 from typing import Dict, List, Optional, Union
 
@@ -58,11 +57,8 @@ from .constants import (
     FEW_SHOT,
     FEW_SHOT_TEXT_CLASSIFICATION,
     GREEDY_SOUP,
-    HF_TEXT,
     IMAGE_BYTEARRAY,
     IMAGE_PATH,
-    IMAGE_SIMILARITY,
-    IMAGE_TEXT_SIMILARITY,
     LABEL,
     LAST_CHECKPOINT,
     LOGITS,
@@ -88,7 +84,6 @@ from .constants import (
     SCORE,
     TEXT,
     TEXT_NER,
-    TEXT_SIMILARITY,
     UNIFORM_SOUP,
     Y_PRED,
     Y_PRED_PROB,
@@ -104,7 +99,6 @@ from .data.infer_types import (
     is_image_column,
 )
 from .data.preprocess_dataframe import MultiModalFeaturePreprocessor
-from .data.utils import apply_data_processor, apply_df_preprocessor, get_collate_fn, get_per_sample_features
 from .matcher import MultiModalMatcher
 from .models.utils import get_model_postprocess_fn
 from .optimization.lit_distiller import DistillerLitModule
@@ -148,7 +142,6 @@ from .utils import (
     get_precision_context,
     get_stopping_threshold,
     hyperparameter_tune,
-    infer_batch,
     infer_dtypes_by_model_names,
     infer_metrics,
     infer_precision,
@@ -264,7 +257,7 @@ class MultiModalPredictor:
         pipeline
             Pipeline has been deprecated and merged in problem_type.
         presets
-            Presets regarding model quality, e.g., best_quality, high_quality_fast_inference, and medium_quality_faster_inference.
+            Presets regarding model quality, e.g., best_quality, high_quality, and medium_quality.
         eval_metric
             Evaluation metric name. If `eval_metric = None`, it is automatically chosen based on `problem_type`.
             Defaults to 'accuracy' for binary and multiclass classification, 'root_mean_squared_error' for regression.
@@ -576,7 +569,7 @@ class MultiModalPredictor:
         train_data
             A dataframe containing training data.
         presets
-            Presets regarding model quality, e.g., best_quality, high_quality_fast_inference, and medium_quality_faster_inference.
+            Presets regarding model quality, e.g., best_quality, high_quality, and medium_quality.
         config
             A dictionary with four keys "model", "data", "optimization", and "environment".
             Each key's value can be a string, yaml file path, or OmegaConf's DictConfig.
@@ -1432,7 +1425,6 @@ class MultiModalPredictor:
                 check_val_every_n_epoch=config.optimization.check_val_every_n_epoch
                 if hasattr(config.optimization, "check_val_every_n_epoch")
                 else 1,
-                reload_dataloaders_every_n_epochs=1,
                 plugins=[custom_checkpoint_plugin],
             )
 
@@ -1467,6 +1459,7 @@ class MultiModalPredictor:
                     standalone=standalone,
                     clean_ckpts=clean_ckpts,
                 )
+            self._best_score = trainer.callback_metrics[f"val_{self._validation_metric_name}"].item()
         else:
             sys.exit(f"Training finished, exit the process with global_rank={trainer.global_rank}...")
 
@@ -1582,9 +1575,6 @@ class MultiModalPredictor:
             prefix=prefix,
             strict=strict_loading,
         )
-
-        if self._problem_type != OBJECT_DETECTION:  # TODO: update detection's evaluation to support this
-            self._best_score = self.evaluate(val_df, metrics=[validation_metric_name])[validation_metric_name]
 
         if is_distill:
             avg_state_dict = self._replace_model_name_prefix(
@@ -1751,20 +1741,13 @@ class MultiModalPredictor:
                         outputs = pred_writer.collect_all_gpu_results(num_gpus=num_gpus)
                 elif self._problem_type == OBJECT_DETECTION:
                     # reformat single gpu output for object detection
-                    # outputs shape: num_batch, 1(["bbox"]), batch_size, 2(if using mask_rcnn)/na, 80, n, 5
+                    # outputs shape: num_batch, 1(["bbox"]), batch_size, 80, n, 5
                     # output LABEL if exists for evaluations
-                    if len(outputs[0][BBOX][0]) == 2:  # additional axis for mask_rcnn, TODO: remove hardcode here
-                        outputs = [
-                            {BBOX: bbox[0], LABEL: ele[LABEL][i]} if LABEL in ele else {BBOX: bbox[0]}
-                            for ele in outputs
-                            for i, bbox in enumerate(ele[BBOX])
-                        ]
-                    else:
-                        outputs = [
-                            {BBOX: bbox, LABEL: ele[LABEL][i]} if LABEL in ele else {BBOX: bbox}
-                            for ele in outputs
-                            for i, bbox in enumerate(ele[BBOX])
-                        ]
+                    outputs = [
+                        {BBOX: bbox, LABEL: ele[LABEL][i]} if LABEL in ele else {BBOX: bbox}
+                        for ele in outputs
+                        for i, bbox in enumerate(ele[BBOX])
+                    ]
 
         return outputs
 
@@ -1802,7 +1785,7 @@ class MultiModalPredictor:
                     elif is_image_column(data=data[col_name], col_name=col_name, image_type=IMAGE_BYTEARRAY):
                         image_type = IMAGE_BYTEARRAY
                     else:
-                        raise ValueError(f"Image type in column {col_name} is not supported!")
+                        image_type = col_type
                     if col_type != image_type:
                         column_types_copy[col_name] = image_type
             self._df_preprocessor._column_types = column_types_copy
@@ -1818,7 +1801,7 @@ class MultiModalPredictor:
         else:  # called .fit() or .load()
             df_preprocessor = self._df_preprocessor
 
-        data_processors = copy.deepcopy(self._data_processors)
+        data_processors = copy.copy(self._data_processors)
         # For prediction data with no labels provided.
         if not requires_label:
             data_processors.pop(LABEL, None)
@@ -2237,7 +2220,6 @@ class MultiModalPredictor:
 
         assert self._problem_type not in [
             REGRESSION,
-            NAMED_ENTITY_RECOGNITION,
         ], f"Problem {self._problem_type} has no probability output."
 
         if candidate_data:
@@ -2254,9 +2236,16 @@ class MultiModalPredictor:
                 realtime=realtime,
                 seed=seed,
             )
-            logits = extract_from_output(outputs=outputs, ret_type=LOGITS)
 
-            prob = logits_to_prob(logits)
+            if self._problem_type == NER:
+                ner_outputs = extract_from_output(outputs=outputs, ret_type=NER_RET)
+                prob = self._df_preprocessor.transform_prediction(
+                    y_pred=ner_outputs,
+                    return_proba=True,
+                )
+            else:
+                logits = extract_from_output(outputs=outputs, ret_type=LOGITS)
+                prob = logits_to_prob(logits)
 
         if not as_multiclass:
             if self._problem_type == BINARY:

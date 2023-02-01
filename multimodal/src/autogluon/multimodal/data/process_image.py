@@ -60,14 +60,14 @@ class ImageProcessor:
         norm_type: Optional[str] = None,
         size: Optional[int] = None,
         max_img_num_per_col: Optional[int] = 1,
-        missing_value_strategy: Optional[str] = "skip",
+        missing_value_strategy: Optional[str] = "zero",
         requires_column_info: bool = False,
     ):
         """
         Parameters
         ----------
-        prefix
-            The prefix connecting a processor to its corresponding model.
+        model
+            The model for which this processor would be created.
         train_transform_types
             A list of image transforms used in training. Note that the transform order matters.
         val_transform_types
