@@ -22,7 +22,7 @@ from .utils import (
     register_encoding_decoding_error_handlers,
 )
 
-logger = logging.getLogger(AUTOMM)
+logger = logging.getLogger(__name__)
 
 # Disable tokenizer parallelism
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -182,7 +182,10 @@ class TextProcessor:
         self.text_trivial_aug_maxscale = text_trivial_aug_maxscale
         self.train_augmenter = construct_text_augmenter(self.text_trivial_aug_maxscale, self.train_augment_types)
         self.template_config = template_config
-        self.template_engine = TemplateEngine(self.template_config)
+        if self.template_config.turn_on:
+            self.template_engine = TemplateEngine(self.template_config)
+        else:
+            self.template_engine = None
 
         if self.normalize_text:
             register_encoding_decoding_error_handlers()
@@ -235,7 +238,7 @@ class TextProcessor:
 
     def build_one_token_sequence(
         self,
-        text_tokens: Dict[str, NDArray[(Any,), np.int32]],
+        text_tokens: Dict[str, NDArray],
     ) -> Dict:
         """
         Construct one token sequence based on multiple token sequences coming from different

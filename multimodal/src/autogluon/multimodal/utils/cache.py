@@ -11,7 +11,7 @@ from pytorch_lightning.callbacks import BasePredictionWriter
 
 from ..constants import AUTOMM
 
-logger = logging.getLogger(AUTOMM)
+logger = logging.getLogger(__name__)
 
 
 class DDPCacheWriter(BasePredictionWriter):
@@ -43,7 +43,7 @@ class DDPCacheWriter(BasePredictionWriter):
             os.makedirs(self.cache_dir, exist_ok=False)
         except FileExistsError:
             logger.warning(
-                f'Warning: cache path already exists! It should be created by other process. Please make sure not running multiple DDP programs simutaneously! path="{self.cache_dir}"'
+                f'Warning: cache path already exists! It should be created by other process. Please make sure not running multiple DDP programs simultaneously! path="{self.cache_dir}"'
             )
         self.cache_dir = os.path.expanduser(self.cache_dir)  # replace ~ with absolute path if it exists
         if self.cache_dir[-1] != os.path.sep:

@@ -1,13 +1,13 @@
 AutoGluon: AutoML for Text, Image, Time Series, and Tabular Data
 ================================================================
 
-.. |ReleaseVersion| image:: https://img.shields.io/badge/doc%20release-v0.6.2-blue
+.. |ReleaseVersion| image:: https://img.shields.io/badge/doc%20release-v0.7.0-blue
     :target: https://auto.gluon.ai/dev/versions.html
     :scale: 100%
 .. |StableVersion| image:: https://img.shields.io/github/v/release/autogluon/autogluon?color=blue&label=stable%20release&sort=semver
     :target: https://auto.gluon.ai/stable/index.html
     :scale: 100%
-.. |PythonVersion| image:: https://img.shields.io/badge/python-3.7%20%7C%203.8%20%7C%203.9-blue
+.. |PythonVersion| image:: https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue
     :target: https://pypi.org/project/autogluon/
 .. |GitHub| image:: https://img.shields.io/github/stars/autogluon/autogluon?style=social
     :target: https://github.com/autogluon/autogluon/stargazers
@@ -92,22 +92,11 @@ Tutorials
       How to train time series models for forecasting.
 
    .. card::
-      :title: Image Prediction (Legacy Version)
-      :link: tutorials/image_prediction/index.html
+      :title: Exploratory Data Analysis
+      :link: tutorials/eda/index.html
 
-      How to classify images into various categories.
+      Tools to explore and visualize data.
 
-   .. card::
-      :title: Object Detection (Legacy Version)
-      :link: tutorials/object_detection/index.html
-
-      How to detect objects and their location in images.
-
-   .. card::
-      :title: Text Prediction (Legacy Version)
-      :link: tutorials/text_prediction/index.html
-
-      How to solve NLP problems via supervised learning from raw text.
 
 Managed Solutions Featuring AutoGluon
 -------------------------------------
@@ -129,10 +118,8 @@ Launch Tutorial Notebooks
    tutorials/multimodal/index
    tutorials/timeseries/index
    tutorials/cloud_fit_deploy/index
+   tutorials/eda/index
    cheatsheet.rst
-   tutorials/image_prediction/index
-   tutorials/object_detection/index
-   tutorials/text_prediction/index
    api/autogluon.predictor
    api/autogluon.features
    api/autogluon.tabular.models

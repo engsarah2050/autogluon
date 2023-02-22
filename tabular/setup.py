@@ -20,11 +20,11 @@ version = ag.update_version(version)
 submodule = 'tabular'
 install_requires = [
     # version ranges added in ag.get_dependency_version_ranges()
-    'numpy',
-    'scipy',
-    'pandas',
-    'scikit-learn',
-    'networkx',
+    'numpy',  # version range defined in `core/_setup_utils.py`
+    'scipy',  # version range defined in `core/_setup_utils.py`
+    'pandas',  # version range defined in `core/_setup_utils.py`
+    'scikit-learn',  # version range defined in `core/_setup_utils.py`
+    'networkx',  # version range defined in `core/_setup_utils.py`
     f'{ag.PACKAGE_NAME}.core=={version}',
     f'{ag.PACKAGE_NAME}.features=={version}',
 ]
@@ -43,17 +43,27 @@ extras_require = {
         'xgboost>=1.6,<1.8',
     ],
     'fastai': [
-        'torch>=1.0,<1.13',
+        'torch>=1.9,<1.14',
         'fastai>=2.3.1,<2.8',
     ],
+<<<<<<< HEAD
     'skex': [        
      'scikit-learn-intelex>=2021.6,<2021.8',
+=======
+    'ray': [
+        f'{ag.PACKAGE_NAME}.core[all]=={version}',
+    ],
+    'skex': [
+        # Note: 2021.7 released on Sep 2022, version 2022.x doesn't exist (went directly from 2021.7 to 2023.0)
+        'scikit-learn-intelex>=2021.7,<2023.1',
+>>>>>>> upstream/master
     ],
     'imodels': [
         'imodels>=1.3.10,<1.4.0',  # 1.3.8/1.3.9 either remove/renamed attribute `complexity_` causing failures. https://github.com/csinva/imodels/issues/147
     ],
     'vowpalwabbit': [
-        'vowpalwabbit>=8.10,<8.11'
+        # FIXME: 9.5+ causes VW to save an empty model which always predicts 0. Confirmed on MacOS (Intel CPU). Unknown how to fix.
+        'vowpalwabbit>=9,<9.5',
     ],
     'skl2onnx': [
         'skl2onnx>=1.13.0,<1.14.0',
@@ -61,13 +71,14 @@ extras_require = {
         # Therefore, we install onnxruntime explicitly here just for macOS.
         'onnxruntime>=1.13.0,<1.14.0'
     ] if sys.platform == 'darwin' else [
-        'skl2onnx>=1.13.0,<1.14.0'
+        'skl2onnx>=1.13.0,<1.14.0',
+        'onnxruntime-gpu>=1.13.0,<1.14.0'
     ]
 }
 
 all_requires = []
 # TODO: Consider adding 'skex' to 'all'
-for extra_package in ['lightgbm', 'catboost', 'xgboost', 'fastai']:
+for extra_package in ['lightgbm', 'catboost', 'xgboost', 'fastai', 'ray']:
     all_requires += extras_require[extra_package]
 all_requires = list(set(all_requires))
 extras_require['all'] = all_requires

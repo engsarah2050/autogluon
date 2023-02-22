@@ -20,6 +20,7 @@ from omegaconf import DictConfig, OmegaConf
 from torch import nn
 
 from autogluon.common.utils.log_utils import set_logger_verbosity
+from autogluon.multimodal.utils.log import get_fit_complete_message, get_fit_start_message
 
 from . import version as ag_version
 from .constants import (
@@ -78,7 +79,8 @@ from .utils import (
     customize_model_names,
     data_to_df,
     extract_from_output,
-    filter_search_space,
+    filter_hyperparameters,
+    get_available_devices,
     get_config,
     get_local_pretrained_config_paths,
     get_minmax_mode,
@@ -97,9 +99,11 @@ from .utils import (
     setup_save_path,
     split_train_tuning_data,
     try_to_infer_pos_label,
+    update_hyperparameters,
+    upgrade_config,
 )
 
-logger = logging.getLogger(AUTOMM)
+logger = logging.getLogger(__name__)
 
 
 class MultiModalMatcher:
@@ -222,7 +226,7 @@ class MultiModalMatcher:
         self._warn_if_exist = warn_if_exist
         self._enable_progress_bar = enable_progress_bar if enable_progress_bar is not None else True
 
-        if self._pipeline is not None:
+        if self._pipeline is not None:  # TODO: do not create pretrained model for HPO presets.
             (
                 self._config,
                 self._query_config,
@@ -364,18 +368,6 @@ class MultiModalMatcher:
         fit_called = self._fit_called  # used in current function
         self._fit_called = True
 
-        if hyperparameter_tune_kwargs is not None:
-            assert isinstance(
-                hyperparameters, dict
-            ), "Please provide hyperparameters as a dictionary if you want to do HPO"
-            if fit_called:
-                warnings.warn(
-                    "HPO while continuous training."
-                    "Hyperparameters related to Model and Data will NOT take effect."
-                    "We will filter them out from the search space."
-                )
-                hyperparameters = filter_search_space(hyperparameters, [MODEL, DATA])
-
         pl.seed_everything(seed, workers=True)
 
         self._save_path = setup_save_path(
@@ -468,6 +460,21 @@ class MultiModalMatcher:
         self._output_shape = output_shape
         self._column_types = column_types
 
+        hyperparameters, hyperparameter_tune_kwargs = update_hyperparameters(
+            problem_type=self._pipeline,
+            presets=presets,
+            provided_hyperparameters=hyperparameters,
+            provided_hyperparameter_tune_kwargs=hyperparameter_tune_kwargs,
+        )
+        hpo_mode = True if hyperparameter_tune_kwargs else False
+        if hpo_mode:
+            hyperparameters = filter_hyperparameters(
+                hyperparameters=hyperparameters,
+                column_types=column_types,
+                config=self._config,
+                fit_called=fit_called,
+            )
+
         _fit_args = dict(
             train_df=train_data,
             val_df=tuning_data,
@@ -476,15 +483,15 @@ class MultiModalMatcher:
             minmax_mode=minmax_mode,
             max_time=time_limit,
             save_path=self._save_path,
-            ckpt_path=None if hyperparameter_tune_kwargs is not None else self._ckpt_path,
-            resume=False if hyperparameter_tune_kwargs is not None else self._resume,
-            enable_progress_bar=False if hyperparameter_tune_kwargs is not None else self._enable_progress_bar,
+            ckpt_path=None if hpo_mode else self._ckpt_path,
+            resume=False if hpo_mode else self._resume,
+            enable_progress_bar=False if hpo_mode else self._enable_progress_bar,
             presets=presets,
             hyperparameters=hyperparameters,
-            hpo_mode=(hyperparameter_tune_kwargs is not None),  # skip average checkpoint if in hpo mode
+            hpo_mode=hpo_mode,  # skip average checkpoint if in hpo mode
         )
 
-        if hyperparameter_tune_kwargs is not None:
+        if hpo_mode:
             # TODO: allow custom gpu
             assert self._resume is False, "You can not resume training with HPO"
             resources = dict(num_gpus=torch.cuda.device_count())
@@ -500,7 +507,9 @@ class MultiModalMatcher:
             return predictor
 
         self._fit(**_fit_args)
-        logger.info(f"Models and intermediate outputs are saved to {self._save_path} ")
+
+        # TODO(?) We should have a separate "_post_training_event()" for logging messages.
+        logger.info(get_fit_complete_message(self._save_path))
         return self
 
     def _get_matcher_df_preprocessor(
@@ -617,6 +626,8 @@ class MultiModalMatcher:
         hpo_mode: bool = False,
         **hpo_kwargs,
     ):
+        # TODO(?) We should have a separate "_pre_training_event()" for logging messages.
+        logger.info(get_fit_start_message(save_path, validation_metric_name))
         config = self._config
         config = get_config(
             problem_type=self._pipeline,
@@ -879,8 +890,11 @@ class MultiModalMatcher:
         with apply_log_filter(log_filter):
             trainer = pl.Trainer(
                 accelerator="gpu" if num_gpus > 0 else None,
-                devices=num_gpus if num_gpus > 0 else None,
-                auto_select_gpus=config.env.auto_select_gpus if num_gpus != 0 else False,
+                devices=get_available_devices(
+                    num_gpus=num_gpus,
+                    auto_select_gpus=config.env.auto_select_gpus,
+                    use_ray_lightning=use_ray_lightning,
+                ),
                 num_nodes=config.env.num_nodes,
                 precision=precision,
                 strategy=strategy,
@@ -1225,8 +1239,7 @@ class MultiModalMatcher:
         with apply_log_filter(log_filter):
             evaluator = pl.Trainer(
                 accelerator="gpu" if num_gpus > 0 else None,
-                devices=num_gpus if num_gpus > 0 else None,
-                auto_select_gpus=self._config.env.auto_select_gpus if num_gpus != 0 else False,
+                devices=get_available_devices(num_gpus=num_gpus, auto_select_gpus=self._config.env.auto_select_gpus),
                 num_nodes=self._config.env.num_nodes,
                 precision=precision,
                 strategy=strategy,
@@ -1850,6 +1863,9 @@ class MultiModalMatcher:
 
         with open(os.path.join(path, "assets.json"), "r") as fp:
             assets = json.load(fp)
+
+        query_config = upgrade_config(query_config, assets["version"])
+        response_config = upgrade_config(response_config, assets["version"])
 
         with open(os.path.join(path, "df_preprocessor.pkl"), "rb") as fp:
             df_preprocessor = CustomUnpickler(fp).load()

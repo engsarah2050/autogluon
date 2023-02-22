@@ -8,7 +8,7 @@ In this section, our goal is to fast finetune and evaluate a pretrained model
 on [Pothole dataset](https://www.kaggle.com/datasets/andrewmvd/pothole-detection) in COCO format.
 Pothole is a single object, i.e. `pothole`, detection dataset, containing 665 images with bounding box annotations
 for the creation of detection models and can work as POC/POV for the maintenance of roads.
-See :ref:`sec_automm_detection_prepare_voc` for how to prepare Pothole dataset.
+See :ref:`sec_automm_detection_prepare_pothole` for how to prepare Pothole dataset.
 
 To start, let's import MultiModalPredictor:
 
@@ -72,7 +72,7 @@ val_metric = "map"
 
 We create the MultiModalPredictor with selected checkpoint name, val_metric, and number of GPUs.
 We need to specify the problem_type to `"object_detection"`,
-and also provide a `sample_data_path` for the predictor to infer the catgories of the dataset.
+and also provide a `sample_data_path` for the predictor to infer the categories of the dataset.
 Here we provide the `train_path`, and it also works using any other split of this dataset.
 
 ```python .input
@@ -108,6 +108,7 @@ predictor.fit(
     hyperparameters={
         "optimization.learning_rate": 5e-6, # we use two stage and detection head has 100x lr
         "optimization.max_epochs": 1,
+        "optimization.check_val_every_n_epoch": 1, # make sure there is at least one validation
         "env.per_gpu_batch_size": 2,  # decrease it when model is large
     },
 )

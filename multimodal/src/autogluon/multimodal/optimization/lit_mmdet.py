@@ -22,7 +22,7 @@ from ..constants import AUTOMM, IMAGE, LABEL
 from ..utils import unpack_datacontainers
 from .utils import apply_layerwise_lr_decay, apply_single_lr, apply_two_stages_lr, get_lr_scheduler, get_optimizer
 
-logger = logging.getLogger(AUTOMM)
+logger = logging.getLogger(__name__)
 
 
 class MMDetLitModule(pl.LightningModule):
@@ -91,7 +91,7 @@ class MMDetLitModule(pl.LightningModule):
             scores = []
             labels = []
             if isinstance(img_result[0], list):
-                # has one additional dimention with 2 outputs: img_result=img_result[0], mask_result=img_result[1]
+                # has one additional dimension with 2 outputs: img_result=img_result[0], mask_result=img_result[1]
                 raise NotImplementedError(
                     "Do not support training for models with masks like mask r-cnn, "
                     "because most custom datasets do not have a ground truth mask."
