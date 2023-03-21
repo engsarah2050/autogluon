@@ -2,7 +2,7 @@ import os
 import re
 import tempfile
 from sys import platform
-from unittest.mock import MagicMock, call
+from unittest.mock import ANY, MagicMock, call
 
 import numpy as np
 import pandas as pd
@@ -10,13 +10,14 @@ import pytest
 
 import autogluon.eda as eda
 from autogluon.eda import AnalysisState
-from autogluon.eda.analysis import Namespace
+from autogluon.eda.analysis import Namespace, ShapAnalysis
 from autogluon.eda.analysis.base import BaseAnalysis
 from autogluon.eda.auto import (
     analyze,
     analyze_interaction,
     covariate_shift_detection,
     dataset_overview,
+    explain_rows,
     quick_fit,
     target_analysis,
 )
@@ -30,6 +31,8 @@ from autogluon.eda.visualization import (
     CorrelationVisualization,
     DatasetStatistics,
     DatasetTypeMismatch,
+    ExplainForcePlot,
+    ExplainWaterfallPlot,
     FeatureImportance,
     FeatureInteractionVisualization,
     LabelInsightsVisualization,
@@ -153,7 +156,8 @@ def test_quick_fit(monkeypatch):
 
 def test_dataset_overview(monkeypatch):
     df_train = pd.read_csv(os.path.join(RESOURCE_PATH, "adult", "train_data.csv")).sample(100, random_state=0)
-    df_train["near_duplicate"] = df_train["education-num"] + 1
+    df_train["education-num"] = df_train["education-num"] + np.random.rand(len(df_train)) / 100
+    df_train["near_duplicate"] = df_train["education-num"] + 0.1
 
     call_ds_render = MagicMock()
     call_dtm_render = MagicMock()
@@ -173,7 +177,6 @@ def test_dataset_overview(monkeypatch):
     call_md_render.assert_has_calls(
         [
             call("### Feature Distance"),
-            call("**Near duplicate group analysis: `education-num`, `near_duplicate` - distance `0.0000`**"),
             call("Feature interaction between `education-num`/`near_duplicate`"),
         ]
     )
@@ -434,3 +437,54 @@ def test_target_analysis__regression(monkeypatch):
         "skewnorm",
         "weibull_min",
     ]
+
+
+@pytest.mark.parametrize(
+    "plot",
+    [
+        ("force"),
+        ("waterfall"),
+        (None),
+    ],
+)
+def test_explain_rows(plot, monkeypatch):
+    train_data = MagicMock()
+    model = MagicMock()
+    rows = MagicMock()
+    with monkeypatch.context() as m:
+        call_analyze = MagicMock(return_value="result")
+        m.setattr(eda.auto.simple, "analyze", call_analyze)
+
+        result = explain_rows(
+            train_data=train_data,
+            model=model,
+            rows=rows,
+            plot=plot,
+            return_state=True,
+            baseline_sample=300,
+            other_arg="other_arg",
+        )
+        assert result == "result"
+
+        call_analyze.assert_called_with(
+            train_data=train_data[model.original_features],
+            model=model,
+            return_state=True,
+            anlz_facets=ANY,
+            viz_facets=ANY,
+        )
+
+        anlz_facet = call_analyze.call_args.kwargs["anlz_facets"][0]
+        assert type(anlz_facet) is ShapAnalysis
+        assert anlz_facet.rows == rows
+        assert anlz_facet.baseline_sample == 300
+
+        expected_plot = {
+            "force": ExplainForcePlot,
+            "waterfall": ExplainWaterfallPlot,
+        }.get(plot, None)
+        viz_facet = call_analyze.call_args.kwargs["viz_facets"]
+        if expected_plot is None:
+            assert viz_facet is None
+        else:
+            assert type(viz_facet[0]) is expected_plot

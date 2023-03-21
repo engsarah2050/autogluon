@@ -26,8 +26,7 @@ from packaging import version
 from torch import nn
 
 from autogluon.common.utils.log_utils import set_logger_verbosity, verbosity2loglevel
-from autogluon.multimodal.utils import object_detection_data_to_df, save_result_df, setup_detection_train_tuning_data
-from autogluon.multimodal.utils.log import get_fit_complete_message, get_fit_start_message
+from autogluon.core.utils.loaders import load_pd
 
 from . import version as ag_version
 from .constants import (
@@ -47,6 +46,7 @@ from .constants import (
     DEEPSPEED_OFFLOADING,
     DEEPSPEED_STRATEGY,
     DEPRECATED_ZERO_SHOT,
+    DOCUMENT,
     FEATURE_EXTRACTION,
     FEATURES,
     FEW_SHOT,
@@ -77,6 +77,7 @@ from .constants import (
     TEXT,
     TEXT_NER,
     UNIFORM_SOUP,
+    XYWH,
     Y_PRED,
     Y_PRED_PROB,
     Y_TRUE,
@@ -118,6 +119,7 @@ from .utils import (
     check_if_packages_installed,
     compute_num_gpus,
     compute_score,
+    convert_pred_to_xywh,
     create_fusion_data_processors,
     create_fusion_model,
     data_to_df,
@@ -127,6 +129,8 @@ from .utils import (
     get_available_devices,
     get_config,
     get_detection_classes,
+    get_fit_complete_message,
+    get_fit_start_message,
     get_local_pretrained_config_paths,
     get_minmax_mode,
     get_mixup,
@@ -152,6 +156,7 @@ from .utils import (
     select_model,
     setup_detection_train_tuning_data,
     setup_save_path,
+    split_hyperparameters,
     split_train_tuning_data,
     tensor_to_ndarray,
     try_to_infer_pos_label,
@@ -699,6 +704,11 @@ class MultiModalPredictor(ExportMixin):
                 self, max_num_tuning_data, seed, train_data, tuning_data
             )
 
+        if isinstance(train_data, str):
+            train_data = load_pd.load(train_data)
+        if isinstance(tuning_data, str):
+            tuning_data = load_pd.load(tuning_data)
+
         pl.seed_everything(seed, workers=True)
 
 <<<<<<< HEAD
@@ -743,7 +753,9 @@ class MultiModalPredictor(ExportMixin):
             valid_data=tuning_data,
             label_columns=self._label_column,
             provided_column_types=column_types,
+            problem_type=self._problem_type,
         )
+
         column_types = infer_label_column_type_by_problem_type(
             column_types=column_types,
             label_columns=self._label_column,
@@ -824,8 +836,11 @@ class MultiModalPredictor(ExportMixin):
             provided_hyperparameter_tune_kwargs=hyperparameter_tune_kwargs,
             teacher_predictor=teacher_predictor,
         )
+        # split out the hyperparameters whose values are complex objects
+        hyperparameters, advanced_hyperparameters = split_hyperparameters(hyperparameters)
+
         hpo_mode = True if hyperparameter_tune_kwargs else False
-        if hpo_mode and self._problem_type != NER:  # TODO: support ner.
+        if hpo_mode:
             hyperparameters = filter_hyperparameters(
                 hyperparameters=hyperparameters,
                 column_types=column_types,
@@ -846,6 +861,7 @@ class MultiModalPredictor(ExportMixin):
             presets=presets,
             config=config,
             hyperparameters=hyperparameters,
+            advanced_hyperparameters=advanced_hyperparameters,
             teacher_predictor=teacher_predictor,
             standalone=standalone,
 <<<<<<< HEAD
@@ -1032,6 +1048,7 @@ class MultiModalPredictor(ExportMixin):
         presets: Optional[str] = None,
         config: Optional[dict] = None,
         hyperparameters: Optional[Union[str, Dict, List[str]]] = None,
+        advanced_hyperparameters: Optional[Dict] = None,
         teacher_predictor: Union[str, MultiModalPredictor] = None,
         hpo_mode: bool = False,
         standalone: bool = True,
@@ -1099,6 +1116,7 @@ class MultiModalPredictor(ExportMixin):
             data_processors = create_fusion_data_processors(
                 config=config,
                 model=model,
+                advanced_hyperparameters=advanced_hyperparameters,
             )
         else:  # continuing training
             data_processors = self._data_processors
@@ -2106,6 +2124,7 @@ class MultiModalPredictor(ExportMixin):
 
         if self._problem_type == NER:
             ret_type = NER_RET
+
         if candidate_data:
             pred = self._match_queries_and_candidates(
                 query_data=data,
@@ -2142,6 +2161,11 @@ class MultiModalPredictor(ExportMixin):
 
             if self._problem_type == NER:
                 pred = merge_bio_format(data[self._df_preprocessor.ner_feature_names[0]], pred)
+
+            if self._problem_type == OBJECT_DETECTION:
+                if self._model.output_bbox_format == XYWH:
+                    pred = convert_pred_to_xywh(pred)
+
         if save_results:
             ## Dumping Result for detection only now
             assert (
@@ -2370,7 +2394,14 @@ class MultiModalPredictor(ExportMixin):
         strict: bool = True,
     ):
         if state_dict is None:
-            state_dict = torch.load(path, map_location=torch.device("cpu"))["state_dict"]
+            if os.path.isdir(path + "-dir"):  # deepspeed save checkpoints into a directory
+                from pytorch_lightning.utilities.deepspeed import convert_zero_checkpoint_to_fp32_state_dict
+
+                convert_zero_checkpoint_to_fp32_state_dict(path + "-dir", path)
+                shutil.rmtree(path + "-dir")
+                state_dict = torch.load(path, map_location=torch.device("cpu"))["state_dict"]
+            else:
+                state_dict = torch.load(path, map_location=torch.device("cpu"))["state_dict"]
         state_dict = {k.partition(prefix)[2]: v for k, v in state_dict.items() if k.startswith(prefix)}
         load_result = model.load_state_dict(state_dict, strict=strict)
         assert (
@@ -2430,6 +2461,12 @@ class MultiModalPredictor(ExportMixin):
                     text_processors=data_processors[modality],
                     path=path,
                 )
+
+        # Clear the documents cache dictionary before saving.
+        for modality in [DOCUMENT]:
+            if modality in data_processors:
+                for p in data_processors[modality]:
+                    p.documents.clear()
 
         with open(os.path.join(path, "data_processors.pkl"), "wb") as fp:
             pickle.dump(data_processors, fp)
@@ -2797,53 +2834,3 @@ class AutoMMPredictor(MultiModalPredictor):
             "raise an exception starting in v0.7."
         )
         super(AutoMMPredictor, self).__init__(**kwargs)
-
-
-class MultiModalOnnxPredictor:
-    def __init__(self, base_predictor, model, providers=None):
-        if providers == None:
-            providers = ["CPUExecutionProvider"]
-        self._predictor = base_predictor
-        import onnxruntime as ort
-
-        self.sess = ort.InferenceSession(model.SerializeToString(), providers=providers)
-
-    def predict(self, data: Union[pd.DataFrame, dict, list, str]):
-        raise NotImplementedError()
-
-    def predict_proba(self, data: Union[pd.DataFrame, dict, list, str]):
-        data, df_preprocessor, data_processors = self._predictor._on_predict_start(
-            data=data,
-            requires_label=False,
-        )
-        data = process_batch(
-            data=data,
-            df_preprocessor=df_preprocessor,
-            data_processors=data_processors,
-        )
-
-        inputs = self.sess.get_inputs()
-        outputs = self.sess.get_outputs()
-        input_names = [i.name for i in inputs]
-        input_dict = {k: data[k].numpy() for k in input_names}
-
-        # Taking second output, since outputs are (feature, logits)
-        # TODO: Make output consistent. Currently relying on keys of the output dict.
-        assert len(outputs) == 2, "expecting two outputs from the model."
-        label_name = outputs[1].name
-        onnx_logits = self.sess.run([label_name], input_dict)[0]
-        onnx_proba = logits_to_prob(onnx_logits)
-
-        return onnx_proba
-
-    @staticmethod
-    def load(path, providers=None):
-        import onnx
-
-        if providers == None:
-            providers = ["CPUExecutionProvider"]
-        base_predictor = MultiModalPredictor.load(path=path)
-        onnx_path = os.path.join(path, "model.onnx")
-        onnx_bytes = onnx.load(onnx_path)
-
-        return MultiModalOnnxPredictor(base_predictor=base_predictor, model=onnx_bytes, providers=providers)

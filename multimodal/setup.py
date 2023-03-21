@@ -55,6 +55,7 @@ install_requires = [
     "jinja2>=3.0.3,<3.2",
     "tensorboard>=2.9,<3",
     "pytesseract>=0.3.9,<0.3.11",
+    "PyMuPDF<=1.21.1",
 ]
 
 install_requires = ag.get_dependency_version_ranges(install_requires)
@@ -67,6 +68,7 @@ extras_require = {
         "onnx>=1.13.0,<1.14.0",
         "onnxruntime>=1.13.0,<1.14.0;platform_system=='Darwin'",
         "onnxruntime-gpu>=1.13.0,<1.14.0;platform_system!='Darwin'",
+        "tensorrt>=8.5.3.1,<8.5.4;platform_system=='Linux'",
     ]
 }
 

@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 import pandas as pd
 
 from autogluon.common.utils.log_utils import verbosity2loglevel
+from autogluon.tabular import TabularPredictor
 
 from .. import AnalysisState
 from ..analysis import (
@@ -15,6 +16,7 @@ from ..analysis import (
     FeatureInteraction,
     MissingValuesAnalysis,
     ProblemTypeControl,
+    ShapAnalysis,
     TrainValidationSplit,
     XShiftDetector,
 )
@@ -28,13 +30,15 @@ from ..analysis.dataset import (
     VariableTypeAnalysis,
 )
 from ..analysis.interaction import FeatureDistanceAnalysis
-from ..state import is_key_present_in_state
+from ..state import expand_nested_args_into_nested_maps, is_key_present_in_state
 from ..utils.defaults import QuickFitDefaults
 from ..visualization import (
     ConfusionMatrix,
     CorrelationVisualization,
     DatasetStatistics,
     DatasetTypeMismatch,
+    ExplainForcePlot,
+    ExplainWaterfallPlot,
     FeatureImportance,
     FeatureInteractionVisualization,
     LabelInsightsVisualization,
@@ -49,6 +53,8 @@ from ..visualization.base import AbstractVisualization
 from ..visualization.interaction import FeatureDistanceAnalysisVisualization
 from ..visualization.layouts import SimpleVerticalLinearLayout
 
+logger = logging.getLogger(__name__)
+
 __all__ = [
     "analyze",
     "analyze_interaction",
@@ -57,13 +63,14 @@ __all__ = [
     "missing_values_analysis",
     "quick_fit",
     "target_analysis",
+    "explain_rows",
 ]
 
 
 def analyze(
-    train_data=None,
-    test_data=None,
-    val_data=None,
+    train_data: Optional[pd.DataFrame] = None,
+    test_data: Optional[pd.DataFrame] = None,
+    val_data: Optional[pd.DataFrame] = None,
     model=None,
     label: Optional[str] = None,
     state: Union[None, dict, AnalysisState] = None,
@@ -245,16 +252,20 @@ def _is_single_numeric_variable(x, y, hue, x_type):
 def quick_fit(
     train_data: pd.DataFrame,
     label: str,
+    test_data: Optional[pd.DataFrame] = None,
     path: Optional[str] = None,
     val_size: float = 0.3,
     problem_type: str = "auto",
     sample: Union[None, int, float] = None,
     state: Union[None, dict, AnalysisState] = None,
     return_state: bool = False,
+    save_model_to_state: bool = True,
     verbosity: int = 0,
     show_feature_importance_barplots: bool = False,
+    estimator_args: Optional[Dict[str, Dict[str, Any]]] = None,
     fig_args: Optional[Dict[str, Dict[str, Any]]] = None,
     chart_args: Optional[Dict[str, Dict[str, Any]]] = None,
+    render_analysis: bool = True,
     **fit_args,
 ):
     """
@@ -275,15 +286,16 @@ def quick_fit(
         - samples with the least distance from the other class - candidates for labeling
 
     Supported `fig_args`/`chart_args` keys:
-        - confusion_matrix - confusion matrix chart for classification predictor
-        - regression_eval - regression predictor results chart
-        - feature_importance - feature importance barplot chart
-
+        - `confusion_matrix.<property>` - confusion matrix chart for classification predictor
+        - `regression_eval.<property>` - regression predictor results chart
+        - `feature_importance.<property>` - feature importance barplot chart
 
     Parameters
     ----------
     train_data: DataFrame
         training dataset
+    test_data: DataFrame
+        test dataset
     label: str
         target variable
     path: Optional[str], default = None,
@@ -302,6 +314,9 @@ def quick_fit(
         pass prior state if necessary; the object will be updated during `anlz_facets` `fit` call.
     return_state: bool, default = False
         return state if `True`
+    save_model_to_state: bool, default = True,
+        save fitted model into `state` under `model` key.
+        This functionality might be helpful in cases when the fitted model could be usable for other purposes (i.e. imputers)
     verbosity: int, default = 0
         Verbosity levels range from 0 to 4 and control how much information is printed.
         Higher levels correspond to more detailed print statements (you can set verbosity = 0 to suppress warnings).
@@ -309,12 +324,19 @@ def quick_fit(
         where `L` ranges from 0 to 50 (Note: higher values of `L` correspond to fewer print statements, opposite of verbosity levels).
     show_feature_importance_barplots: bool, default = False
         if `True`, then barplot char will ba added with feature importance visualization
-    fit_args
-        kwargs to pass into `TabularPredictor` fit
+    estimator_args: Optional[Dict[str, Dict[str, Any]]], default = None,
+        args to pass into the estimator constructor
+    fit_args: Optional[Dict[str, Dict[str, Any]]], default = None,
+        kwargs to pass into `TabularPredictor` fit.
     fig_args: Optional[Dict[str, Any]], default = None,
-        figures args for vizualizations; key == component; value = dict of kwargs for component figure
+        figures args for vizualizations; key == component; value = dict of kwargs for component figure. The args are supporting nested
+        dot syntax: 'a.b.c'.
     chart_args: Optional[Dict[str, Any]], default = None,
-        figures args for vizualizations; key == component; value = dict of kwargs for component chart
+        figures args for vizualizations; key == component; value = dict of kwargs for component chart. The args are supporting nested
+        dot syntax: 'a.b.c'.
+    render_analysis: bool, default = True
+        if `False`, then don't render any visualizations; this can be used if user just needs to train a model. It is recommended to use this option
+        with `save_model_to_state=True` and `return_state=True` options.
 
     Returns
     -------
@@ -328,7 +350,8 @@ def quick_fit(
     >>> state = auto.quick_fit(
     >>>     train_data=..., label=...,
     >>>     return_state=True,  # return state object from call
-    >>>     save_model_to_state=True,  # store fitted model into the state
+    >>>     fig_args={"regression_eval.figsize": (8,6)},  # customize regression evaluation `figsize`
+    >>>     chart_args={"regression_eval.residuals_plot_mode": "hist"}  # customize regression evaluation `residuals_plot_mode`
     >>>     hyperparameters={'GBM': {}}  # train specific model
     >>> )
     >>>
@@ -350,35 +373,20 @@ def quick_fit(
     if not isinstance(state, AnalysisState):
         state = AnalysisState(state)
 
-    fig_args = get_empty_dict_if_none(fig_args)
-    chart_args = get_empty_dict_if_none(chart_args)
+    fig_args = expand_nested_args_into_nested_maps(get_empty_dict_if_none(fig_args))
+    chart_args = expand_nested_args_into_nested_maps(get_empty_dict_if_none(chart_args))
 
+    estimator_args = get_empty_dict_if_none(estimator_args)
     fit_args = get_default_estimator_if_not_specified(fit_args)
 
-    return analyze(
-        train_data=train_data,
-        label=label,
-        sample=sample,
-        state=state,
-        return_state=return_state,
-        anlz_facets=[
-            ProblemTypeControl(problem_type=problem_type),
-            TrainValidationSplit(
-                val_size=val_size,
-                children=[
-                    AutoGluonModelQuickFit(
-                        estimator_args={"path": path},
-                        verbosity=verbosity,
-                        problem_type=problem_type,
-                        children=[
-                            AutoGluonModelEvaluator(),
-                        ],
-                        **fit_args,
-                    ),
-                ],
-            ),
-        ],
-        viz_facets=[
+    if "path" not in estimator_args:
+        estimator_args["path"] = path  # type: ignore
+
+    if (test_data is not None) and (label not in test_data.columns):
+        test_data = None
+
+    if render_analysis:
+        viz = [
             MarkdownSectionComponent(markdown=f"### Model Prediction for {label}"),
             ConfusionMatrix(
                 fig_args=fig_args.get("confusion_matrix", {}),
@@ -386,7 +394,7 @@ def quick_fit(
             ),
             RegressionEvaluation(
                 fig_args=fig_args.get("regression_eval", {}),
-                **chart_args.get("regression_eval", dict(marker="o", scatter_kws={"s": 5})),
+                **chart_args.get("regression_eval", {}),
             ),
             MarkdownSectionComponent(markdown="### Model Leaderboard"),
             ModelLeaderboard(),
@@ -409,7 +417,36 @@ def quick_fit(
                 "and are good candidates for additional labeling",
             ),
             PropertyRendererComponent("model_evaluation.undecided", transform_fn=(lambda df: df.head(10))),
+        ]
+    else:
+        viz = []
+
+    return analyze(
+        train_data=train_data,
+        test_data=test_data,
+        label=label,
+        sample=sample,
+        state=state,
+        return_state=return_state,
+        anlz_facets=[
+            ProblemTypeControl(problem_type=problem_type),
+            TrainValidationSplit(
+                val_size=val_size,
+                children=[
+                    AutoGluonModelQuickFit(
+                        estimator_args=estimator_args,
+                        verbosity=verbosity,
+                        problem_type=problem_type,
+                        save_model_to_state=save_model_to_state,
+                        children=[
+                            AutoGluonModelEvaluator(),
+                        ],
+                        **fit_args,
+                    ),
+                ],
+            ),
         ],
+        viz_facets=viz,
     )
 
 
@@ -428,8 +465,8 @@ def dataset_overview(
     Shortcut to perform high-level datasets summary overview (counts, frequencies, missing statistics, types info).
 
     Supported `fig_args`/`chart_args` keys:
-        - feature_distance - feature distance dendrogram chart
-
+        - `feature_distance.<property>` - feature distance dendrogram chart
+        - `chart.<variable>.<property>` - near-duplicate groups visualizations chart. If chart is labeled as a relationship <A>/<B>, then <variable> is <B>
 
     Parameters
     ----------
@@ -461,8 +498,8 @@ def dataset_overview(
     >>>
     >>> auto.dataset_overview(
     >>>     train_data=df_train, test_data=df_test, label=target_col,
-    >>>     chart_args={'feature_distance': dict(orientation='left')},
-    >>>     fig_args={'feature_distance': dict(figsize=(6,6))},
+    >>>     chart_args={'feature_distance.orientation': 'left'},
+    >>>     fig_args={'feature_distance.figsize': (6,6)},
     >>> )
 
     See Also
@@ -476,8 +513,8 @@ def dataset_overview(
 
     """
 
-    fig_args = get_empty_dict_if_none(fig_args)
-    chart_args = get_empty_dict_if_none(chart_args)
+    fig_args = expand_nested_args_into_nested_maps(get_empty_dict_if_none(fig_args))
+    chart_args = expand_nested_args_into_nested_maps(get_empty_dict_if_none(chart_args))
 
     state = analyze(
         train_data=train_data,
@@ -491,6 +528,7 @@ def dataset_overview(
             DatasetSummary(),
             MissingValuesAnalysis(),
             RawTypesAnalysis(),
+            VariableTypeAnalysis(),
             SpecialTypesAnalysis(),
             ApplyFeatureGenerator(category_to_numbers=True, children=[FeatureDistanceAnalysis()]),
         ],
@@ -512,17 +550,21 @@ def dataset_overview(
 
             interactions: List[AbstractVisualization] = []
             for n in nodes[1:]:
-                interactions.append(MarkdownSectionComponent(f"Feature interaction between `{nodes[0]}`/`{n}`"))
-                interactions.append(FeatureInteractionVisualization(key=f"{nodes[0]}:{n}"))
+                if state.variable_type.train_data[n] != "category":  # type: ignore
+                    interactions.append(MarkdownSectionComponent(f"Feature interaction between `{nodes[0]}`/`{n}`"))
+                    interactions.append(
+                        FeatureInteractionVisualization(
+                            key=f"{nodes[0]}:{n}",
+                            fig_args=fig_args.get("chart", {}).get(n, {}),
+                            **chart_args.get("chart", {}).get(n, {}),
+                        )
+                    )
 
             analyze(
                 train_data=train_data,
                 state=state,
                 anlz_facets=[FeatureInteraction(key=f"{nodes[0]}:{n}", x=nodes[0], y=n) for n in nodes[1:]],
                 viz_facets=[
-                    MarkdownSectionComponent(
-                        f'**Near duplicate group analysis: `{"`, `".join(nodes)}` - distance `{group["distance"]:.4f}`**'
-                    ),
                     *interactions,
                 ],
             )
@@ -539,6 +581,8 @@ def covariate_shift_detection(
     state: Union[None, dict, AnalysisState] = None,
     return_state: bool = False,
     verbosity: int = 0,
+    fig_args: Optional[Dict[str, Any]] = None,
+    chart_args: Optional[Dict[str, Any]] = None,
     **fit_args,
 ):
     """
@@ -547,6 +591,9 @@ def covariate_shift_detection(
     Detects a change in covariate (X) distribution between training and test, which we call XShift.  It can tell you
     if your training set is not representative of your test set distribution.  This is done with a Classifier 2
     Sample Test.
+
+    Supported `fig_args`/`chart_args` keys:
+        - `chart.<variable_name>.<property>` - properties for charts rendered during the analysis
 
     Parameters
     ----------
@@ -574,6 +621,14 @@ def covariate_shift_detection(
         where `L` ranges from 0 to 50 (Note: higher values of `L` correspond to fewer print statements, opposite of verbosity levels).
     fit_args
         kwargs to pass into `TabularPredictor` fit
+    fig_args: Optional[Dict[str, Any]], default = None,
+        figures args for vizualizations; key == component; value = dict of kwargs for component figure. The args are supporting nested
+        dot syntax: 'a.b.c'. Charts args are following the convention of `<variable_name>.<param>`
+        (i.e. `chart.PassengerId.figsize` will result in setting `figsize` on `PassengerId` figure.
+    chart_args: Optional[Dict[str, Any]], default = None,
+        figures args for vizualizations; key == component; value = dict of kwargs for component chart. The args are supporting nested
+        dot syntax: 'a.b.c'. Charts args are following the convention of `<variable_name>.<param>`
+        (i.e. `chart.PassengerId.fill` will result in setting `fill` on `PassengerId` chart.
 
     Returns
     -------
@@ -596,6 +651,8 @@ def covariate_shift_detection(
 
     """
     fit_args = get_default_estimator_if_not_specified(fit_args)
+    fig_args = expand_nested_args_into_nested_maps(get_empty_dict_if_none(fig_args))
+    chart_args = expand_nested_args_into_nested_maps(get_empty_dict_if_none(chart_args))
 
     state = analyze(
         train_data=train_data,
@@ -605,7 +662,9 @@ def covariate_shift_detection(
         state=state,
         return_state=True,
         anlz_facets=[
-            XShiftDetector(classifier_kwargs=dict(path=path, verbosity=verbosity), classifier_fit_kwargs=fit_args)
+            RawTypesAnalysis(),
+            VariableTypeAnalysis(),
+            XShiftDetector(classifier_kwargs=dict(path=path, verbosity=verbosity), classifier_fit_kwargs=fit_args),
         ],
         viz_facets=[XShiftSummary()],
     )
@@ -615,7 +674,7 @@ def covariate_shift_detection(
     if xshift_results.detection_status:
         fi = xshift_results.feature_importance
         fi = fi[fi.p_value <= xshift_results.pvalue_threshold]
-        vars_to_plot = fi.index.tolist()
+        vars_to_plot = fi.index.tolist()[: XShiftSummary.MAX_FEATURES_TO_DISPLAY]
         if len(vars_to_plot) > 0:
             _train_data = train_data[vars_to_plot].copy()
             _train_data["__dataset__"] = "train_data"
@@ -624,15 +683,24 @@ def covariate_shift_detection(
             df_all = pd.concat([_train_data, _test_data], ignore_index=True)
 
             for var in vars_to_plot:
-                pvalue = fi.loc[var]["p_value"]
-                analyze(
-                    viz_facets=[
-                        MarkdownSectionComponent(
-                            f"**`{var}` values distribution between datasets; p-value: `{pvalue:.4f}`**"
-                        )
-                    ]
-                )
-                analyze_interaction(train_data=df_all, state=state, x=var, hue="__dataset__")
+                if state.variable_type.train_data[var] != "category":  # type: ignore
+                    pvalue = fi.loc[var]["p_value"]
+                    analyze(
+                        viz_facets=[
+                            MarkdownSectionComponent(
+                                f"**`{var}` values distribution between datasets; p-value: `{pvalue:.4f}`**"
+                            )
+                        ]
+                    )
+
+                    analyze_interaction(
+                        train_data=df_all,
+                        state=state,
+                        x=var,
+                        hue="__dataset__",
+                        fig_args=fig_args.get("chart", {}).get(var, {}),
+                        chart_args=chart_args.get("chart", {}).get(var, {}),
+                    )
 
     return state if return_state else None
 
@@ -673,6 +741,8 @@ def target_analysis(
     sample: Union[None, int, float] = None,
     state: Union[None, dict, AnalysisState] = None,
     return_state: bool = False,
+    fig_args: Optional[Dict[str, Any]] = None,
+    chart_args: Optional[Dict[str, Any]] = None,
 ) -> Optional[AnalysisState]:
     """
     Target variable composite analysis.
@@ -681,6 +751,12 @@ def target_analysis(
      - basic summary stats
      - feature values distribution charts; adds fitted distributions for numeric targets
      - target correlations analysis; with interaction charts of target vs high-correlated features
+
+    Supported `fig_args`/`chart_args` keys:
+        - `correlation.<property>` - properties for correlation heatmap
+        - `chart.<variable_name>.<property>` - properties for charts rendered during the analysis.
+        If <variable_name> is matching `label` value, then this will modify the top chart; all other values will be affecting label/<variable_name>
+        interaction charts
 
     Parameters
     ----------
@@ -704,6 +780,14 @@ def target_analysis(
         See also :func:`autogluon.eda.analysis.dataset.Sampler`
     return_state: bool, default = False
         return state if `True`
+    fig_args: Optional[Dict[str, Any]], default = None,
+        figures args for vizualizations; key == component; value = dict of kwargs for component figure. The args are supporting nested
+        dot syntax: 'a.b.c'. Charts args are following the convention of `<variable_name>.<param>`
+        (i.e. `chart.PassengerId.figsize` will result in setting `figsize` on `<target>`/`PassengerId` figure.
+    chart_args: Optional[Dict[str, Any]], default = None,
+        figures args for vizualizations; key == component; value = dict of kwargs for component chart. The args are supporting nested
+        dot syntax: 'a.b.c'. Charts args are following the convention of `<variable_name>.<param>`
+        (i.e. `chart.PassengerId.fill` will result in setting `fill` on `<target>`/`PassengerId` chart.
 
     Returns
     -------
@@ -718,6 +802,9 @@ def target_analysis(
     """
 
     assert label in train_data.columns, f"label `{label}` is not in `train_data` columns: `{train_data.columns}`"
+
+    fig_args = expand_nested_args_into_nested_maps(get_empty_dict_if_none(fig_args))
+    chart_args = expand_nested_args_into_nested_maps(get_empty_dict_if_none(chart_args))
 
     if (test_data is not None) and (label in test_data.columns):
         _test_data = test_data[[label]]
@@ -759,16 +846,20 @@ def target_analysis(
         state=state,
         return_state=True,
         fit_distributions=fit_distributions,
+        fig_args=fig_args.get("chart", {}).get(label, {}),
+        chart_args=chart_args.get("chart", {}).get(label, {}),
     )
 
     state = _render_distribution_fit_information_if_available(state, label)
-    state = _render_correlation_analysis(state, train_data, label, sample)
-    state = _render_features_highly_correlated_with_target(state, train_data, label, sample)
+    state = _render_correlation_analysis(state, train_data, label, sample, fig_args, chart_args)
+    state = _render_features_highly_correlated_with_target(state, train_data, label, sample, fig_args, chart_args)
 
     return state if return_state else None
 
 
-def _render_features_highly_correlated_with_target(state, train_data, label, sample) -> AnalysisState:
+def _render_features_highly_correlated_with_target(
+    state, train_data, label, sample, fig_args, chart_args
+) -> AnalysisState:
     fields = state.correlations_focus_high_corr.train_data.index.tolist()  # type: ignore
     analyze(
         train_data=train_data,
@@ -776,12 +867,20 @@ def _render_features_highly_correlated_with_target(state, train_data, label, sam
         sample=sample,
         return_state=True,
         anlz_facets=[FeatureInteraction(key=f"{f}:{label}", x=f, y=label) for f in fields],
-        viz_facets=[FeatureInteractionVisualization(headers=True, key=f"{f}:{label}") for f in fields],
+        viz_facets=[
+            FeatureInteractionVisualization(
+                headers=True,
+                key=f"{f}:{label}",
+                fig_args=fig_args.get("chart", {}).get(f, {}),
+                **chart_args.get("chart", {}).get(f, {}),
+            )
+            for f in fields
+        ],
     )
     return state
 
 
-def _render_correlation_analysis(state, train_data, label, sample) -> AnalysisState:
+def _render_correlation_analysis(state, train_data, label, sample, fig_args, chart_args) -> AnalysisState:
     state = analyze(
         train_data=train_data,
         sample=sample,
@@ -800,7 +899,9 @@ def _render_correlation_analysis(state, train_data, label, sample) -> AnalysisSt
         state=state,
         viz_facets=[
             MarkdownSectionComponent("\n".join(corr_info)),
-            CorrelationVisualization(headers=True),
+            CorrelationVisualization(
+                headers=True, fig_args=fig_args.get("correlation", {}), **chart_args.get("correlation", {})
+            ),
         ],
     )
     return state
@@ -907,4 +1008,82 @@ def missing_values_analysis(
             DatasetStatistics(),
             MissingValues(graph_type=graph_type, **chart_args),
         ],
+    )
+
+
+def explain_rows(
+    train_data: pd.DataFrame,
+    model: TabularPredictor,
+    rows: pd.DataFrame,
+    display_rows: bool = False,
+    plot: Optional[str] = "force",
+    baseline_sample: int = 100,
+    return_state: bool = False,
+    fit_args: Optional[Dict[str, Any]] = None,
+    **kwargs,
+) -> Optional[AnalysisState]:
+    """
+    Kernel SHAP is a method that uses a special weighted linear regression
+    to compute the importance of each feature. The computed importance values
+    are Shapley values from game theory and also coefficients from a local linear
+    regression values analysis for the given rows.
+
+    The results are rendered either as force plot or waterfall plot.
+
+    Parameters
+    ----------
+    train_data: DataFrame
+        training dataset
+    model: TabularPredictor
+        trained AutoGluon predictor
+    rows: pd.DataFrame,
+        rows to explain
+    display_rows: bool, default = False
+        if `True` then display the row before the explanation chart
+    plot: Optional[str], default = 'force'
+        type of plot to visualize the Shapley values. Supported keys:
+        - `force` - Visualize the given SHAP values with an additive force layout
+        - `waterfall` - Visualize the given SHAP values with a waterfall layout
+        - `None` - do not use any visualization
+    baseline_sample: int, default = 100
+        The background dataset size to use for integrating out features. To determine the impact
+        of a feature, that feature is set to "missing" and the change in the model output
+        is observed.
+    return_state: bool, default = False
+        return state if `True`
+    fit_args: Optional[Dict[str, Any]], default = None,
+        kwargs for `ShapAnalysis`.
+    kwargs
+
+    See Also
+    --------
+    :py:class:`~shap.KernelExplainer`
+    :py:class:`~autogluon.eda.analysis.explain.ShapAnalysis`
+    :py:class:`~autogluon.eda.visualization.explain.ExplainForcePlot`
+    :py:class:`~autogluon.eda.visualization.explain.ExplainWaterfallPlot`
+    """
+
+    if fit_args is None:
+        fit_args = {}
+
+    if plot is None:
+        viz_facets = None
+    else:
+        supported_plots = {
+            "force": ExplainForcePlot,
+            "waterfall": ExplainWaterfallPlot,
+        }
+        viz_cls = supported_plots.get(plot, None)
+        assert viz_cls is not None, (
+            f"plot must be one of the following values: {','.join(supported_plots.keys())}. "
+            f"If no visualization required, then `None` can be passed."
+        )
+        viz_facets = [viz_cls(display_rows=display_rows, **kwargs)]
+
+    return analyze(
+        train_data=train_data[model.original_features],
+        model=model,
+        return_state=return_state,
+        anlz_facets=[ShapAnalysis(rows, baseline_sample=baseline_sample, **fit_args)],  # type: ignore
+        viz_facets=viz_facets,  # type: ignore
     )
