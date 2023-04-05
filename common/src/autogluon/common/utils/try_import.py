@@ -18,9 +18,14 @@ __all__ = [
     'try_import_autogluon_multimodal',
     'try_import_rapids_cuml',
     'try_import_imodels',
+<<<<<<< HEAD:core/src/autogluon/core/utils/try_import.py
     'try_import_torchensemble',
      
     ]
+=======
+    'try_import_fasttext',
+]
+>>>>>>> upstream/master:common/src/autogluon/common/utils/try_import.py
 
 logger = logging.getLogger(__name__)
 
@@ -269,3 +274,12 @@ def try_import_vowpalwabbit():
     except ImportError:
         raise ImportError("`import vowpalwabbit` failed.\n"
                           "A quick tip is to install via `pip install vowpalwabbit>=9,<9.5")
+        
+
+def try_import_fasttext():
+    try:
+        import fasttext
+
+        _ = fasttext.__file__
+    except Exception:
+        raise ImportError('Import fasttext failed. Please run "pip install fasttext"')
