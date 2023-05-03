@@ -1,8 +1,8 @@
-import copy
 import logging
 import os
+import re
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import autogluon.core as ag
 from autogluon.common.loaders import load_pkl
@@ -87,6 +87,7 @@ class AbstractTimeSeriesModel(AbstractModel):
         hyperparameters: Dict[str, Union[int, float, str, ag.Space]] = None,
         **kwargs,
     ):
+        name = name or re.sub(r"Model$", "", self.__class__.__name__)
         super().__init__(
             path=path,
             name=name,
@@ -449,16 +450,11 @@ class AbstractTimeSeriesModel(AbstractModel):
     def get_memory_size(self, **kwargs) -> Optional[int]:
         return None
 
-    def convert_to_refit_full_template(self):
-        params = copy.deepcopy(self.get_params())
-
-        # TODO: Time series models currently do not support incremental training
-        params["hyperparameters"].update(self.params_trained)
-        params["name"] = params["name"] + ag.constants.REFIT_FULL_SUFFIX
-
-        template = self.__class__(**params)
-
-        return template
+    def convert_to_refit_full_via_copy(self) -> "AbstractTimeSeriesModel":
+        refit_model = super().convert_to_refit_full_via_copy()
+        refit_model.val_score = None
+        refit_model.predict_time = None
+        return refit_model
 
     def get_user_params(self) -> dict:
         """Used to access user-specified parameters for the model before initialization."""

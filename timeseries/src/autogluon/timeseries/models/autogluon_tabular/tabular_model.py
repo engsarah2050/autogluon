@@ -1,5 +1,4 @@
 import logging
-import re
 import time
 import warnings
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -69,7 +68,6 @@ class AutoGluonTabularModel(AbstractTimeSeriesModel):
         hyperparameters: Dict[str, Any] = None,
         **kwargs,  # noqa
     ):
-        name = name or re.sub(r"Model$", "", self.__class__.__name__)  # TODO: look name up from presets
         super().__init__(
             path=path,
             freq=freq,
@@ -397,3 +395,6 @@ class AutoGluonTabularModel(AbstractTimeSeriesModel):
         for col in data.columns:
             data[col] = data[col] * scale_per_item
         return data
+
+    def _more_tags(self) -> dict:
+        return {"can_refit_full": True}
