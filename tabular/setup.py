@@ -46,17 +46,12 @@ extras_require = {
         'torch>=1.9,<1.14',
         'fastai>=2.3.1,<2.8',
     ],
-<<<<<<< HEAD
-    'skex': [        
-     'scikit-learn-intelex>=2021.6,<2021.8',
-=======
     'ray': [
         f'{ag.PACKAGE_NAME}.core[all]=={version}',
     ],
     'skex': [
         # Note: 2021.7 released on Sep 2022, version 2022.x doesn't exist (went directly from 2021.7 to 2023.0)
         'scikit-learn-intelex>=2021.7,<2023.1',
->>>>>>> upstream/master
     ],
     'imodels': [
         'imodels>=1.3.10,<1.4.0',  # 1.3.8/1.3.9 either remove/renamed attribute `complexity_` causing failures. https://github.com/csinva/imodels/issues/147
