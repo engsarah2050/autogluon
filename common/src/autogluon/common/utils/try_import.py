@@ -18,14 +18,9 @@ __all__ = [
     'try_import_autogluon_multimodal',
     'try_import_rapids_cuml',
     'try_import_imodels',
-<<<<<<< HEAD:core/src/autogluon/core/utils/try_import.py
-    'try_import_torchensemble',
-     
-    ]
-=======
+    'try_import_torchensemble',  
     'try_import_fasttext',
 ]
->>>>>>> upstream/master:common/src/autogluon/common/utils/try_import.py
 
 logger = logging.getLogger(__name__)
 
