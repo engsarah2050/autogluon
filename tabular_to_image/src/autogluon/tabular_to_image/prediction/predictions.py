@@ -22,12 +22,11 @@ import torchvision
 from torchvision import datasets, models, transforms
 from autogluon.core.utils  import ResourceManager #get_memory_size, bytes_to_mega_bytes
 from autogluon.core.models.abstract.abstract_nn_model import AbstractNeuralNetworkModel
-from autogluon.core.utils import try_import_torch,try_import_torchensemble
 from autogluon.core.utils.loaders import load_compress
 from autogluon.tabular_to_image.image_converter import Image_converter
 from autogluon.tabular_to_image.models_zoo import ModelsZoo
 from autogluon.tabular_to_image.Early.earlyStopping import EarlyStopping
-
+from autogluon.common.utils.try_import import try_import_torch,try_import_torchensemble
 
 __all__ = ['ImagePredictor']
 
