@@ -32,15 +32,10 @@ from autogluon.multimodal.utils.log import get_fit_complete_message, get_fit_sta
 
 from . import version as ag_version
 from .constants import (
-<<<<<<< HEAD
-   LABEL,
-=======
-    AUTOMM,
     AUTOMM_TUTORIAL_MODE,
     BBOX,
     BEST,
     BEST_K_MODELS_FILE,
->>>>>>> upstream/master
     BINARY,
     COLUMN_FEATURES,
     DEEPSPEED_MIN_PL_VERSION,
@@ -531,21 +526,6 @@ class MultiModalPredictor(ExportMixin):
         transformers.logging.set_verbosity(verbosity2loglevel(verbosity))
 
     def fit(
-<<<<<<< HEAD
-            self,
-            train_data: pd.DataFrame,
-            config: Optional[dict] = None,
-            tuning_data: Optional[pd.DataFrame] = None,
-            time_limit: Optional[int] = None,
-            save_path: Optional[str] = None,
-            hyperparameters: Optional[Union[str, Dict, List[str]]] = None,
-            column_types: Optional[dict] = None,
-            holdout_frac: Optional[float] = None,
-            teacher_predictor: Union[str, AutoMMPredictor] = None,
-            seed: Optional[int] = 123,
-            hyperparameter_tune_kwargs: Optional[dict] = None,
-
-=======
         self,
         train_data: Union[pd.DataFrame, str],
         presets: Optional[str] = None,
@@ -562,11 +542,7 @@ class MultiModalPredictor(ExportMixin):
         seed: Optional[int] = 0,
         standalone: Optional[bool] = True,
         hyperparameter_tune_kwargs: Optional[dict] = None,
-<<<<<<< HEAD
->>>>>>> upstream/master
-=======
         clean_ckpts: Optional[bool] = True,
->>>>>>> upstream/master
     ):
         """
         Fit MultiModalPredictor predict label column of a dataframe based on the other columns,
@@ -717,31 +693,6 @@ class MultiModalPredictor(ExportMixin):
         if isinstance(tuning_data, str):
             tuning_data = load_pd.load(tuning_data)
 
-<<<<<<< HEAD
-        pl.seed_everything(seed, workers=True)
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-        if self._resume:
-            assert hyperparameter_tune_kwargs is None, "You can not resume training with HPO"
-            save_path = process_save_path(path=self._save_path, resume=True)
-        elif save_path is not None:
-            save_path = process_save_path(path=save_path)
-        elif self._save_path is not None:
-            save_path = process_save_path(path=self._save_path, raise_if_exist=False)
-
-        if not self._resume:
-            save_path = setup_outputdir(
-                path=save_path,
-            )
-
-        save_path = os.path.abspath(os.path.expanduser(save_path))
-        self._save_path = save_path
-        logger.debug(f"save path: {save_path}")
-=======
-=======
-=======
->>>>>>> upstream/master
         if self._presets is not None:
             # FIXME: Silently ignoring user input, there should be a warning
             presets = self._presets
@@ -752,7 +703,6 @@ class MultiModalPredictor(ExportMixin):
             # FIXME: Silently ignoring user input, there should be a warning
             config = self._config
 
->>>>>>> upstream/master
         self._save_path = setup_save_path(
             resume=self._resume,
             old_save_path=self._save_path,
@@ -761,8 +711,6 @@ class MultiModalPredictor(ExportMixin):
             warn_if_exist=False,
             fit_called=fit_called,
         )
->>>>>>> upstream/master
-
         self._problem_type = self._infer_problem_type(train_data=train_data, column_types=column_types)
 
         if tuning_data is None:
@@ -866,16 +814,8 @@ class MultiModalPredictor(ExportMixin):
             advanced_hyperparameters=advanced_hyperparameters,
             teacher_predictor=teacher_predictor,
             standalone=standalone,
-<<<<<<< HEAD
-            hpo_mode=(hyperparameter_tune_kwargs is not None),  # skip average checkpoint if in hpo mode
-<<<<<<< HEAD
-
-=======
-=======
             hpo_mode=hpo_mode,  # skip average checkpoint if in hpo mode
->>>>>>> upstream/master
             clean_ckpts=clean_ckpts,
->>>>>>> upstream/master
         )
 
         if hpo_mode:
@@ -1128,11 +1068,7 @@ class MultiModalPredictor(ExportMixin):
         ckpt_path: str,
         resume: bool,
         enable_progress_bar: bool,
-<<<<<<< HEAD
-        preset: Optional[str] = None,
-=======
         seed: int,
->>>>>>> upstream/master
         presets: Optional[str] = None,
         config: Optional[dict] = None,
         hyperparameters: Optional[Union[str, Dict, List[str]]] = None,
