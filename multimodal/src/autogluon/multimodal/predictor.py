@@ -26,6 +26,7 @@ from packaging import version
 from torch import nn
 
 from autogluon.common.utils.log_utils import set_logger_verbosity, verbosity2loglevel
+from autogluon.common.utils.resource_utils import ResourceManager
 from autogluon.core.utils import default_holdout_frac, generate_train_test_split_combined
 from autogluon.core.utils.loaders import load_pd
 from autogluon.multimodal.utils.log import get_fit_complete_message, get_fit_start_message
@@ -37,6 +38,7 @@ from .constants import (
     BEST,
     BEST_K_MODELS_FILE,
     BINARY,
+    CLASSIFICATION,
     COLUMN_FEATURES,
     DEEPSPEED_MIN_PL_VERSION,
     DEEPSPEED_MODULE,
@@ -87,8 +89,8 @@ from .data.datamodule import BaseDataModule
 from .data.dataset_mmlab import MultiImageMixDataset
 from .data.infer_types import (
     infer_column_types,
-    infer_label_column_type_by_problem_type,
-    infer_problem_type_output_shape,
+    infer_output_shape,
+    infer_problem_type,
     infer_rois_column_type,
     is_image_column,
 )
@@ -130,8 +132,10 @@ from .utils import (
     get_available_devices,
     get_config,
     get_detection_classes,
+    get_dir_ckpt_paths,
     get_fit_complete_message,
     get_fit_start_message,
+    get_load_ckpt_paths,
     get_local_pretrained_config_paths,
     get_minmax_mode,
     get_mixup,
@@ -150,7 +154,6 @@ from .utils import (
     modify_duplicate_model_names,
     object_detection_data_to_df,
     predict,
-    process_batch,
     save_ovd_result_df,
     save_pretrained_model_configs,
     save_result_df,
@@ -711,23 +714,34 @@ class MultiModalPredictor(ExportMixin):
             warn_if_exist=False,
             fit_called=fit_called,
         )
+<<<<<<< HEAD
         self._problem_type = self._infer_problem_type(train_data=train_data, column_types=column_types)
+=======
+>>>>>>> upstream/master
 
         if tuning_data is None:
             train_data, tuning_data = self._split_train_tuning(
                 data=train_data, holdout_frac=holdout_frac, random_state=seed
             )
 
-        column_types = self._infer_column_types(
-            train_data=train_data, tuning_data=tuning_data, column_types=column_types
+        if self._label_column:
+            self._problem_type = infer_problem_type(
+                y_train_data=train_data[self._label_column],
+                provided_problem_type=self._problem_type,
+            )
+
+        column_types = infer_column_types(
+            data=train_data,
+            valid_data=tuning_data,
+            label_columns=self._label_column,
+            provided_column_types=column_types,
+            problem_type=self._problem_type,  # used to update the corresponding column type
         )
 
-        # FIXME: separate infer problem_type with output_shape, should be logically distinct
-        _, output_shape = infer_problem_type_output_shape(
+        output_shape = infer_output_shape(
             label_column=self._label_column,
-            column_types=column_types,
             data=train_data,
-            provided_problem_type=self._problem_type,
+            problem_type=self._problem_type,
         )
 
         # Determine data scarcity mode, i.e. a few-shot scenario
@@ -821,7 +835,7 @@ class MultiModalPredictor(ExportMixin):
         if hpo_mode:
             # TODO: allow custom gpu
             assert self._resume is False, "You can not resume training with HPO"
-            resources = dict(num_gpus=torch.cuda.device_count())
+            resources = dict(num_gpus=ResourceManager.get_gpu_count_torch())
             if _fit_args["max_time"] is not None:
                 _fit_args["max_time"] *= 0.95  # give some buffer time to ray lightning trainer
             _fit_args["predictor"] = self
@@ -840,42 +854,6 @@ class MultiModalPredictor(ExportMixin):
         logger.info(get_fit_complete_message(self._save_path))
 
         return self
-
-    # FIXME: Avoid having separate logic for inferring features and label column that is combined together
-    def _infer_column_types(
-        self, train_data: pd.DataFrame, tuning_data: pd.DataFrame = None, column_types: dict = None
-    ) -> dict:
-        column_types = infer_column_types(
-            data=train_data,
-            label_columns=self._label_column,
-            provided_column_types=column_types,
-            valid_data=tuning_data,
-            problem_type=self._problem_type,
-        )
-        column_types = infer_label_column_type_by_problem_type(
-            column_types=column_types,
-            label_columns=self._label_column,
-            problem_type=self._problem_type,
-            data=train_data,
-            valid_data=tuning_data,
-        )
-        return column_types
-
-    # FIXME: Align logic with Tabular,
-    #  don't combine output_shape and problem_type detection, make them separate
-    #  Use autogluon.core.utils.utils.infer_problem_type
-    def _infer_problem_type(self, train_data: pd.DataFrame, column_types: dict = None) -> str:
-        column_types_label = self._infer_column_types(
-            train_data=train_data[[self._label_column]], column_types=column_types
-        )
-
-        problem_type, _ = infer_problem_type_output_shape(
-            label_column=self._label_column,
-            column_types=column_types_label,
-            data=train_data,
-            provided_problem_type=self._problem_type,
-        )
-        return problem_type
 
     def _split_train_tuning(
         self, data: pd.DataFrame, holdout_frac: float = None, random_state: int = 0
@@ -1803,15 +1781,8 @@ class MultiModalPredictor(ExportMixin):
                     else:
                         outputs = pred_writer.collect_all_gpu_results(num_gpus=num_gpus)
                 elif self._problem_type == OBJECT_DETECTION:
-                    # reformat single gpu output for object detection
-                    # outputs shape: num_batch, 1(["bbox"]), batch_size, 80, n, 5
-                    # output LABEL if exists for evaluations
-                    outputs = [
-                        {BBOX: bbox, LABEL: ele[LABEL][i]} if LABEL in ele else {BBOX: bbox}
-                        for ele in outputs
-                        for i, bbox in enumerate(ele[BBOX])
-                    ]
-
+                    # Unpack outputs for object detection while using single gpu
+                    outputs = [output for batch_outputs in outputs for output in batch_outputs]
         return outputs
 
     def _on_predict_start(
@@ -1824,16 +1795,11 @@ class MultiModalPredictor(ExportMixin):
             allowable_dtypes, fallback_dtype = infer_dtypes_by_model_names(model_config=self._config.model)
             column_types = infer_column_types(
                 data=data,
+                label_columns=self._label_column,
+                problem_type=self._problem_type,
                 allowable_column_types=allowable_dtypes,
                 fallback_column_type=fallback_dtype,
             )
-            if self._label_column and self._label_column in data.columns:
-                column_types = infer_label_column_type_by_problem_type(
-                    column_types=column_types,
-                    label_columns=self._label_column,
-                    problem_type=self._problem_type,
-                    data=data,
-                )
             if self._problem_type == OBJECT_DETECTION:
                 column_types = infer_rois_column_type(
                     column_types=column_types,
@@ -2230,7 +2196,9 @@ class MultiModalPredictor(ExportMixin):
             )
 
         if (as_pandas is None and isinstance(data, pd.DataFrame)) or as_pandas is True:
-            if self._problem_type == OBJECT_DETECTION:
+            if (
+                self._problem_type == OBJECT_DETECTION
+            ):  # TODO: add prediction output in COCO format if as_pandas is False
                 pred = save_result_df(
                     pred=pred,
                     data=data,
@@ -2658,6 +2626,7 @@ class MultiModalPredictor(ExportMixin):
         can be completely or partially trained by .fit(). If a previous training has completed,
         it will load the checkpoint `model.ckpt`. Otherwise if a previous training accidentally
         collapses in the middle, it can load the `last.ckpt` checkpoint by setting `resume=True`.
+        It also supports loading one specific checkpoint given its path.
 
         Parameters
         ----------
@@ -2674,11 +2643,12 @@ class MultiModalPredictor(ExportMixin):
         -------
         The loaded predictor object.
         """
-        path = os.path.abspath(os.path.expanduser(path))
-        assert os.path.isdir(path), f"'{path}' must be an existing directory."
+        dir_path, ckpt_path = get_dir_ckpt_paths(path=path)
+
+        assert os.path.isdir(dir_path), f"'{dir_path}' must be an existing directory."
         predictor = cls(label="dummy_label")
 
-        with open(os.path.join(path, "assets.json"), "r") as fp:
+        with open(os.path.join(dir_path, "assets.json"), "r") as fp:
             assets = json.load(fp)
         if "class_name" in assets and assets["class_name"] == "MultiModalMatcher":
             predictor._matcher = MultiModalMatcher.load(
@@ -2688,7 +2658,7 @@ class MultiModalPredictor(ExportMixin):
             )
             return predictor
 
-        predictor = cls._load_metadata(predictor=predictor, path=path, resume=resume, verbosity=verbosity)
+        predictor = cls._load_metadata(predictor=predictor, path=dir_path, resume=resume, verbosity=verbosity)
 
         efficient_finetune = OmegaConf.select(predictor._config, "optimization.efficient_finetune")
 
@@ -2709,42 +2679,11 @@ class MultiModalPredictor(ExportMixin):
                 model=model,
             )
 
-        resume_ckpt_path = os.path.join(path, LAST_CHECKPOINT)
-        final_ckpt_path = os.path.join(path, MODEL_CHECKPOINT)
-        if resume:  # resume training which crashed before
-            if not os.path.isfile(resume_ckpt_path):
-                if os.path.isfile(final_ckpt_path):
-                    raise ValueError(
-                        f"Resuming checkpoint '{resume_ckpt_path}' doesn't exist, but "
-                        f"final checkpoint '{final_ckpt_path}' exists, which means training "
-                        f"is already completed."
-                    )
-                else:
-                    raise ValueError(
-                        f"Resuming checkpoint '{resume_ckpt_path}' and "
-                        f"final checkpoint '{final_ckpt_path}' both don't exist. "
-                        f"Consider starting training from scratch."
-                    )
-            load_path = resume_ckpt_path
-            logger.info(f"Resume training from checkpoint: '{resume_ckpt_path}'")
-            ckpt_path = resume_ckpt_path
-        else:  # load a model checkpoint for prediction, evaluation, or continuing training on new data
-            if not os.path.isfile(final_ckpt_path):
-                if os.path.isfile(resume_ckpt_path):
-                    raise ValueError(
-                        f"Final checkpoint '{final_ckpt_path}' doesn't exist, but "
-                        f"resuming checkpoint '{resume_ckpt_path}' exists, which means training "
-                        f"is not done yet. Consider resume training from '{resume_ckpt_path}'."
-                    )
-                else:
-                    raise ValueError(
-                        f"Resuming checkpoint '{resume_ckpt_path}' and "
-                        f"final checkpoint '{final_ckpt_path}' both don't exist. "
-                        f"Consider starting training from scratch."
-                    )
-            load_path = final_ckpt_path
-            logger.info(f"Load pretrained checkpoint: {os.path.join(path, MODEL_CHECKPOINT)}")
-            ckpt_path = None  # must set None since we do not resume training
+        load_path, ckpt_path = get_load_ckpt_paths(
+            ckpt_path=ckpt_path,
+            dir_path=dir_path,
+            resume=resume,
+        )
 
         model = cls._load_state_dict(
             model=model,

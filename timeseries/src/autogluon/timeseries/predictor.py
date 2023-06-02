@@ -1,18 +1,17 @@
 import logging
 import pprint
 import time
-import traceback
 import warnings
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, Union
 
 import pandas as pd
 
 from autogluon.common.utils.log_utils import set_logger_verbosity
-from autogluon.common.utils.utils import setup_outputdir
+from autogluon.common.utils.utils import check_saved_predictor_version, setup_outputdir
 from autogluon.core.utils.decorators import apply_presets
-from autogluon.core.utils.loaders import load_pkl
-from autogluon.core.utils.savers import save_pkl
+from autogluon.core.utils.loaders import load_pkl, load_str
+from autogluon.core.utils.savers import save_pkl, save_str
+from autogluon.timeseries import __version__ as current_ag_version
 from autogluon.timeseries.configs import TIMESERIES_PRESETS_CONFIGS
 from autogluon.timeseries.dataset.ts_dataframe import ITEMID, TIMESTAMP, TimeSeriesDataFrame
 from autogluon.timeseries.learner import AbstractLearner, TimeSeriesLearner
@@ -93,18 +92,18 @@ class TimeSeriesPredictor:
         If True, the predictor will ignore the datetime indexes during both training and testing, and will replace
         the data indexes with dummy timestamps in second frequency. In this case, the forecast output time indexes will
         be arbitrary values, and seasonality will be turned off for local models.
-    learner_type : AbstractLearner, default = TimeSeriesLearner
-        A class which inherits from ``AbstractLearner``. The learner specifies the inner logic of the
-        ``TimeSeriesPredictor``.
-    learner_kwargs : dict, optional
-        Keyword arguments to send to the learner (for advanced users only). Options include ``trainer_type``, a
-        class inheriting from ``AbstractTrainer`` which controls training of multiple models.
-        If ``path`` and ``eval_metric`` are re-specified within ``learner_kwargs``, these are ignored.
+    cache_predictions : bool, default = True
+        If True, the predictor will cache and reuse the predictions made by individual models whenever
+        :meth:`~autogluon.timeseries.TimeSeriesPredictor.predict`, :meth:`~autogluon.timeseries.TimeSeriesPredictor.leaderboard`,
+        or :meth:`~autogluon.timeseries.TimeSeriesPredictor.evaluate` methods are called. This allows to significantly
+        speed up these methods. If False, caching will be disabled. You can set this argument to False to reduce disk
+        usage at the cost of longer prediction times.
     label : str, optional
         Alias for :attr:`target`.
     """
 
     predictor_file_name = "predictor.pkl"
+    _predictor_version_file_name = "__version__"
 
     def __init__(
         self,
@@ -117,6 +116,7 @@ class TimeSeriesPredictor:
         verbosity: int = 2,
         quantile_levels: Optional[List[float]] = None,
         ignore_time_index: bool = False,
+        cache_predictions: bool = True,
         learner_type: Type[AbstractLearner] = TimeSeriesLearner,
         learner_kwargs: Optional[dict] = None,
         label: Optional[str] = None,
@@ -128,6 +128,7 @@ class TimeSeriesPredictor:
         self.path = setup_outputdir(path)
 
         self.ignore_time_index = ignore_time_index
+        self.cache_predictions = cache_predictions
         if target is not None and label is not None:
             raise ValueError("Both `label` and `target` are specified. Please specify at most one of these arguments.")
         self.target = target or label or "target"
@@ -149,7 +150,7 @@ class TimeSeriesPredictor:
         self.eval_metric_seasonal_period = eval_metric_seasonal_period
         if quantile_levels is None:
             quantile_levels = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-        self.quantile_levels = quantile_levels
+        self.quantile_levels = sorted(quantile_levels)
 
         if validation_splitter is not None:
             warnings.warn(
@@ -175,6 +176,7 @@ class TimeSeriesPredictor:
                 prediction_length=self.prediction_length,
                 quantile_levels=self.quantile_levels,
                 ignore_time_index=ignore_time_index,
+                cache_predictions=self.cache_predictions,
             )
         )
         self._learner: AbstractLearner = learner_type(**learner_kwargs)
@@ -204,15 +206,10 @@ class TimeSeriesPredictor:
                 )
         if self.ignore_time_index:
             df = df.get_reindexed_view(freq="S")
-        timestamps = df.reset_index(level=TIMESTAMP)[TIMESTAMP]
-        is_sorted = timestamps.groupby(level=ITEMID, sort=False).apply(lambda x: x.is_monotonic_increasing).all()
-        if not is_sorted:
-            warnings.warn(
-                "Provided data contains timestamps that are not sorted chronologically. "
-                "This will lead to TimeSeriesPredictor not working as intended. "
-                "Please make sure that the timestamps are sorted in increasing order for all time series."
-            )
-        # TODO: Make sure that entries for each item_id are contiguous -> https://github.com/autogluon/autogluon/issues/3036
+        # MultiIndex.is_monotonic_increasing checks if index is sorted by ["item_id", "timestamp"]
+        if not df.index.is_monotonic_increasing:
+            df = df.sort_index()
+            df._cached_freq = None  # in case frequency was incorrectly cached as IRREGULAR_TIME_INDEX_FREQSTR
         if df.freq is None:
             raise ValueError(
                 "Frequency not provided and cannot be inferred. This is often due to the "
@@ -291,6 +288,7 @@ class TimeSeriesPredictor:
         presets: Optional[str] = None,
         hyperparameters: Dict[Union[str, Type], Any] = None,
         hyperparameter_tune_kwargs: Optional[Union[str, Dict]] = None,
+        excluded_model_types: Optional[List[str]] = None,
         num_val_windows: int = 1,
         refit_full: bool = False,
         enable_ensemble: bool = True,
@@ -365,7 +363,7 @@ class TimeSeriesPredictor:
             Available presets:
 
             - ``"fast_training"``: fit simple "local" statistical models (``ETS``, ``ARIMA``, ``Theta``, ``Naive``, ``SeasonalNaive``). These models are fast to train, but cannot capture more complex patterns in the data.
-            - ``"medium_quality"``: all models mentioned above + tree-based model ``AutoGluonTabular`` + deep learning model ``DeepAR``. Default setting that produces good forecasts with reasonable training time.
+            - ``"medium_quality"``: all models mentioned above + tree-based model ``DirectTabular`` + deep learning model ``DeepAR``. Default setting that produces good forecasts with reasonable training time.
             - ``"high_quality"``: all models mentioned above + hyperparameter optimization for local statistical models + deep learning models ``TemporalFusionTransformerMXNet`` (if MXNet is available) and ``SimpleFeedForward``. Usually more accurate than ``medium_quality``, but takes longer to train.
             - ``"best_quality"``: all models mentioned above + deep learning model ``TransformerMXNet`` (if MXNet is available) + hyperparameter optimization for deep learning models. Usually better than ``high_quality``, but takes much longer to train.
 
@@ -378,7 +376,7 @@ class TimeSeriesPredictor:
             If str is passed, will use a preset hyperparameter configuration defined in`
             `autogluon/timeseries/trainer/models/presets.py``.
 
-            If dict is provided, the keys are strings or Types that indicate which models to train. Each value is
+            If dict is provided, the keys are strings or types that indicate which models to train. Each value is
             itself a dict containing hyperparameters for each of the trained models, or a list of such dicts. Any
             omitted hyperparameters not specified here will be set to default. For example::
 
@@ -446,7 +444,16 @@ class TimeSeriesPredictor:
                         "scheduler": "local",
                         "searcher": "auto",
                         "num_trials": 5,
-                    }
+                    },
+                )
+        excluded_model_types: List[str], optional
+            Banned subset of model types to avoid training during ``fit()``, even if present in ``hyperparameters``.
+            For example, the following code will train all models included in the ``high_quality`` presets except ``DeepAR``::
+
+                predictor.fit(
+                    ...,
+                    presets="high_quality",
+                    excluded_model_types=["DeepAR"],
                 )
         num_val_windows : int, default = 1
             Number of backtests done on ``train_data`` for each trained model to estimate the validation performance.
@@ -488,6 +495,7 @@ class TimeSeriesPredictor:
             evaluation_metric=self.eval_metric,
             hyperparameters=hyperparameters,
             hyperparameter_tune_kwargs=hyperparameter_tune_kwargs,
+            excluded_model_types=excluded_model_types,
             num_val_windows=num_val_windows,
             enable_ensemble=enable_ensemble,
             random_seed=random_seed,
@@ -525,6 +533,7 @@ class TimeSeriesPredictor:
             val_data=tuning_data,
             hyperparameters=hyperparameters,
             hyperparameter_tune_kwargs=hyperparameter_tune_kwargs,
+            excluded_model_types=excluded_model_types,
             time_limit=time_left,
             verbosity=verbosity,
             num_val_windows=num_val_windows,
@@ -548,6 +557,7 @@ class TimeSeriesPredictor:
         data: Union[TimeSeriesDataFrame, pd.DataFrame],
         known_covariates: Optional[TimeSeriesDataFrame] = None,
         model: Optional[str] = None,
+        use_cache: bool = True,
         random_seed: Optional[int] = 123,
     ) -> TimeSeriesDataFrame:
         """Return quantile and mean forecasts for the given dataset, starting from the end of each time series.
@@ -580,6 +590,9 @@ class TimeSeriesPredictor:
         random_seed : int or None, default = 123
             If provided, fixes the seed of the random number generator for all models. This guarantees reproducible
             results for most models (except those trained on GPU because of the non-determinism of GPU operations).
+        use_cache : bool, default = True
+            If True, will attempt to use the cached predictions. If False, cached predictions will be ignored.
+            This argument is ignored if ``cache_predictions`` was set to False when creating the ``TimeSeriesPredictor``.
 
 
         Examples
@@ -611,8 +624,11 @@ class TimeSeriesPredictor:
         """
         if random_seed is not None:
             set_random_seed(random_seed)
+        # Don't use data.item_ids in case data is not a TimeSeriesDataFrame
+        original_item_id_order = data.reset_index()[ITEMID].unique()
         data = self._check_and_prepare_data_frame(data)
-        return self._learner.predict(data, known_covariates=known_covariates, model=model)
+        predictions = self._learner.predict(data, known_covariates=known_covariates, model=model, use_cache=use_cache)
+        return predictions.reindex(original_item_id_order, level=ITEMID)
 
     def evaluate(self, data: Union[TimeSeriesDataFrame, pd.DataFrame], **kwargs):
         """Evaluate the performance for given dataset, computing the score determined by ``self.eval_metric``
@@ -640,6 +656,9 @@ class TimeSeriesPredictor:
             (with highest validation score) will be used.
         metric : str, optional
             Name of the evaluation metric to compute scores with. Defaults to ``self.eval_metric``
+        use_cache : bool, default = True
+            If True, will attempt to use the cached predictions. If False, cached predictions will be ignored.
+            This argument is ignored if ``cache_predictions`` was set to False when creating the ``TimeSeriesPredictor``.
 
         Returns
         -------
@@ -655,13 +674,24 @@ class TimeSeriesPredictor:
         return self.evaluate(data, **kwargs)
 
     @classmethod
-    def load(cls, path: str) -> "TimeSeriesPredictor":
+    def _load_version_file(cls, path: str) -> str:
+        version_file_path = path + cls._predictor_version_file_name
+        version = load_str.load(path=version_file_path)
+        return version
+
+    @classmethod
+    def load(cls, path: str, require_version_match: bool = True) -> "TimeSeriesPredictor":
         """Load an existing ``TimeSeriesPredictor`` from given ``path``.
 
         Parameters
         ----------
         path : str
             Path where the predictor was saved via :meth:`~autogluon.timeseries.TimeSeriesPredictor.save`.
+        require_version_match : bool, default = True
+            If True, will raise an AssertionError if the ``autogluon.timeseries`` version of the loaded predictor does
+            not match the installed version of ``autogluon.timeseries``.
+            If False, will allow loading of models trained on incompatible versions, but is NOT recommended. Users may
+            run into numerous issues if attempting this.
 
         Returns
         -------
@@ -671,12 +701,33 @@ class TimeSeriesPredictor:
             raise ValueError("`path` cannot be None or empty in load().")
         path = setup_outputdir(path, warn_if_exist=False)
 
+        try:
+            version_saved = cls._load_version_file(path=path)
+        except:
+            logger.warning(
+                f'WARNING: Could not find version file at "{path + cls._predictor_version_file_name}".\n'
+                f"This means that the predictor was fit in a version `<=0.7.0`."
+            )
+            version_saved = "Unknown (Likely <=0.7.0)"
+
+        check_saved_predictor_version(
+            version_current=current_ag_version,
+            version_saved=version_saved,
+            require_version_match=require_version_match,
+            logger=logger,
+        )
+
         logger.info(f"Loading predictor from path {path}")
         learner = AbstractLearner.load(path)
         predictor = load_pkl.load(path=learner.path + cls.predictor_file_name)
         predictor._learner = learner
         predictor.path = learner.path
         return predictor
+
+    def _save_version_file(self):
+        version_file_contents = current_ag_version
+        version_file_path = self.path + self._predictor_version_file_name
+        save_str.save(path=version_file_path, data=version_file_contents, verbose=False)
 
     def save(self) -> None:
         """Save this predictor to file in directory specified by this Predictor's ``path``.
@@ -688,6 +739,7 @@ class TimeSeriesPredictor:
         self._learner = None
         save_pkl.save(path=tmp_learner.path + self.predictor_file_name, object=self)
         self._learner = tmp_learner
+        self._save_version_file()
 
     def info(self) -> Dict[str, Any]:
         """Returns a dictionary of objects each describing an attribute of the training process and trained models."""
@@ -702,7 +754,10 @@ class TimeSeriesPredictor:
         return self._trainer.get_model_best()
 
     def leaderboard(
-        self, data: Optional[Union[TimeSeriesDataFrame, pd.DataFrame]] = None, silent=False
+        self,
+        data: Optional[Union[TimeSeriesDataFrame, pd.DataFrame]] = None,
+        silent: bool = False,
+        use_cache: bool = True,
     ) -> pd.DataFrame:
         """Return a leaderboard showing the performance of every trained model, the output is a
         pandas data frame with columns:
@@ -738,6 +793,9 @@ class TimeSeriesPredictor:
 
         silent : bool, default = False
             If False, the leaderboard DataFrame will be printed.
+        use_cache : bool, default = True
+            If True, will attempt to use the cached predictions. If False, cached predictions will be ignored.
+            This argument is ignored if ``cache_predictions`` was set to False when creating the ``TimeSeriesPredictor``.
 
         Returns
         -------
@@ -746,7 +804,7 @@ class TimeSeriesPredictor:
             test performance.
         """
         data = self._check_and_prepare_data_frame(data)
-        leaderboard = self._learner.leaderboard(data)
+        leaderboard = self._learner.leaderboard(data, use_cache=use_cache)
         if not silent:
             with pd.option_context("display.max_rows", None, "display.max_columns", None, "display.width", 1000):
                 print(leaderboard)

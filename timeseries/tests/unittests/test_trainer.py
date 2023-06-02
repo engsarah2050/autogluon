@@ -342,7 +342,7 @@ def test_when_trainer_fit_and_deleted_then_oof_predictions_can_be_loaded(temp_mo
             "Naive": {},
             "ETS": {},
             "AutoETS": {"n_jobs": 1},
-            "AutoGluonTabular": {"tabular_hyperparameters": {"GBM": {}}},
+            "DirectTabular": {"tabular_hyperparameters": {"GBM": {}}},
             "DeepAR": {"epochs": 1, "num_batches_per_epoch": 1},
         },
     )
@@ -360,40 +360,6 @@ def test_when_trainer_fit_and_deleted_then_oof_predictions_can_be_loaded(temp_mo
             loaded_trainer._score_with_predictions(oof_data, oof_predictions)
 
 
-@pytest.mark.parametrize("failing_model", ["NaiveModel", "SeasonalNaiveModel"])
-def test_given_base_model_fails_when_trainer_predicts_then_weighted_ensemble_can_predict(
-    temp_model_path, failing_model
-):
-    trainer = AutoTimeSeriesTrainer(path=temp_model_path, enable_ensemble=False)
-    trainer.fit(train_data=DUMMY_TS_DATAFRAME, hyperparameters={"Naive": {}, "SeasonalNaive": {}})
-    ensemble = TimeSeriesGreedyEnsemble(name="WeightedEnsemble")
-    ensemble.model_to_weight = {"Naive": 0.5, "SeasonalNaive": 0.5}
-    trainer._add_model(ensemble, base_models=["Naive", "SeasonalNaive"])
-    trainer.save_model(model=ensemble)
-
-    with mock.patch(f"autogluon.timeseries.models.local.naive.{failing_model}.predict") as fail_predict:
-        fail_predict.side_effect = RuntimeError("Numerical error")
-        preds = trainer.predict(DUMMY_TS_DATAFRAME, model="WeightedEnsemble")
-        fail_predict.assert_called()
-        assert isinstance(preds, TimeSeriesDataFrame)
-
-
-@pytest.mark.parametrize("failing_model", ["NaiveModel", "SeasonalNaiveModel"])
-def test_given_base_model_fails_when_trainer_scores_then_weighted_ensemble_can_score(temp_model_path, failing_model):
-    trainer = AutoTimeSeriesTrainer(path=temp_model_path, enable_ensemble=False)
-    trainer.fit(train_data=DUMMY_TS_DATAFRAME, hyperparameters={"Naive": {}, "SeasonalNaive": {}})
-    ensemble = TimeSeriesGreedyEnsemble(name="WeightedEnsemble")
-    ensemble.model_to_weight = {"Naive": 0.5, "SeasonalNaive": 0.5}
-    trainer._add_model(ensemble, base_models=["Naive", "SeasonalNaive"])
-    trainer.save_model(model=ensemble)
-
-    with mock.patch(f"autogluon.timeseries.models.local.naive.{failing_model}.predict") as fail_predict:
-        fail_predict.side_effect = RuntimeError("Numerical error")
-        score = trainer.score(DUMMY_TS_DATAFRAME, model="WeightedEnsemble")
-        fail_predict.assert_called()
-        assert isinstance(score, float)
-
-
 def test_when_known_covariates_present_then_all_ensemble_base_models_can_predict(temp_model_path):
     df = DATAFRAME_WITH_COVARIATES.copy()
     prediction_length = 2
@@ -401,7 +367,9 @@ def test_when_known_covariates_present_then_all_ensemble_base_models_can_predict
     df_future = df.slice_by_timestep(-prediction_length, None)
     known_covariates = df_future.drop("target", axis=1)
 
-    trainer = AutoTimeSeriesTrainer(path=temp_model_path, prediction_length=prediction_length, enable_ensemble=False)
+    trainer = AutoTimeSeriesTrainer(
+        path=temp_model_path, prediction_length=prediction_length, enable_ensemble=False, cache_predictions=False
+    )
     trainer.fit(df_train, hyperparameters={"ETS": {"maxiter": 1}, "DeepAR": {"epochs": 1, "num_batches_per_epoch": 1}})
 
     # Manually add ensemble to ensure that both models have non-zero weight
@@ -433,7 +401,7 @@ def trained_and_refit_trainers():
                 "Naive": {},
                 "ETS": {"maxiter": 1},
                 "DeepAR": {"epochs": 1, "num_batches_per_epoch": 1},
-                "AutoGluonTabular": {"tabular_hyperparameters": {"GBM": {}}},
+                "DirectTabular": {"tabular_hyperparameters": {"GBM": {}}},
                 "RecursiveTabular": {},
             },
         )
@@ -475,3 +443,117 @@ def test_when_refit_full_called_with_model_name_then_single_model_is_updated(tem
     )
     model_full_dict = trainer.refit_full("DeepAR")
     assert list(model_full_dict.values()) == ["DeepAR_FULL"]
+
+
+@pytest.mark.parametrize(
+    "hyperparameters, expected_model_names",
+    [
+        ({"Naive": {}, "SeasonalNaiveModel": {}}, ["Naive", "SeasonalNaive"]),
+        ({"Naive": {}, "NaiveModel": {}}, ["Naive", "Naive_2"]),
+    ],
+)
+def test_when_some_models_have_incorrect_suffix_then_correct_model_are_trained(
+    temp_model_path, hyperparameters, expected_model_names
+):
+    trainer = AutoTimeSeriesTrainer(path=temp_model_path, enable_ensemble=False)
+    trainer.fit(DUMMY_TS_DATAFRAME, hyperparameters=hyperparameters)
+    leaderboard = trainer.leaderboard()
+    assert sorted(leaderboard["model"].values) == expected_model_names
+
+
+@pytest.mark.parametrize("excluded_model_types", [["DeepAR"], ["DeepARModel"]])
+def test_when_excluded_model_names_provided_then_excluded_models_are_not_trained(
+    temp_model_path, excluded_model_types
+):
+    trainer = AutoTimeSeriesTrainer(path=temp_model_path)
+    trainer.fit(
+        DUMMY_TS_DATAFRAME,
+        hyperparameters={
+            "DeepAR": {"epochs": 1, "num_batches_per_epoch": 1},
+            "SimpleFeedForward": {"epochs": 1, "num_batches_per_epoch": 1},
+        },
+        excluded_model_types=excluded_model_types,
+    )
+    leaderboard = trainer.leaderboard()
+    assert leaderboard["model"].values == ["SimpleFeedForward"]
+
+
+@pytest.mark.parametrize("model_names", [["WeightedEnsemble"], ["WeightedEnsemble", "DeepAR"], ["DeepAR"]])
+def test_when_get_model_pred_dict_called_then_it_contains_all_required_keys(trained_trainers, model_names):
+    trainer = trained_trainers[repr(TEST_HYPERPARAMETER_SETTINGS[1])]
+    model_pred_dict = trainer.get_model_pred_dict(model_names=model_names, data=DUMMY_TS_DATAFRAME)
+    assert sorted(model_pred_dict.keys()) == sorted(model_names)
+
+
+@pytest.mark.parametrize("model_names", [["WeightedEnsemble"], ["WeightedEnsemble", "DeepAR"], ["DeepAR"]])
+def test_when_get_model_pred_dict_called_then_pred_time_dict_contains_all_required_keys(trained_trainers, model_names):
+    trainer = trained_trainers[repr(TEST_HYPERPARAMETER_SETTINGS[1])]
+    model_pred_dict, pred_time_dict = trainer.get_model_pred_dict(
+        model_names=model_names, data=DUMMY_TS_DATAFRAME, record_pred_time=True
+    )
+    assert sorted(pred_time_dict.keys()) == sorted(model_names)
+
+
+def test_given_dfs_are_identical_then_identical_hash_is_computed(temp_model_path):
+    trainer = AutoTimeSeriesTrainer(path=temp_model_path)
+    df = DATAFRAME_WITH_COVARIATES
+    df_other = DATAFRAME_WITH_COVARIATES.copy()
+    df_other = df_other.reindex(reversed(df_other.columns), axis=1)
+    assert df is not df_other
+    assert trainer._compute_dataset_hash(df) == trainer._compute_dataset_hash(df_other)
+
+
+def test_given_cache_predictions_is_true_when_calling_get_model_pred_dict_then_predictions_are_cached(temp_model_path):
+    trainer = AutoTimeSeriesTrainer(path=temp_model_path)
+    trainer.fit(DUMMY_TS_DATAFRAME, hyperparameters={"Naive": {}, "SeasonalNaive": {}})
+    assert not trainer._cached_predictions_path.exists()
+    trainer.get_model_pred_dict(trainer.get_model_names(), data=DUMMY_TS_DATAFRAME, record_pred_time=True)
+
+    dataset_hash = trainer._compute_dataset_hash(DUMMY_TS_DATAFRAME)
+    model_pred_dict, pred_time_dict = trainer._get_cached_pred_dicts(dataset_hash)
+    assert pred_time_dict.keys() == model_pred_dict.keys() == set(trainer.get_model_names())
+    assert all(isinstance(v, TimeSeriesDataFrame) for v in model_pred_dict.values())
+    assert all(isinstance(v, float) for v in pred_time_dict.values())
+
+
+def test_given_cache_predictions_is_true_when_predicting_multiple_times_then_cached_predictions_are_updated(
+    temp_model_path,
+):
+    trainer = AutoTimeSeriesTrainer(path=temp_model_path)
+    trainer.fit(DUMMY_TS_DATAFRAME, hyperparameters={"Naive": {}, "SeasonalNaive": {}})
+
+    dataset_hash = trainer._compute_dataset_hash(DUMMY_TS_DATAFRAME)
+
+    trainer.predict(DUMMY_TS_DATAFRAME, model="Naive")
+    model_pred_dict, pred_time_dict = trainer._get_cached_pred_dicts(dataset_hash)
+    assert sorted(model_pred_dict.keys()) == sorted(pred_time_dict.keys()) == ["Naive"]
+
+    trainer.predict(DUMMY_TS_DATAFRAME, model="SeasonalNaive")
+    model_pred_dict, pred_time_dict = trainer._get_cached_pred_dicts(dataset_hash)
+    assert sorted(model_pred_dict.keys()) == sorted(pred_time_dict.keys()) == ["Naive", "SeasonalNaive"]
+
+
+def test_given_cache_predictions_is_true_when_predicting_multiple_times_then_cached_predictions_are_used(
+    temp_model_path,
+):
+    trainer = AutoTimeSeriesTrainer(path=temp_model_path)
+    trainer.fit(DUMMY_TS_DATAFRAME, hyperparameters={"Naive": {}})
+    mock_return_value = "mock_return_value"
+    with mock.patch("autogluon.timeseries.models.local.naive.NaiveModel.predict") as naive_predict:
+        naive_predict.return_value = mock_return_value
+        trainer.predict(DUMMY_TS_DATAFRAME, model="Naive")
+
+    with mock.patch("autogluon.timeseries.models.local.naive.NaiveModel.predict") as naive_predict:
+        predictions = trainer.predict(DUMMY_TS_DATAFRAME, model="Naive")
+        naive_predict.assert_not_called()
+        assert predictions == mock_return_value
+
+
+def test_given_cache_predictions_is_false_when_calling_get_model_pred_dict_then_predictions_are_not_cached(
+    temp_model_path,
+):
+    trainer = AutoTimeSeriesTrainer(path=temp_model_path, cache_predictions=False)
+    trainer.fit(DUMMY_TS_DATAFRAME, hyperparameters=DUMMY_TRAINER_HYPERPARAMETERS)
+    assert not trainer._cached_predictions_path.exists()
+    trainer.get_model_pred_dict(trainer.get_model_names(), data=DUMMY_TS_DATAFRAME)
+    assert not trainer._cached_predictions_path.exists()

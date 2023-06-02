@@ -429,19 +429,26 @@ def test_given_enable_ensemble_false_when_predictor_called_then_ensemble_is_not_
     assert not any("ensemble" in n.lower() for n in predictor.get_model_names())
 
 
-def test_given_model_fails_when_predictor_predicts_then_exception_is_caught_by_learner(temp_model_path):
-    predictor = TimeSeriesPredictor(
-        path=temp_model_path,
-        eval_metric="MAPE",
-    )
-    predictor.fit(
-        train_data=DUMMY_TS_DATAFRAME,
-        hyperparameters={"ARIMA": {"maxiter": 1, "seasonal_period": 1, "seasonal_order": (0, 0, 0)}},
-    )
+def test_given_model_fails_when_predictor_predicts_then_exception_is_raised(temp_model_path):
+    predictor = TimeSeriesPredictor(path=temp_model_path)
+    predictor.fit(train_data=DUMMY_TS_DATAFRAME, hyperparameters={"ARIMA": {"maxiter": 1}, "Naive": {}})
     with mock.patch("autogluon.timeseries.models.local.statsmodels.ARIMAModel.predict") as arima_predict:
         arima_predict.side_effect = RuntimeError("Numerical error")
-        with pytest.raises(RuntimeError, match="Prediction failed, please provide a different model to"):
-            predictor.predict(DUMMY_TS_DATAFRAME)
+        with pytest.raises(
+            RuntimeError, match="Following models failed to predict: \\['ARIMA', 'WeightedEnsemble'\\]"
+        ):
+            predictor.predict(DUMMY_TS_DATAFRAME, model="WeightedEnsemble")
+
+
+def test_given_model_fails_when_predictor_scores_then_exception_is_raised(temp_model_path):
+    predictor = TimeSeriesPredictor(path=temp_model_path)
+    predictor.fit(train_data=DUMMY_TS_DATAFRAME, hyperparameters={"ARIMA": {"maxiter": 1}, "Naive": {}})
+    with mock.patch("autogluon.timeseries.models.local.statsmodels.ARIMAModel.predict") as arima_predict:
+        arima_predict.side_effect = RuntimeError("Numerical error")
+        with pytest.raises(
+            RuntimeError, match="Following models failed to predict: \\['ARIMA', 'WeightedEnsemble'\\]"
+        ):
+            predictor.score(DUMMY_TS_DATAFRAME, model="WeightedEnsemble")
 
 
 def test_given_no_searchspace_and_hyperparameter_tune_kwargs_when_predictor_fits_then_exception_is_raised(
@@ -585,6 +592,16 @@ def test_given_data_cannot_be_interpreted_as_tsdf_then_exception_raised(temp_mod
         predictor.fit(df, hyperparameters={"Naive": {}})
 
 
+def test_given_data_is_not_sorted_then_predictor_can_fit_and_predict(temp_model_path):
+    shuffled_df = pd.DataFrame(DUMMY_TS_DATAFRAME).sample(frac=1.0)
+    ts_df = TimeSeriesDataFrame(shuffled_df)
+
+    predictor = TimeSeriesPredictor(path=temp_model_path, prediction_length=2)
+    predictor.fit(ts_df, hyperparameters={"Naive": {}})
+    predictions = predictor.predict(ts_df)
+    assert len(predictions) == predictor.prediction_length * ts_df.num_items
+
+
 def test_when_both_argument_aliases_are_passed_to_init_then_exception_is_raised(temp_model_path):
     with pytest.raises(ValueError, match="Please specify at most one of these arguments"):
         predictor = TimeSeriesPredictor(path=temp_model_path, target="custom_target", label="custom_target")
@@ -634,3 +651,37 @@ def test_when_refit_full_is_passed_to_fit_then_refit_full_is_skipped(temp_model_
             refit_method.assert_called()
         else:
             refit_method.assert_not_called()
+
+
+def test_when_excluded_model_names_provided_then_excluded_models_are_not_trained(temp_model_path):
+    predictor = TimeSeriesPredictor(path=temp_model_path)
+    predictor.fit(
+        DUMMY_TS_DATAFRAME,
+        hyperparameters={
+            "DeepAR": {"epochs": 1, "num_batches_per_epoch": 1},
+            "SimpleFeedForward": {"epochs": 1, "num_batches_per_epoch": 1},
+        },
+        excluded_model_types=["DeepAR"],
+    )
+    leaderboard = predictor.leaderboard()
+    assert leaderboard["model"].values == ["SimpleFeedForward"]
+
+
+@pytest.mark.parametrize("method_name", ["leaderboard", "predict", "score", "evaluate"])
+@pytest.mark.parametrize("use_cache", [True, False])
+def test_when_use_cache_is_set_to_false_then_cached_predictions_are_ignored(temp_model_path, use_cache, method_name):
+    predictor = TimeSeriesPredictor(path=temp_model_path, cache_predictions=True).fit(
+        DUMMY_TS_DATAFRAME, hyperparameters={"Naive": {}}
+    )
+    # Cache predictions
+    predictor.predict(DUMMY_TS_DATAFRAME)
+
+    with mock.patch(
+        "autogluon.timeseries.trainer.abstract_trainer.AbstractTimeSeriesTrainer._get_cached_pred_dicts"
+    ) as mock_get_cached_pred_dicts:
+        mock_get_cached_pred_dicts.return_value = {}, {}
+        getattr(predictor, method_name)(DUMMY_TS_DATAFRAME, use_cache=use_cache)
+        if use_cache:
+            mock_get_cached_pred_dicts.assert_called()
+        else:
+            mock_get_cached_pred_dicts.assert_not_called()

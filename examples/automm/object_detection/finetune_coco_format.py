@@ -70,7 +70,7 @@ def tutorial_script_for_finetune_fast_pothole_in_coco_format():
     val_path = os.path.join(data_dir, "Annotations", "usersplit_val_cocoformat.json")
     test_path = os.path.join(data_dir, "Annotations", "usersplit_test_cocoformat.json")
 
-    checkpoint_name = "yolov3_mobilenetv2_320_300e_coco"
+    checkpoint_name = "yolov3_mobilenetv2_8xb24-320-300e_coco"  # mmdet3
     num_gpus = 1
 
     predictor = MultiModalPredictor(
@@ -109,7 +109,7 @@ def tutorial_script_for_finetune_yolox_pothole_in_coco_format():
     val_path = os.path.join(data_dir, "Annotations", "usersplit_val_cocoformat.json")
     test_path = os.path.join(data_dir, "Annotations", "usersplit_test_cocoformat.json")
 
-    checkpoint_name = "yolox_l_8x8_300e_coco"
+    checkpoint_name = "yolox_s"
     num_gpus = 1
 
     predictor = MultiModalPredictor(
@@ -149,13 +149,13 @@ def tutorial_script_for_finetune_yoloxo365_pothole_in_coco_format():
     val_path = os.path.join(data_dir, "Annotations", "usersplit_val_cocoformat.json")
     test_path = os.path.join(data_dir, "Annotations", "usersplit_test_cocoformat.json")
 
-    num_gpus = 1
+    num_gpus = -1
 
     predictor = MultiModalPredictor(
         hyperparameters={
             "model.mmdet_image.checkpoint_name": "yolox_l_objects365",
+            "model.mmdet_image.frozen_layers": ["backbone"],
             "env.num_gpus": num_gpus,
-            "optimization.val_metric": "map",
         },
         problem_type="object_detection",
         sample_data_path=train_path,
@@ -166,9 +166,9 @@ def tutorial_script_for_finetune_yoloxo365_pothole_in_coco_format():
         train_path,
         tuning_data=val_path,
         hyperparameters={
-            "optimization.learning_rate": 5e-5,  # we use two stage and detection head has 100x lr
-            "optimization.max_epochs": 30,
-            "env.per_gpu_batch_size": 8,  # decrease it when model is large
+            "optimization.learning_rate": 1e-4,  # we use two stage and detection head has 100x lr
+            "optimization.max_epochs": 50,
+            "env.per_gpu_batch_size": 12,  # decrease it when model is large
         },
     )
     end = time.time()
@@ -330,4 +330,4 @@ def main():
 
 
 if __name__ == "__main__":
-    tutorial_script_for_finetune_yoloxo365_pothole_in_coco_format()
+    tutorial_script_for_finetune_yolox_pothole_in_coco_format()
