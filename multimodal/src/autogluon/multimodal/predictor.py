@@ -714,11 +714,6 @@ class MultiModalPredictor(ExportMixin):
             warn_if_exist=False,
             fit_called=fit_called,
         )
-<<<<<<< HEAD
-        self._problem_type = self._infer_problem_type(train_data=train_data, column_types=column_types)
-=======
->>>>>>> upstream/master
-
         if tuning_data is None:
             train_data, tuning_data = self._split_train_tuning(
                 data=train_data, holdout_frac=holdout_frac, random_state=seed
