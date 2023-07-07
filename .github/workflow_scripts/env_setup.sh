@@ -5,6 +5,7 @@ function setup_build_env {
     python3 -m pip install "black>=22.3,<23.0"
     python3 -m pip install isort>=5.10
     python3 -m pip install bandit
+    python3 -m pip install packaging
 }
 
 function setup_build_contrib_env {
@@ -17,7 +18,7 @@ function setup_build_contrib_env {
 
 function setup_torch_gpu {
     # Security-patched torch.
-    python3 -m pip install torch==1.13.1+cu116 torchvision==0.14.1+cu116 torchaudio==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
+    python3 -m pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
 }
 
 function setup_torch_cpu {
@@ -26,7 +27,7 @@ function setup_torch_cpu {
 }
 
 function setup_torch_gpu_non_linux {
-    pip3 install torch==1.13.1+cu116 torchvision==0.14.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
+    pip3 install torch==1.13.1+cu117 torchvision==0.14.1+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
 }
 
 function setup_torch_cpu_non_linux {
@@ -46,6 +47,28 @@ function install_local_packages {
     done
 }
 
+function install_tabular {
+    python3 -m pip install --upgrade pygraphviz
+    install_local_packages "tabular/$1"
+}
+
+function install_tabular_platforms {
+    # pygraphviz will be installed with conda in platform tests
+    install_local_packages "tabular/$1"
+}
+
+function install_multimodal_no_groundingdino {
+    # groundingdino has issue when installing on Windows
+    # https://github.com/IDEA-Research/GroundingDINO/issues/57
+    source $(dirname "$0")/setup_mmcv.sh
+    
+    # launch different process for each test to make sure memory is released
+    python3 -m pip install --upgrade pytest-xdist
+    install_local_packages "multimodal/$1"
+    setup_mmcv
+    # python3 -m pip install --upgrade "mmocr<1.0"  # not compatible with mmcv 2.0
+}
+
 function install_multimodal {
     source $(dirname "$0")/setup_mmcv.sh
     source $(dirname "$0")/setup_groundingdino.sh
@@ -61,6 +84,12 @@ function install_multimodal {
 function install_all {
     install_local_packages "common/[tests]" "core/[all]" "features/" "tabular/[all,tests]" "timeseries/[all,tests]" "eda/[tests]"
     install_multimodal "[tests]"
+    install_local_packages "autogluon/"
+}
+
+function install_all_windows {
+    install_local_packages "common/[tests]" "core/[all]" "features/" "tabular/[all,tests]" "timeseries/[all,tests]" "eda/[tests]"
+    install_multimodal_no_groundingdino "[tests]"
     install_local_packages "autogluon/"
 }
 

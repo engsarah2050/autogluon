@@ -36,7 +36,7 @@ def test_when_predictor_called_then_training_is_performed(temp_model_path):
     assert "SimpleFeedForward" in predictor.get_model_names()
 
 
-@pytest.mark.parametrize("hyperparameters", TEST_HYPERPARAMETER_SETTINGS + ["local_only"])  # noqa
+@pytest.mark.parametrize("hyperparameters", TEST_HYPERPARAMETER_SETTINGS + ["fast_training"])  # noqa
 def test_given_hyperparameters_when_predictor_called_then_model_can_predict(temp_model_path, hyperparameters):
     predictor = TimeSeriesPredictor(path=temp_model_path, eval_metric="MAPE", prediction_length=3)
     predictor.fit(
@@ -54,7 +54,7 @@ def test_given_hyperparameters_when_predictor_called_then_model_can_predict(temp
     assert not np.any(np.isnan(predictions))
 
 
-@pytest.mark.parametrize("hyperparameters", TEST_HYPERPARAMETER_SETTINGS + ["local_only"])  # noqa
+@pytest.mark.parametrize("hyperparameters", TEST_HYPERPARAMETER_SETTINGS + ["fast_training"])  # noqa
 def test_given_different_target_name_when_predictor_called_then_model_can_predict(temp_model_path, hyperparameters):
     df = TimeSeriesDataFrame(copy.copy(DUMMY_TS_DATAFRAME))
     df.rename(columns={"target": "mytarget"}, inplace=True)
@@ -431,24 +431,20 @@ def test_given_enable_ensemble_false_when_predictor_called_then_ensemble_is_not_
 
 def test_given_model_fails_when_predictor_predicts_then_exception_is_raised(temp_model_path):
     predictor = TimeSeriesPredictor(path=temp_model_path)
-    predictor.fit(train_data=DUMMY_TS_DATAFRAME, hyperparameters={"ARIMA": {"maxiter": 1}, "Naive": {}})
+    predictor.fit(train_data=DUMMY_TS_DATAFRAME, hyperparameters={"ARIMA": {"maxiter": 1}})
     with mock.patch("autogluon.timeseries.models.local.statsmodels.ARIMAModel.predict") as arima_predict:
         arima_predict.side_effect = RuntimeError("Numerical error")
-        with pytest.raises(
-            RuntimeError, match="Following models failed to predict: \\['ARIMA', 'WeightedEnsemble'\\]"
-        ):
-            predictor.predict(DUMMY_TS_DATAFRAME, model="WeightedEnsemble")
+        with pytest.raises(RuntimeError, match="Following models failed to predict: \\['ARIMA'\\]"):
+            predictor.predict(DUMMY_TS_DATAFRAME)
 
 
 def test_given_model_fails_when_predictor_scores_then_exception_is_raised(temp_model_path):
     predictor = TimeSeriesPredictor(path=temp_model_path)
-    predictor.fit(train_data=DUMMY_TS_DATAFRAME, hyperparameters={"ARIMA": {"maxiter": 1}, "Naive": {}})
+    predictor.fit(train_data=DUMMY_TS_DATAFRAME, hyperparameters={"ARIMA": {"maxiter": 1}})
     with mock.patch("autogluon.timeseries.models.local.statsmodels.ARIMAModel.predict") as arima_predict:
         arima_predict.side_effect = RuntimeError("Numerical error")
-        with pytest.raises(
-            RuntimeError, match="Following models failed to predict: \\['ARIMA', 'WeightedEnsemble'\\]"
-        ):
-            predictor.score(DUMMY_TS_DATAFRAME, model="WeightedEnsemble")
+        with pytest.raises(RuntimeError, match="Following models failed to predict: \\['ARIMA'\\]"):
+            predictor.score(DUMMY_TS_DATAFRAME)
 
 
 def test_given_no_searchspace_and_hyperparameter_tune_kwargs_when_predictor_fits_then_exception_is_raised(

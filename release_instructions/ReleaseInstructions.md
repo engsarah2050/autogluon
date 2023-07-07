@@ -2,7 +2,7 @@
 
 ## Prior to release: 1 week out
 
-* Ensure the version specified in `docs/conf.py`, `VERSION`, and `docs/index.md` align with the intended release version.
+* Ensure the version specified in `docs/conf.py` and `VERSION` align with the intended release version.
 * Check all dependency version ranges.
   * Ensure all dependencies are not capped by major version, unless the reason is documented inline.
     * Example of major version cap: `scikit-learn<2`
@@ -102,7 +102,7 @@ After GitHub & PyPi release, conduct release on Conda-Forge
 After release is published, on the mainline branch:
 * Update `release` in `docs/conf.py`
 * Increment version in the `VERSION` file
-* Update `ReleaseVersion` image link in `docs/badges.rst`
+* Update doc links in `docs/versions.rst`
 * Update `README.md` sample code with new release version.
 * Send release update to internal and external slack channels and mailing lists
 * Publish any blogs / talks planned for release to generate interest.

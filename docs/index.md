@@ -207,7 +207,14 @@ Install AutoGluon using [pip](https://pip.pypa.io/en/stable/installation/):
 pip install autogluon
 ```
 
-AutoGluon supports Linux, MacOS, and Windows. See {doc}`./install` for detailed instructions. 
+AutoGluon supports Linux, MacOS, and Windows. See {doc}`./install` for detailed instructions.
+
+## Community
+
+[![](https://img.shields.io/discord/1043248669505368144?logo=discord&style=flat)](https://discord.gg/wjUmjqAc2N)
+[![Twitter](https://img.shields.io/twitter/follow/autogluon?style=social)](https://twitter.com/autogluon)
+
+Get involved in the AutoGluon community by joining our [Discord](https://discord.gg/wjUmjqAc2N)!
 
 
 ```{toctree}
@@ -261,8 +268,11 @@ hidden:
 
 TabularPredictor <api/autogluon.tabular.TabularPredictor>
 TabularDataset <api/autogluon.core.TabularDataset>
+Tabular Models <api/autogluon.tabular.models.rst>
 MultiModalPredictor <api/autogluon.multimodal.MultiModalPredictor>
-TimeSeriesDataFrame <api/autogluon.timeseries.TimeSeriesDataFrame>
 TimeSeriesPredictor <api/autogluon.timeseries.TimeSeriesPredictor>
+TimeSeriesDataFrame <api/autogluon.timeseries.TimeSeriesDataFrame>
+Feature Generators <api/autogluon.features.rst>
 FeatureMetadata <api/autogluon.common.features.feature_metadata.FeatureMetadata>
+Search Spaces <api/autogluon.common.space.rst>
 ```
