@@ -1,4 +1,7 @@
 import logging
+import os
+import shutil
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Type
 
@@ -6,21 +9,24 @@ import gluonts
 import gluonts.core.settings
 import numpy as np
 import pandas as pd
+from gluonts.core.component import from_hyperparameters
 from gluonts.dataset.common import Dataset as GluonTSDataset
 from gluonts.dataset.field_names import FieldName
 from gluonts.model.estimator import Estimator as GluonTSEstimator
 from gluonts.model.forecast import Forecast, QuantileForecast, SampleForecast
 from gluonts.model.predictor import Predictor as GluonTSPredictor
-from gluonts.torch.model.forecast import DistributionForecast
 from pandas.tseries.frequencies import to_offset
 
+from autogluon.common.loaders import load_pkl
 from autogluon.common.utils.log_utils import set_logger_verbosity
-from autogluon.core.hpo.constants import RAY_BACKEND
 from autogluon.core.utils import warning_filter
 from autogluon.timeseries.dataset.ts_dataframe import ITEMID, TimeSeriesDataFrame
 from autogluon.timeseries.models.abstract import AbstractTimeSeriesModel
 from autogluon.timeseries.utils.forecast import get_forecast_horizon_index_ts_dataframe
-from autogluon.timeseries.utils.warning_filters import disable_root_logger
+from autogluon.timeseries.utils.warning_filters import disable_root_logger, torch_warning_filter
+
+# NOTE: We avoid imports for torch and pytorch_lightning at the top level and hide them inside class methods.
+# This is done to skip these imports during multiprocessing (which may cause bugs)
 
 logger = logging.getLogger(__name__)
 gts_logger = logging.getLogger(gluonts.__name__)
@@ -120,7 +126,7 @@ class AbstractGluonTSModel(AbstractTimeSeriesModel):
     name: str
         Name of the model. Also, name of subdirectory inside path where model will be saved.
     eval_metric: str
-        objective function the model intends to optimize, will use mean_wQuantileLoss by default.
+        objective function the model intends to optimize, will use WQL by default.
     hyperparameters:
         various hyperparameters that will be used by model (can be search spaces instead of
         fixed values). See *Other Parameters* in each inheriting model's documentation for
@@ -128,9 +134,8 @@ class AbstractGluonTSModel(AbstractTimeSeriesModel):
     """
 
     gluonts_model_path = "gluon_ts"
-    gluonts_estimator_class: Type[GluonTSEstimator] = None
     # datatype of floating point and integers passed internally to GluonTS
-    float_dtype: Type = np.float64
+    float_dtype: Type = np.float32
     int_dtype: Type = np.int64
     # default number of samples for prediction
     default_num_samples: int = 1000
@@ -165,6 +170,8 @@ class AbstractGluonTSModel(AbstractTimeSeriesModel):
         self.feat_static_cat_cardinality: List[int] = []
 
     def save(self, path: str = None, verbose: bool = True) -> str:
+        # we flush callbacks instance variable if it has been set. it can keep weak references which breaks training
+        self.callbacks = []
         # The GluonTS predictor is serialized using custom logic
         predictor = self.gts_predictor
         self.gts_predictor = None
@@ -180,16 +187,14 @@ class AbstractGluonTSModel(AbstractTimeSeriesModel):
         return str(path)
 
     @classmethod
-    def load(
-        cls, path: str, reset_paths: bool = True, load_oof: bool = False, verbose: bool = True
-    ) -> "AbstractGluonTSModel":
-        model = super().load(
-            path=path,
-            reset_paths=reset_paths,
-            load_oof=load_oof,
-            verbose=verbose,
-        )
-        model.gts_predictor = GluonTSPredictor.deserialize(Path(path) / cls.gluonts_model_path)
+    def load(cls, path: str, reset_paths: bool = True, verbose: bool = True) -> "AbstractGluonTSModel":
+        from gluonts.torch.model.predictor import PyTorchPredictor
+
+        with torch_warning_filter():
+            model = load_pkl.load(path=os.path.join(path, cls.model_file_name), verbose=verbose)
+            if reset_paths:
+                model.set_contexts(path)
+            model.gts_predictor = PyTorchPredictor.deserialize(Path(path) / cls.gluonts_model_path)
         return model
 
     def _deferred_init_params_aux(self, **kwargs) -> None:
@@ -243,14 +248,45 @@ class AbstractGluonTSModel(AbstractTimeSeriesModel):
         return args
 
     def _get_estimator_init_args(self) -> Dict[str, Any]:
-        """Get GluonTS specific constructor arguments for estimator objects, an alias to
-        `self._get_model_params` for better readability."""
-        return self._get_model_params()
+        """Get GluonTS specific constructor arguments for estimator objects, an alias to `self._get_model_params`
+        for better readability."""
+        init_kwargs = self._get_model_params()
+        # Map MXNet kwarg names to PyTorch Lightning kwarg names
+        init_kwargs.setdefault("lr", init_kwargs.get("learning_rate", 1e-3))
+        init_kwargs.setdefault("max_epochs", init_kwargs.get("epochs"))
+        return init_kwargs
+
+    def _get_estimator_class(self) -> Type[GluonTSEstimator]:
+        raise NotImplementedError
 
     def _get_estimator(self) -> GluonTSEstimator:
         """Return the GluonTS Estimator object for the model"""
-        with warning_filter():
-            return self.gluonts_estimator_class.from_hyperparameters(**self._get_estimator_init_args())
+        # As GluonTSPyTorchLightningEstimator objects do not implement `from_hyperparameters` convenience
+        # constructors, we re-implement the logic here.
+        # we translate the "epochs" parameter to "max_epochs" for consistency in the AbstractGluonTSModel interface
+        import torch
+
+        init_args = self._get_estimator_init_args()
+
+        trainer_kwargs = {}
+        epochs = init_args.get("max_epochs")
+        callbacks = init_args.get("callbacks", [])
+
+        # TODO: Provide trainer_kwargs outside the function (e.g., to specify # of GPUs)?
+        if epochs is not None:
+            trainer_kwargs.update({"max_epochs": epochs})
+        trainer_kwargs.update({"callbacks": callbacks, "enable_progress_bar": False})
+        trainer_kwargs["default_root_dir"] = self.path
+
+        if torch.cuda.is_available():
+            trainer_kwargs["accelerator"] = "gpu"
+            trainer_kwargs["devices"] = 1
+
+        return from_hyperparameters(
+            self._get_estimator_class(),
+            trainer_kwargs=trainer_kwargs,
+            **init_args,
+        )
 
     def _to_gluonts_dataset(
         self, time_series_df: Optional[TimeSeriesDataFrame], known_covariates: Optional[TimeSeriesDataFrame] = None
@@ -307,7 +343,14 @@ class AbstractGluonTSModel(AbstractTimeSeriesModel):
         time_limit: int = None,
         **kwargs,
     ) -> None:
+        # necessary to initialize the loggers
+        import pytorch_lightning  # noqa
+
         verbosity = kwargs.get("verbosity", 2)
+        for logger_name in logging.root.manager.loggerDict:
+            if "pytorch_lightning" in logger_name:
+                pl_logger = logging.getLogger(logger_name)
+                pl_logger.setLevel(logging.ERROR if verbosity <= 3 else logging.INFO)
         set_logger_verbosity(verbosity, logger=logger)
         gts_logger.setLevel(logging.ERROR if verbosity <= 3 else logging.INFO)
 
@@ -318,7 +361,6 @@ class AbstractGluonTSModel(AbstractTimeSeriesModel):
             )
 
         self._check_fit_params()
-
         # update auxiliary parameters
         self._deferred_init_params_aux(
             dataset=train_data, callbacks=self._get_callbacks(time_limit=time_limit), **kwargs
@@ -332,9 +374,16 @@ class AbstractGluonTSModel(AbstractTimeSeriesModel):
                 cache_data=True,
             )
 
+        lightning_logs_dir = Path(self.path) / "lightning_logs"
+        if lightning_logs_dir.exists() and lightning_logs_dir.is_dir():
+            logger.debug(f"Removing lightning_logs directory {lightning_logs_dir}")
+            shutil.rmtree(lightning_logs_dir)
+
     def _get_callbacks(self, time_limit: int, *args, **kwargs) -> List[Callable]:
         """Retrieve a list of callback objects for the GluonTS trainer"""
-        return []
+        from pytorch_lightning.callbacks import Timer
+
+        return [Timer(timedelta(seconds=time_limit))] if time_limit is not None else []
 
     def predict(
         self,
@@ -393,10 +442,22 @@ class AbstractGluonTSModel(AbstractTimeSeriesModel):
         return QuantileForecast(**forecast_init_args)
 
     @staticmethod
-    def _distribution_to_quantile_forecast(
-        forecast: DistributionForecast, quantile_levels: List[float]
-    ) -> QuantileForecast:
-        raise NotImplementedError
+    def _distribution_to_quantile_forecast(forecast: Forecast, quantile_levels: List[float]) -> QuantileForecast:
+        import torch
+
+        # Compute all quantiles in parallel instead of a for-loop
+        quantiles = torch.tensor(quantile_levels, device=forecast.distribution.mean.device).reshape(-1, 1)
+        quantile_predictions = forecast.distribution.icdf(quantiles).cpu().detach().numpy()
+        forecast_arrays = np.vstack([forecast.mean, quantile_predictions])
+        forecast_keys = ["mean"] + [str(q) for q in quantile_levels]
+
+        forecast_init_args = dict(
+            forecast_arrays=forecast_arrays,
+            start_date=forecast.start_date,
+            forecast_keys=forecast_keys,
+            item_id=str(forecast.item_id),
+        )
+        return QuantileForecast(**forecast_init_args)
 
     def _gluonts_forecasts_to_data_frame(
         self,
@@ -404,6 +465,8 @@ class AbstractGluonTSModel(AbstractTimeSeriesModel):
         quantile_levels: List[float],
         forecast_index: pd.MultiIndex,
     ) -> TimeSeriesDataFrame:
+        from gluonts.torch.model.forecast import DistributionForecast
+
         # TODO: Concatenate all forecasts into a single tensor/object before converting?
         # Especially for DistributionForecast this could result in massive speedups
         if isinstance(forecasts[0], SampleForecast):
@@ -431,6 +494,3 @@ class AbstractGluonTSModel(AbstractTimeSeriesModel):
         result = pd.concat(result_dfs)
         result.index = forecast_index
         return TimeSeriesDataFrame(result)
-
-    def _get_hpo_backend(self):
-        return RAY_BACKEND

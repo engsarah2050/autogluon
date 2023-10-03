@@ -1,10 +1,9 @@
 import logging
 from typing import Callable, Optional, Union
 
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torchmetrics
-from omegaconf import DictConfig
-from torch import nn
+from lightning.pytorch.utilities import grad_norm
 from torch.nn.modules.loss import _Loss
 from torchmetrics.aggregation import BaseAggregator
 
@@ -47,6 +46,7 @@ class MMDetLitModule(pl.LightningModule):
         custom_metric_func: Callable = None,
         test_metric: Optional[torchmetrics.Metric] = None,
         efficient_finetune: Optional[str] = None,
+        track_grad_norm: Optional[Union[int, str]] = -1,
     ):
         super().__init__()  # TODO: inherit LitModule
         self.save_hyperparameters(
@@ -65,6 +65,7 @@ class MMDetLitModule(pl.LightningModule):
         self.id2label = self.model.id2label
         self.input_data_key = self.model.prefix + "_" + IMAGE
         self.input_label_key = self.model.prefix + "_" + LABEL
+        self.track_grad_norm = track_grad_norm
 
     def _base_step(self, batch, mode):
         ret = self.model(batch=batch[self.input_data_key], mode=mode)
@@ -156,12 +157,13 @@ class MMDetLitModule(pl.LightningModule):
         else:
             self.evaluate(batch, "val")
 
-    def validation_epoch_end(self, validation_step_outputs):
+    def on_validation_epoch_end(self):
         val_result = self.validation_metric.compute()
         if self.use_loss:
             self.log_dict({"val_direct_loss": val_result}, sync_dist=True)
         else:
             # TODO: add mAP/mAR_per_class
+            val_result.pop("classes", None)  # introduced in torchmetrics v1.0.0
             mAPs = {"val_" + k: v for k, v in val_result.items()}
             mAPs["val_mAP"] = mAPs["val_map"]
             self.log_dict(mAPs, sync_dist=True)
@@ -177,8 +179,8 @@ class MMDetLitModule(pl.LightningModule):
 
     def configure_optimizers(self):
         """
-        Configure optimizer. This function is registered by pl.LightningModule.
-        Refer to https://pytorch-lightning.readthedocs.io/en/latest/common/lightning_module.html#configure-optimizers
+        Configure optimizer. This function is registered by LightningModule.
+        Refer to https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#configure-optimizers
         Returns
         -------
         [optimizer]
@@ -253,3 +255,8 @@ class MMDetLitModule(pl.LightningModule):
         sched = {"scheduler": scheduler, "interval": "step"}
         logger.debug("done configuring optimizer and scheduler")
         return [optimizer], [sched]
+
+    def on_before_optimizer_step(self, optimizer):
+        # If using mixed precision, the gradients are already unscaled here
+        if self.track_grad_norm != -1:
+            self.log_dict(grad_norm(self, norm_type=self.track_grad_norm))

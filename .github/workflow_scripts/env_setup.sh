@@ -6,6 +6,7 @@ function setup_build_env {
     python3 -m pip install isort>=5.10
     python3 -m pip install bandit
     python3 -m pip install packaging
+    python3 -m pip install ruff
 }
 
 function setup_build_contrib_env {
@@ -13,25 +14,13 @@ function setup_build_contrib_env {
     python3 -m pip install -r $(dirname "$0")/../../docs/requirements_doc.txt
     python3 -m pip install git+https://github.com/zhanghang1989/d2l-book
     export AG_DOCS=1
-    export AUTOMM_TUTORIAL_MODE=1 # Disable progress bar in AutoMMPredictor
+    export AUTOMM_TUTORIAL_MODE=1 # Disable progress bar in MultiModalPredictor
 }
 
-function setup_torch_gpu {
-    # Security-patched torch.
-    python3 -m pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
-}
-
-function setup_torch_cpu {
-    # Security-patched torch
-    python3 -m pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cpu
-}
-
-function setup_torch_gpu_non_linux {
-    pip3 install torch==1.13.1+cu117 torchvision==0.14.1+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
-}
-
-function setup_torch_cpu_non_linux {
-    pip3 install torch==1.13.1 torchvision==0.14.1
+function setup_benchmark_env {
+    pip install -U autogluon.bench
+    git clone https://github.com/autogluon/autogluon-dashboard.git
+    pip install -e ./autogluon-dashboard
 }
 
 function setup_hf_model_mirror {
@@ -61,7 +50,7 @@ function install_multimodal_no_groundingdino {
     # groundingdino has issue when installing on Windows
     # https://github.com/IDEA-Research/GroundingDINO/issues/57
     source $(dirname "$0")/setup_mmcv.sh
-    
+
     # launch different process for each test to make sure memory is released
     python3 -m pip install --upgrade pytest-xdist
     install_local_packages "multimodal/$1"
@@ -72,7 +61,7 @@ function install_multimodal_no_groundingdino {
 function install_multimodal {
     source $(dirname "$0")/setup_mmcv.sh
     source $(dirname "$0")/setup_groundingdino.sh
-    
+
     # launch different process for each test to make sure memory is released
     python3 -m pip install --upgrade pytest-xdist
     install_local_packages "multimodal/$1"

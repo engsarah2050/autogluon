@@ -1,6 +1,5 @@
 """Unit tests and utils common to all models"""
 import itertools
-import os
 import shutil
 import tempfile
 from unittest import mock
@@ -51,7 +50,7 @@ def trained_models():
     for model_class, prediction_length in itertools.product(TESTABLE_MODELS, TESTABLE_PREDICTION_LENGTHS):
         temp_model_path = tempfile.mkdtemp()
         model = model_class(
-            path=temp_model_path + os.path.sep,
+            path=temp_model_path,
             freq="H",
             prediction_length=prediction_length,
             hyperparameters=DUMMY_HYPERPARAMETERS,
@@ -103,7 +102,7 @@ def test_when_score_and_cache_oof_called_then_oof_predictions_are_saved(
     if isinstance(model, MultiWindowBacktestingModel):
         pytest.skip()
 
-    oof_predictions = model.get_oof_predictions()
+    oof_predictions = model.get_oof_predictions()[0]
     assert isinstance(oof_predictions, TimeSeriesDataFrame)
     oof_score = model._score_with_predictions(DUMMY_TS_DATAFRAME, oof_predictions)
     assert isinstance(oof_score, float)
@@ -139,7 +138,8 @@ def test_when_models_saved_then_they_can_be_loaded(model_class, trained_models, 
     assert dict_equal_primitive(model.params, loaded_model.params)
     assert dict_equal_primitive(model.params_aux, loaded_model.params_aux)
     assert model.metadata == loaded_model.metadata
-    assert model.get_oof_predictions().equals(loaded_model.get_oof_predictions())
+    for orig_oof_pred, loaded_oof_pred in zip(model.get_oof_predictions(), loaded_model.get_oof_predictions()):
+        assert orig_oof_pred.equals(loaded_oof_pred)
 
 
 @flaky
@@ -209,10 +209,6 @@ def test_when_fit_called_then_models_train_and_returned_predictor_inference_has_
         quantile_levels=quantile_levels,
         hyperparameters=DUMMY_HYPERPARAMETERS,
     )
-    # TFT cannot handle arbitrary quantiles
-    if "TemporalFusionTransformerMXNet" in model.name:
-        return
-
     model.fit(train_data=DUMMY_TS_DATAFRAME)
     predictions = model.predict(DUMMY_TS_DATAFRAME, quantile_levels=quantile_levels)
 

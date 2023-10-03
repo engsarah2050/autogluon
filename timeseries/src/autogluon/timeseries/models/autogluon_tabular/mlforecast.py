@@ -90,7 +90,7 @@ class RecursiveTabularModel(AbstractTimeSeriesModel):
         "MASE": "mean_absolute_error",
         "MAPE": "mean_absolute_percentage_error",
         "sMAPE": "mean_absolute_percentage_error",
-        "mean_wQuantileLoss": "mean_absolute_error",
+        "WQL": "mean_absolute_error",
         "MSE": "mean_squared_error",
         "RMSE": "root_mean_squared_error",
     }
@@ -244,7 +244,7 @@ class RecursiveTabularModel(AbstractTimeSeriesModel):
             if strategy == "items":
                 item_ids = data.item_ids
                 num_items_to_keep = math.ceil(len(item_ids) * max_num_rows / len(data))
-                items_to_keep = np.random.choice(item_ids, num_items_to_keep, replace=False)
+                items_to_keep = np.random.choice(item_ids, num_items_to_keep, replace=False)  # noqa: F841
                 logger.debug(
                     f"\tRandomly selected {num_items_to_keep} ({num_items_to_keep / len(item_ids):.1%}) time series "
                     "to limit peak memory usage"
@@ -290,7 +290,7 @@ class RecursiveTabularModel(AbstractTimeSeriesModel):
 
         estimator = TabularEstimator(
             predictor_init_kwargs={
-                "path": self.path + os.sep + "point_predictor",
+                "path": os.path.join(self.path, "point_predictor"),
                 "problem_type": ag.constants.REGRESSION,
                 "eval_metric": self.TIMESERIES_METRIC_TO_TABULAR_METRIC[self.eval_metric],
                 "verbosity": verbosity - 2,

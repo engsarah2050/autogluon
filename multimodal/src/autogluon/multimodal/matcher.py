@@ -11,9 +11,9 @@ import warnings
 from datetime import timedelta
 from typing import Callable, Dict, List, Optional, Union
 
+import lightning.pytorch as pl
 import numpy as np
 import pandas as pd
-import pytorch_lightning as pl
 import torch
 import yaml
 from omegaconf import DictConfig, OmegaConf
@@ -842,6 +842,7 @@ class MultiModalMatcher:
             lr_mult=config.optimization.lr_mult,
             weight_decay=config.optimization.weight_decay,
             warmup_steps=config.optimization.warmup_steps,
+            track_grad_norm=OmegaConf.select(config, "optimization.track_grad_norm", default=-1),
         )
         metrics_kwargs = dict(
             validation_metric=validation_metric,
@@ -890,12 +891,10 @@ class MultiModalMatcher:
             model_summary,
         ]
 
-        use_ray_lightning = "_ray_lightning_plugin" in hpo_kwargs
         if hpo_mode:
-            if use_ray_lightning:
-                from ray_lightning.tune import TuneReportCheckpointCallback
-            else:
-                from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
+            from .utils.hpo import get_ray_tune_ckpt_callback
+
+            TuneReportCheckpointCallback = get_ray_tune_ckpt_callback()
             tune_report_callback = TuneReportCheckpointCallback(
                 {f"{task.validation_metric_name}": f"{task.validation_metric_name}"},
                 filename=RAY_TUNE_CHECKPOINT,
@@ -930,16 +929,13 @@ class MultiModalMatcher:
 
         if not hpo_mode:
             if num_gpus <= 1:
-                strategy = None
+                strategy = "auto"
             else:
                 strategy = config.env.strategy
         else:
-            # we don't support running each trial in parallel without ray lightning
-            if use_ray_lightning:
-                strategy = hpo_kwargs.get("_ray_lightning_plugin")
-            else:
-                strategy = None
-                num_gpus = min(num_gpus, 1)
+            # TODO: checkout lightning support for ray tune for multi gpu support
+            strategy = "auto"
+            num_gpus = min(num_gpus, 1)
 
         config.env.num_gpus = num_gpus
         config.env.precision = precision
@@ -952,11 +948,10 @@ class MultiModalMatcher:
         log_filter = LogFilter(blacklist_msgs)
         with apply_log_filter(log_filter):
             trainer = pl.Trainer(
-                accelerator="gpu" if num_gpus > 0 else None,
+                accelerator="gpu" if num_gpus > 0 else "auto",
                 devices=get_available_devices(
                     num_gpus=num_gpus,
                     auto_select_gpus=config.env.auto_select_gpus,
-                    use_ray_lightning=use_ray_lightning,
                 ),
                 num_nodes=config.env.num_nodes,
                 precision=precision,
@@ -976,7 +971,6 @@ class MultiModalMatcher:
                 log_every_n_steps=OmegaConf.select(config, "optimization.log_every_n_steps", default=10),
                 enable_progress_bar=enable_progress_bar,
                 fast_dev_run=config.env.fast_dev_run,
-                track_grad_norm=OmegaConf.select(config, "optimization.track_grad_norm", default=-1),
                 val_check_interval=config.optimization.val_check_interval,
                 check_val_every_n_epoch=config.optimization.check_val_every_n_epoch
                 if hasattr(config.optimization, "check_val_every_n_epoch")
@@ -1296,7 +1290,7 @@ class MultiModalMatcher:
         log_filter = LogFilter(blacklist_msgs)
         with apply_log_filter(log_filter):
             evaluator = pl.Trainer(
-                accelerator="gpu" if num_gpus > 0 else None,
+                accelerator="gpu" if num_gpus > 0 else "auto",
                 devices=get_available_devices(num_gpus=num_gpus, auto_select_gpus=self._config.env.auto_select_gpus),
                 num_nodes=self._config.env.num_nodes,
                 precision=precision,

@@ -11,6 +11,7 @@ from packaging import version
 from pytorch_metric_learning import distances, losses, miners
 from torch import nn, optim
 from torch.nn import functional as F
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from transformers import Adafactor
 from transformers.trainer_pt_utils import get_parameter_names
 
@@ -63,7 +64,6 @@ from ..constants import (
     ROOT_MEAN_SQUARED_ERROR,
     SPEARMANR,
 )
-from ..utils.map import MeanAveragePrecision
 from .losses import FocalLoss, MultiNegativesSoftmaxLoss, SoftTargetCrossEntropy
 from .lr_scheduler import (
     get_cosine_schedule_with_warmup,
@@ -692,6 +692,8 @@ def apply_layerwise_lr_decay(
     decay_param_names = get_weight_decay_param_names(model)
 
     for name, param in model.named_parameters():
+        if name.startswith("_orig_mod."):
+            name = "".join(name.split("_orig_mod."))
         layer_id = model.name_to_id[name]
         if layer_id == 0:  # Set top layer (e.g. head, fusion_mlp, adapter) as being trainable.
             param.requires_grad = True

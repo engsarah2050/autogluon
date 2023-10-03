@@ -1,4 +1,4 @@
-from .cache import DDPCacheWriter
+from .cache import DDPPredictionWriter
 from .checkpoint import AutoMMModelCheckpoint, AutoMMModelCheckpointIO, average_checkpoints
 from .config import (
     apply_omegaconf_overrides,
@@ -38,7 +38,8 @@ from .environment import (
     get_available_devices,
     get_precision_context,
     infer_precision,
-    is_interactive,
+    is_interactive_env,
+    is_interactive_strategy,
     move_to_device,
 )
 from .export import ExportMixin
@@ -53,7 +54,6 @@ from .log import (
     get_gpu_message,
     make_exp_dir,
 )
-from .map import MeanAveragePrecision
 from .matcher import compute_semantic_similarity, convert_data_for_ranking, create_siamese_model, semantic_search
 from .metric import compute_ranking_score, compute_score, get_minmax_mode, get_stopping_threshold, infer_metrics
 from .misc import logits_to_prob, merge_bio_format, shopee_dataset, tensor_to_ndarray, visualize_ner

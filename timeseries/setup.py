@@ -4,9 +4,7 @@ import importlib.util
 ###########################
 # This code block is a HACK (!), but is necessary to avoid code duplication. Do NOT alter these lines.
 import os
-import warnings
 
-from packaging.version import parse as vparse
 from setuptools import setup
 
 filepath = os.path.abspath(os.path.dirname(__file__))
@@ -27,10 +25,10 @@ install_requires = [
     "numpy",  # version range defined in `core/_setup_utils.py`
     "scipy",  # version range defined in `core/_setup_utils.py`
     "pandas",  # version range defined in `core/_setup_utils.py`
+    "torch",  # version range defined in `core/_setup_utils.py`
+    "lightning",  # version range defined in `core/_setup_utils.py`
     "statsmodels>=0.13.0,<0.15",
     "gluonts>=0.13.1,<0.14",
-    "torch>=1.9,<1.14",
-    "pytorch-lightning>=1.7.4,<1.10.0",
     "networkx",  # version range defined in `core/_setup_utils.py`
     # TODO: update statsforecast to v1.5.0 - resolve antlr4-python3-runtime dependency clash with multimodal
     "statsforecast>=1.4.0,<1.5",
@@ -45,7 +43,7 @@ install_requires = [
 extras_require = {
     "tests": [
         "pytest",
-        "flake8>=4.0,<5",
+        "ruff>=0.0.285",
         "flaky>=3.7,<4",
         "pytest-timeout>=2.1,<3",
         "isort>=5.10",

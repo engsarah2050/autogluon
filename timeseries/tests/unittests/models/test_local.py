@@ -1,5 +1,6 @@
 import logging
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -8,12 +9,14 @@ from autogluon.timeseries.models.local import (
     ARIMAModel,
     AutoARIMAModel,
     AutoETSModel,
+    AverageModel,
     DynamicOptimizedThetaModel,
     ETSModel,
     NaiveModel,
+    NPTSModel,
+    SeasonalAverageModel,
     SeasonalNaiveModel,
     ThetaModel,
-    ThetaStatsmodelsModel,
 )
 
 from ..common import (
@@ -26,13 +29,15 @@ from ..common import (
 TESTABLE_MODELS = [
     AutoARIMAModel,
     AutoETSModel,
+    AverageModel,
     DynamicOptimizedThetaModel,
     ARIMAModel,
     ETSModel,
     ThetaModel,
     NaiveModel,
+    NPTSModel,
+    SeasonalAverageModel,
     SeasonalNaiveModel,
-    ThetaStatsmodelsModel,
 ]
 
 
@@ -82,20 +87,16 @@ def test_when_local_model_predicts_then_time_index_is_correct(model_class, predi
 
 
 def get_seasonal_period_from_fitted_local_model(model):
-    if model.name == "ARIMA":
-        return model._local_model_args["seasonal_order"][-1]
-    elif model.name == "ETS":
-        return model._local_model_args["seasonal_periods"]
-    elif model.name == "ThetaStatsmodels":
-        return model._local_model_args["period"]
-    elif model.name in ["AutoETS", "AutoARIMA", "DynamicOptimizedTheta", "Theta"]:
+    if model.name in ["ARIMA", "AutoETS", "AutoARIMA", "DynamicOptimizedTheta", "ETS", "Theta"]:
         return model._local_model_args["season_length"]
     else:
         return model._local_model_args["seasonal_period"]
 
 
 @pytest.mark.parametrize("model_class", TESTABLE_MODELS)
-@pytest.mark.parametrize("hyperparameters", [{"seasonal_period": None, "n_jobs": 1}, {"n_jobs": 1}])
+@pytest.mark.parametrize(
+    "hyperparameters", [{**DEFAULT_HYPERPARAMETERS, "seasonal_period": None}, DEFAULT_HYPERPARAMETERS]
+)
 @pytest.mark.parametrize(
     "freqstr, ts_length, expected_seasonal_period",
     [
@@ -143,7 +144,7 @@ def test_when_seasonal_period_is_provided_then_inferred_period_is_overriden(
     model = model_class(
         path=temp_model_path,
         prediction_length=3,
-        hyperparameters={"seasonal_period": provided_seasonal_period, "n_jobs": 1},
+        hyperparameters={"seasonal_period": provided_seasonal_period, **DEFAULT_HYPERPARAMETERS},
     )
 
     model.fit(train_data=train_data)
@@ -192,3 +193,49 @@ def test_when_fallback_model_enabled_and_model_fails_then_no_exception_is_raised
     model._predict_with_local_model = failing_predict
     predictions = model.predict(DUMMY_TS_DATAFRAME)
     assert isinstance(predictions, TimeSeriesDataFrame)
+
+
+@pytest.mark.parametrize("seasonal_period, should_match", [(1, True), (2, False)])
+def test_when_seasonal_period_equals_one_then_average_and_seasonal_average_are_equivalent(
+    seasonal_period, should_match
+):
+    avg = AverageModel(
+        hyperparameters=DEFAULT_HYPERPARAMETERS,
+        prediction_length=3,
+    )
+    avg.fit(train_data=DUMMY_TS_DATAFRAME)
+    predictions_avg = avg.predict(DUMMY_TS_DATAFRAME)
+
+    seasonal_avg = SeasonalAverageModel(
+        hyperparameters={"seasonal_period": seasonal_period, **DEFAULT_HYPERPARAMETERS},
+        prediction_length=3,
+    )
+    seasonal_avg.fit(train_data=DUMMY_TS_DATAFRAME)
+    predictions_seasonal_avg = seasonal_avg.predict(DUMMY_TS_DATAFRAME)
+
+    allclose = np.allclose(predictions_avg.values, predictions_seasonal_avg.values)
+    if should_match:
+        assert allclose
+    else:
+        assert not allclose
+
+
+def test_when_data_shorter_than_seasonal_period_then_average_forecast_is_used():
+    prediction_length = 20
+    seasonal_period = DUMMY_TS_DATAFRAME.num_timesteps_per_item().max() + prediction_length
+
+    avg = AverageModel(
+        hyperparameters=DEFAULT_HYPERPARAMETERS,
+        prediction_length=prediction_length,
+    )
+    avg.fit(train_data=DUMMY_TS_DATAFRAME)
+    predictions_avg = avg.predict(DUMMY_TS_DATAFRAME)
+
+    seasonal_avg = SeasonalAverageModel(
+        hyperparameters={"seasonal_period": seasonal_period, "n_jobs": 1},
+        prediction_length=prediction_length,
+    )
+    seasonal_avg.fit(train_data=DUMMY_TS_DATAFRAME)
+    predictions_seasonal_avg = seasonal_avg.predict(DUMMY_TS_DATAFRAME)
+
+    assert np.allclose(predictions_avg.values, predictions_seasonal_avg.values)

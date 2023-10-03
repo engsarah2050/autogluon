@@ -1039,23 +1039,16 @@ class TabularPredictor:
         if refit_full is not False:
             if infer_limit is not None:
                 infer_limit = infer_limit - self._learner.preprocess_1_time
-            trainer_model_best = self._trainer.get_model_best(infer_limit=infer_limit)
+            trainer_model_best = self._trainer.get_model_best(infer_limit=infer_limit, infer_limit_as_child=True)
             logger.log(20, "Automatically performing refit_full as a post-fit operation (due to `.fit(..., refit_full=True)`")
-            self.refit_full(model=refit_full, set_best_to_refit_full=False)
             if set_best_to_refit_full:
-                model_full_dict = self._trainer.get_model_full_dict()
-                if trainer_model_best in model_full_dict:
-                    self._trainer.model_best = model_full_dict[trainer_model_best]
-                    # Note: model_best will be overwritten if additional training is done with new models, since model_best will have validation score of None and any new model will have a better validation score.
-                    # This has the side-effect of having the possibility of model_best being overwritten by a worse model than the original model_best.
-                    self._trainer.save()
-                elif trainer_model_best in model_full_dict.values():
-                    self._trainer.model_best = trainer_model_best
-                    self._trainer.save()
-                else:
-                    logger.warning(
-                        f"Best model ({trainer_model_best}) is not present in refit_full dictionary. Training may have failed on the refit model. AutoGluon will default to using {trainer_model_best} for predictions."
-                    )
+                _set_best_to_refit_full = trainer_model_best
+            else:
+                _set_best_to_refit_full = False
+            if refit_full == "best":
+                self.refit_full(model=trainer_model_best, set_best_to_refit_full=_set_best_to_refit_full)
+            else:
+                self.refit_full(model=refit_full, set_best_to_refit_full=_set_best_to_refit_full)
 
         if calibrate == "auto":
             if self.problem_type in PROBLEM_TYPES_CLASSIFICATION and self.eval_metric.needs_proba:
@@ -1382,7 +1375,7 @@ class TabularPredictor:
             test_pseudo_idxes = pd.Series(data=False, index=y_pred_proba.index)
             test_pseudo_idxes[test_pseudo_idxes_true.index] = True
 
-            y_pseudo_og = y_pseudo_og.append(y_pred.loc[test_pseudo_idxes_true.index], verify_integrity=True)
+            y_pseudo_og = pd.concat([y_pseudo_og, y_pred.loc[test_pseudo_idxes_true.index]], verify_integrity=True)
 
             pseudo_data = unlabeled_data.loc[y_pseudo_og.index]
             pseudo_data[self.label] = y_pseudo_og
@@ -2593,10 +2586,11 @@ class TabularPredictor:
                 If 'best' then the model with the highest validation score is refit.
             All ancestor models will also be refit in the case that the selected model is a weighted or stacker ensemble.
             Valid models are listed in this `predictor` by calling `predictor.get_model_names()`.
-        set_best_to_refit_full : bool, default = True
+        set_best_to_refit_full : bool | str, default = True
             If True, sets best model to the refit_full version of the prior best model.
             This means the model used when `predictor.predict(data)` is called will be the refit_full version instead of the original version of the model.
             Ignored if `model` is not the best model.
+            If str, interprets as a model name and sets best model to the refit_full version of the model `set_best_to_refit_full`.
 
         Returns
         -------
@@ -2617,9 +2611,13 @@ class TabularPredictor:
         refit_full_dict = self._learner.refit_ensemble_full(model=model)
 
         if set_best_to_refit_full:
+            if isinstance(set_best_to_refit_full, str):
+                model_to_set_best = set_best_to_refit_full
+            else:
+                model_to_set_best = model_best
             model_full_dict = self._trainer.get_model_full_dict()
-            if model_best in model_full_dict:
-                self._trainer.model_best = model_full_dict[model_best]
+            if model_to_set_best in model_full_dict:
+                self._trainer.model_best = model_full_dict[model_to_set_best]
                 # Note: model_best will be overwritten if additional training is done with new models,
                 # since model_best will have validation score of None and any new model will have a better validation score.
                 # This has the side-effect of having the possibility of model_best being overwritten by a worse model than the original model_best.
@@ -2629,10 +2627,10 @@ class TabularPredictor:
                     f'Updated best model to "{self._trainer.model_best}" (Previously "{model_best}"). '
                     f'AutoGluon will default to using "{self._trainer.model_best}" for predict() and predict_proba().',
                 )
-            elif model_best in model_full_dict.values():
+            elif model_to_set_best in model_full_dict.values():
                 # Model best is already a refit full model
                 prev_best = self._trainer.model_best
-                self._trainer.model_best = model_best
+                self._trainer.model_best = model_to_set_best
                 self._trainer.save()
                 logger.log(
                     20,
@@ -2641,12 +2639,12 @@ class TabularPredictor:
                 )
             else:
                 logger.warning(
-                    f'Best model ("{model_best}") is not present in refit_full dictionary. '
+                    f'Best model ("{model_to_set_best}") is not present in refit_full dictionary. '
                     f'Training may have failed on the refit model. AutoGluon will default to using "{model_best}" for predict() and predict_proba().'
                 )
 
         te = time.time()
-        logger.log(20, f"Refit complete, total runtime = {round(te - ts, 2)}s")
+        logger.log(20, f'Refit complete, total runtime = {round(te - ts, 2)}s ... Best model: "{self._trainer.model_best}"')
         return refit_full_dict
 
     def get_model_best(self):
@@ -3531,20 +3529,20 @@ class TabularPredictor:
 
     @classmethod
     def _load_version_file(cls, path) -> str:
-        version_file_path = path + cls._predictor_version_file_name
+        version_file_path = os.path.join(path, cls._predictor_version_file_name)
         version = load_str.load(path=version_file_path)
         return version
 
     @classmethod
     def _load_metadata_file(cls, path: str, silent=True):
-        metadata_file_path = path + cls._predictor_metadata_file_name
+        metadata_file_path = os.path.join(path, cls._predictor_metadata_file_name)
         return load_json.load(path=metadata_file_path, verbose=not silent)
 
     def _save_version_file(self, silent=False):
         from ..version import __version__
 
         version_file_contents = f"{__version__}"
-        version_file_path = self.path + self._predictor_version_file_name
+        version_file_path = os.path.join(self.path, self._predictor_version_file_name)
         save_str.save(path=version_file_path, data=version_file_contents, verbose=not silent)
 
     def _save_metadata_file(self, silent=False):
@@ -3552,7 +3550,7 @@ class TabularPredictor:
         Save metadata json file to disk containing information such as
         python version, autogluon version, installed packages, operating system, etc.
         """
-        metadata_file_path = self.path + self._predictor_metadata_file_name
+        metadata_file_path = os.path.join(self.path, self._predictor_metadata_file_name)
 
         metadata = get_autogluon_metadata()
 
@@ -3577,7 +3575,7 @@ class TabularPredictor:
         self._learner.save()
         self._learner = None
         self._trainer = None
-        save_pkl.save(path=path + self.predictor_file_name, object=self)
+        save_pkl.save(path=os.path.join(path, self.predictor_file_name), object=self)
         self._learner = tmp_learner
         self._trainer = tmp_trainer
         self._save_version_file(silent=silent)
@@ -3593,7 +3591,7 @@ class TabularPredictor:
         """
         Inner load method, called in `load`.
         """
-        predictor: TabularPredictor = load_pkl.load(path=path + cls.predictor_file_name)
+        predictor: TabularPredictor = load_pkl.load(path=os.path.join(path, cls.predictor_file_name))
         learner = predictor._learner_type.load(path)
         predictor._set_post_fit_vars(learner=learner)
         return predictor
@@ -3641,7 +3639,7 @@ class TabularPredictor:
             version_saved = cls._load_version_file(path=path)
         except:
             logger.warning(
-                f'WARNING: Could not find version file at "{path + cls._predictor_version_file_name}".\n'
+                f'WARNING: Could not find version file at "{os.path.join(path, cls._predictor_version_file_name)}".\n'
                 f"This means that the predictor was fit in a version `<=0.3.1`."
             )
             version_saved = None
@@ -3668,7 +3666,7 @@ class TabularPredictor:
             metadata_init = cls._load_metadata_file(path=path)
         except:
             logger.warning(
-                f'WARNING: Could not find metadata file at "{path + cls._predictor_metadata_file_name}".\n'
+                f'WARNING: Could not find metadata file at "{os.path.join(path, cls._predictor_metadata_file_name)}".\n'
                 f"This could mean that the predictor was fit in a version `<=0.5.2`."
             )
             metadata_init = None

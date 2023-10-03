@@ -8,11 +8,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from autogluon.common.utils.log_utils import set_logger_verbosity
-from autogluon.common.utils.path_converter import PathConverter
 from autogluon.common.utils.utils import hash_pandas_df
 from autogluon.core.models import AbstractModel
 from autogluon.core.utils.exceptions import TimeLimitExceeded
@@ -22,6 +22,7 @@ from autogluon.timeseries import TimeSeriesDataFrame, TimeSeriesEvaluator
 from autogluon.timeseries.models.abstract import AbstractTimeSeriesModel
 from autogluon.timeseries.models.ensemble import AbstractTimeSeriesEnsembleModel, TimeSeriesGreedyEnsemble
 from autogluon.timeseries.models.presets import contains_searchspace
+from autogluon.timeseries.splitter import AbstractWindowSplitter, ExpandingWindowSplitter
 from autogluon.timeseries.utils.features import CovariateMetadata
 from autogluon.timeseries.utils.warning_filters import disable_tqdm
 
@@ -39,7 +40,6 @@ class SimpleAbstractTrainer:
 
     def __init__(self, path: str, low_memory: bool, save_data: bool, *args, **kwargs):
         self.path = path
-        self.path = PathConverter.to_relative(self.path)
         self.reset_paths = False
 
         self.low_memory = low_memory
@@ -88,6 +88,8 @@ class SimpleAbstractTrainer:
         """Get a member attribute for given model from the `model_graph`."""
         if not isinstance(model, str):
             model = model.name
+        if attribute == "path":
+            return os.path.join(*self.model_graph.nodes[model][attribute])
         return self.model_graph.nodes[model][attribute]
 
     def set_model_attribute(self, model: Union[str, AbstractModel], attribute: str, val):
@@ -98,36 +100,27 @@ class SimpleAbstractTrainer:
 
     @property
     def path_root(self) -> str:
-        return self.path.rsplit(os.path.sep, maxsplit=2)[0] + os.path.sep
+        return os.path.dirname(self.path)
 
     @property
     def path_utils(self) -> str:
-        return self.path_root + "utils" + os.path.sep
+        return os.path.join(self.path_root, "utils")
 
     @property
     def path_data(self) -> str:
-        return self.path_utils + "data" + os.path.sep
+        return os.path.join(self.path_utils, "data")
 
     @property
     def path_pkl(self) -> str:
-        return self.path + self.trainer_file_name
+        return os.path.join(self.path, self.trainer_file_name)
 
     def set_contexts(self, path_context: str) -> None:
-        self.path, model_paths = self.create_contexts(path_context)
-        for model, path in model_paths.items():
-            self.set_model_attribute(model=model, attribute="path", val=path)
+        self.path = self.create_contexts(path_context)
 
-    def create_contexts(self, path_context: str) -> Tuple[str, dict]:
+    def create_contexts(self, path_context: str) -> str:
         path = path_context
-        # TODO: consider keeping track of model path suffixes in model_graph instead
-        # TODO: of full paths
-        model_paths = self.get_models_attribute_dict(attribute="path")
-        for model, prev_path in model_paths.items():
-            model_local_path = prev_path.split(self.path, 1)[1]
-            new_path = path + model_local_path
-            model_paths[model] = new_path
 
-        return path, model_paths
+        return path
 
     def save(self) -> None:
         # todo: remove / revise low_memory logic
@@ -144,7 +137,7 @@ class SimpleAbstractTrainer:
 
     @classmethod
     def load(cls, path: str, reset_paths: bool = False) -> "SimpleAbstractTrainer":
-        load_path = path + cls.trainer_file_name
+        load_path = os.path.join(path, cls.trainer_file_name)
         if not reset_paths:
             return load_pkl.load(path=load_path)
         else:
@@ -173,7 +166,7 @@ class SimpleAbstractTrainer:
             path = self.get_model_attribute(model=model_name, attribute="path")
         if model_type is None:
             model_type = self.get_model_attribute(model=model_name, attribute="type")
-        return model_type.load(path=path, reset_paths=self.reset_paths)
+        return model_type.load(path=os.path.join(self.path, path), reset_paths=self.reset_paths)
 
     def construct_model_templates(self, hyperparameters: Union[str, Dict[str, Any]], **kwargs):
         raise NotImplementedError
@@ -199,7 +192,7 @@ class SimpleAbstractTrainer:
                     model = self.models[model]
             if isinstance(model, str):
                 model_type = self.get_model_attribute(model=model, attribute="type")
-                model_path = self.get_model_attribute(model=model, attribute="path")
+                model_path = os.path.join(self.path, self.get_model_attribute(model=model, attribute="path"))
                 model_info_dict[model] = model_type.load_info(path=model_path)
             else:
                 model_info_dict[model.name] = model.get_info()
@@ -207,7 +200,7 @@ class SimpleAbstractTrainer:
 
     @classmethod
     def load_info(cls, path, reset_paths=False, load_model_if_required=True) -> Dict[str, Any]:
-        load_path = path + cls.trainer_info_name
+        load_path = os.path.join(path, cls.trainer_info_name)
         try:
             return load_pkl.load(path=load_path)
         except:  # noqa
@@ -220,8 +213,8 @@ class SimpleAbstractTrainer:
     def save_info(self, include_model_info: bool = False):
         info = self.get_info(include_model_info=include_model_info)
 
-        save_pkl.save(path=self.path + self.trainer_info_name, object=info)
-        save_json.save(path=self.path + self.trainer_info_json_name, obj=info)
+        save_pkl.save(path=os.path.join(self.path, self.trainer_info_name), object=info)
+        save_json.save(path=os.path.join(self.path, self.trainer_info_json_name), obj=info)
         return info
 
     def get_info(self, include_model_info: bool = False) -> Dict[str, Any]:
@@ -265,17 +258,15 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
         save_data: bool = True,
         enable_ensemble: bool = True,
         verbosity: int = 2,
-        num_val_windows: int = 1,
+        val_splitter: Optional[AbstractWindowSplitter] = None,
+        refit_every_n_windows: Optional[int] = 1,
         cache_predictions: bool = True,
         **kwargs,
     ):
         super().__init__(path=path, save_data=save_data, low_memory=True, **kwargs)
 
         self.prediction_length = prediction_length
-        self.quantile_levels = kwargs.get(
-            "quantile_levels",
-            kwargs.get("quantiles", [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]),
-        )
+        self.quantile_levels = kwargs.get("quantile_levels", [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
         self.target = kwargs.get("target", "target")
         self.metadata = kwargs.get("metadata", CovariateMetadata())
         self.is_data_saved = False
@@ -291,24 +282,28 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
 
         self.eval_metric = TimeSeriesEvaluator.check_get_evaluation_metric(eval_metric)
         self.eval_metric_seasonal_period = eval_metric_seasonal_period
-        self.num_val_windows = num_val_windows
+        if val_splitter is None:
+            val_splitter = ExpandingWindowSplitter(prediction_length=self.prediction_length)
+        assert isinstance(val_splitter, AbstractWindowSplitter), "val_splitter must be of type AbstractWindowSplitter"
+        self.val_splitter = val_splitter
+        self.refit_every_n_windows = refit_every_n_windows
         self.cache_predictions = cache_predictions
         self.hpo_results = {}
 
     def save_train_data(self, data: TimeSeriesDataFrame, verbose: bool = True) -> None:
-        path = self.path_data + "train.pkl"
+        path = os.path.join(self.path_data, "train.pkl")
         save_pkl.save(path=path, object=data, verbose=verbose)
 
     def save_val_data(self, data: TimeSeriesDataFrame, verbose: bool = True) -> None:
-        path = self.path_data + "val.pkl"
+        path = os.path.join(self.path_data, "val.pkl")
         save_pkl.save(path=path, object=data, verbose=verbose)
 
     def load_train_data(self) -> TimeSeriesDataFrame:
-        path = self.path_data + "train.pkl"
+        path = os.path.join(self.path_data, "train.pkl")
         return load_pkl.load(path=path)
 
     def load_val_data(self) -> Optional[TimeSeriesDataFrame]:
-        path = self.path_data + "val.pkl"
+        path = os.path.join(self.path_data, "val.pkl")
         if os.path.exists(path):
             return load_pkl.load(path=path)
         else:
@@ -329,8 +324,8 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
 
         self.models = models
 
-    def _get_model_oof_predictions(self, model_name: str) -> TimeSeriesDataFrame:
-        model_path = self.get_model_attribute(model=model_name, attribute="path")
+    def _get_model_oof_predictions(self, model_name: str) -> List[TimeSeriesDataFrame]:
+        model_path = os.path.join(self.path, self.get_model_attribute(model=model_name, attribute="path"))
         model_type = self.get_model_attribute(model=model_name, attribute="type")
         return model_type.load_oof_predictions(path=model_path)
 
@@ -356,7 +351,7 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
             If ``base_models`` are provided and ``model`` is not a ``AbstractTimeSeriesEnsembleModel``.
         """
         node_attrs = dict(
-            path=model.path,
+            path=os.path.relpath(model.path, self.path).split(os.sep),
             type=type(model),
             fit_time=model.fit_time,
             predict_time=model.predict_time,
@@ -393,7 +388,7 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
     def get_model_names(self, level: Optional[int] = None, **kwargs) -> List[str]:
         """Get model names that are registered in the model graph"""
         if level is not None:
-            return list(node for node, l in self._get_model_levels().items() if l == level)
+            return list(node for node, l in self._get_model_levels().items() if l == level)  # noqa: E741
         return list(self.model_graph.nodes)
 
     def _train_single(
@@ -410,7 +405,8 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
             val_data=val_data,
             time_limit=time_limit,
             verbosity=self.verbosity,
-            num_val_windows=self.num_val_windows,
+            val_splitter=self.val_splitter,
+            refit_every_n_windows=self.refit_every_n_windows,
         )
         return model
 
@@ -436,7 +432,8 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
                 hyperparameter_tune_kwargs=hyperparameter_tune_kwargs,
                 time_limit=time_limit,
                 default_num_trials=default_num_trials,
-                num_val_windows=self.num_val_windows,
+                val_splitter=self.val_splitter,
+                refit_every_n_windows=self.refit_every_n_windows,
             )
         total_tuning_time = time.time() - tuning_start_time
 
@@ -444,7 +441,7 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
         model_names_trained = []
         # add each of the trained HPO configurations to the trained models
         for model_hpo_name, model_info in hpo_models.items():
-            model_path = model_info["path"]
+            model_path = os.path.join(self.path, model_info["path"])
             # Only load model configurations that didn't fail
             if Path(model_path).exists():
                 model_hpo = self.load_model(model_hpo_name, path=model_path, model_type=type(model))
@@ -558,17 +555,12 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
                 self.save_val_data(val_data)
             self.is_data_saved = True
 
-        if self.num_val_windows > 0:
-            assert val_data is None, "val_data shouldn't be provided if num_val_windows > 0"
-        else:
-            assert val_data is not None, "val_data should be provided if num_val_windows > 0"
-
         if models is None:
             models = self.construct_model_templates(
                 hyperparameters=hyperparameters,
                 hyperparameter_tune=hyperparameter_tune_kwargs is not None,  # TODO: remove hyperparameter_tune
                 freq=train_data.freq,
-                multi_window=self.num_val_windows > 0,
+                multi_window=self.val_splitter.num_val_windows > 0,
                 excluded_model_types=excluded_model_types,
             )
 
@@ -647,11 +639,9 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
                 )
             else:
                 try:
-                    if val_data is None:
-                        val_data = self._get_ensemble_oof_data(train_data)
                     model_names_trained.append(
                         self.fit_ensemble(
-                            val_data=val_data,
+                            data_per_window=self._get_ensemble_oof_data(train_data=train_data, val_data=val_data),
                             model_names=models_available_for_ensemble,
                             time_limit=time_left_for_ensemble,
                         )
@@ -674,21 +664,13 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
 
         return model_names_trained
 
-    def _get_ensemble_oof_data(self, train_data: TimeSeriesDataFrame) -> TimeSeriesDataFrame:
-        """Stack validation data for all windows into a single dataframe"""
-        split_per_window = []
-        for window_index in range(self.num_val_windows):
-            if window_index == 0:
-                end_index = None
-            else:
-                end_index = -self.prediction_length * window_index
-            _, val_fold = train_data.train_test_split(
-                self.prediction_length,
-                end_index=end_index,
-                suffix=f"_W{window_index}",
-            )
-            split_per_window.append(val_fold)
-        return pd.concat(split_per_window)
+    def _get_ensemble_oof_data(
+        self, train_data: TimeSeriesDataFrame, val_data: Optional[TimeSeriesDataFrame]
+    ) -> List[TimeSeriesDataFrame]:
+        if val_data is None:
+            return [val_fold for _, val_fold in self.val_splitter.split(train_data)]
+        else:
+            return [val_data]
 
     def _get_ensemble_model_name(self) -> str:
         """Ensure we don't have name collisions in the ensemble model name"""
@@ -700,11 +682,11 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
         return ensemble_name
 
     def fit_ensemble(
-        self, val_data: TimeSeriesDataFrame, model_names: List[str], time_limit: Optional[float] = None
+        self, data_per_window: List[TimeSeriesDataFrame], model_names: List[str], time_limit: Optional[float] = None
     ) -> str:
         logger.info("Fitting simple weighted ensemble.")
 
-        model_preds = {}
+        model_preds: Dict[str, List[TimeSeriesDataFrame]] = {}
         for model_name in model_names:
             model_preds[model_name] = self._get_model_oof_predictions(model_name=model_name)
 
@@ -716,28 +698,29 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
             target=self.target,
             prediction_length=self.prediction_length,
             path=self.path,
-            freq=val_data.freq,
+            freq=data_per_window[0].freq,
             quantile_levels=self.quantile_levels,
             metadata=self.metadata,
         )
-        ensemble.fit_ensemble(predictions=model_preds, data=val_data, time_limit=time_limit)
-        time_end = time.time()
-        ensemble.fit_time = time_end - time_start
+        ensemble.fit_ensemble(model_preds, data_per_window=data_per_window, time_limit=time_limit)
+        ensemble.fit_time = time.time() - time_start
 
         predict_time = 0
         for m in ensemble.model_names:
             predict_time += self.get_model_attribute(model=m, attribute="predict_time")
         ensemble.predict_time = predict_time
 
-        predictions = ensemble.predict({n: model_preds[n] for n in ensemble.model_names})
-        ensemble.val_score = self._score_with_predictions(val_data, predictions)
+        score_per_fold = []
+        for window_idx, data in enumerate(data_per_window):
+            predictions = ensemble.predict({n: model_preds[n][window_idx] for n in ensemble.model_names})
+            score_per_fold.append(self._score_with_predictions(data, predictions))
+        ensemble.val_score = np.mean(score_per_fold)
 
         self._log_scores_and_times(
             val_score=ensemble.val_score,
             fit_time=ensemble.fit_time,
             predict_time=ensemble.predict_time,
         )
-
         self._add_model(model=ensemble, base_models=ensemble.model_names)
         self.save_model(model=ensemble)
         return ensemble.name
@@ -958,7 +941,7 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
                         model_pred_dict=model_pred_dict,
                     )
                     pred_time_dict_marginal[model_name] = time.time() - predict_start_time
-                except Exception as e:
+                except Exception:
                     failed_models.append(model_name)
                     logger.error(f"Model {model_name} failed to predict with the following exception:")
                     logger.error(traceback.format_exc())
@@ -1012,7 +995,7 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
                     return model_pred_dict, pred_time_dict
                 else:
                     logger.warning(f"Found corrupted cached predictions in {self._cached_predictions_path}")
-        logger.debug(f"Found no cached predictions")
+        logger.debug("Found no cached predictions")
         return {}, {}
 
     def _save_cached_pred_dicts(
@@ -1020,7 +1003,7 @@ class AbstractTimeSeriesTrainer(SimpleAbstractTrainer):
     ) -> None:
         # TODO: Save separate file for each dataset if _cached_predictions file grows large?
         if self._cached_predictions_path.exists():
-            logger.debug(f"Extending existing cached predictions")
+            logger.debug("Extending existing cached predictions")
             cached_predictions = load_pkl.load(str(self._cached_predictions_path))
         else:
             cached_predictions = {}

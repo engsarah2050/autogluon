@@ -1,12 +1,10 @@
 """Unit tests for learners"""
-import os
 import shutil
 import tempfile
 from collections import defaultdict
 from unittest import mock
 
 import numpy as np
-import pandas as pd
 import pytest
 
 from autogluon.common import space
@@ -31,7 +29,7 @@ def trained_learners():
     for hp in TEST_HYPERPARAMETER_SETTINGS:
         temp_model_path = tempfile.mkdtemp()
         learner = TimeSeriesLearner(
-            path_context=temp_model_path + os.path.sep,
+            path_context=temp_model_path,
             eval_metric="MASE",
             prediction_length=3,
         )
@@ -190,7 +188,7 @@ def test_when_static_features_in_tuning_data_are_missing_then_exception_is_raise
     val_data = get_data_frame_with_variable_lengths({"B": 25, "A": 20}, static_features=None)
     learner = TimeSeriesLearner(path_context=temp_model_path)
     with pytest.raises(ValueError, match="Provided tuning_data must contain static_features"):
-        learner.fit(train_data=train_data, val_data=val_data, num_val_windows=0)
+        learner.fit(train_data=train_data, val_data=val_data)
 
 
 def test_when_static_features_columns_in_tuning_data_are_missing_then_exception_is_raised(temp_model_path):
@@ -202,7 +200,7 @@ def test_when_static_features_columns_in_tuning_data_are_missing_then_exception_
     )
     learner = TimeSeriesLearner(path_context=temp_model_path)
     with pytest.raises(KeyError, match="required columns are missing from the provided"):
-        learner.fit(train_data=train_data, val_data=val_data, num_val_windows=0)
+        learner.fit(train_data=train_data, val_data=val_data)
 
 
 def test_when_train_data_has_no_static_features_but_val_data_has_static_features_then_val_data_features_get_removed(
@@ -348,40 +346,6 @@ def test_given_extra_items_and_timestamps_are_present_in_dataframe_when_learner_
                 pred_data.loc[item_id].index, freq=pred_data.freq, prediction_length=prediction_length
             )
             assert (passed_known_covariates.loc[item_id].index == expected_forecast_timestamps).all()
-
-
-def test_given_ignore_index_is_true_and_covariates_too_short_when_learner_predicts_then_exception_is_raised(
-    temp_model_path,
-):
-    prediction_length = 5
-    learner = TimeSeriesLearner(
-        path_context=temp_model_path,
-        known_covariates_names=["Y", "X"],
-        prediction_length=prediction_length,
-        ignore_time_index=True,
-    )
-    train_data = get_data_frame_with_variable_lengths(ITEM_ID_TO_LENGTH, covariates_names=["Y", "X"])
-    learner.fit(train_data=train_data, hyperparameters=HYPERPARAMETERS_DUMMY)
-    short_known_covariates = get_data_frame_with_variable_lengths(
-        {k: 4 for k in ITEM_ID_TO_LENGTH.keys()}, covariates_names=["X", "Y"]
-    )
-    with pytest.raises(ValueError, match=f"should include the values for prediction_length={prediction_length}"):
-        learner.predict(train_data, known_covariates=short_known_covariates)
-
-
-def test_when_ignore_index_is_true_and_known_covariates_available_then_learner_can_predict(temp_model_path):
-    prediction_length = 5
-    learner = TimeSeriesLearner(
-        path_context=temp_model_path,
-        known_covariates_names=["Y", "X"],
-        prediction_length=prediction_length,
-        ignore_time_index=True,
-    )
-    train_data = get_data_frame_with_variable_lengths(ITEM_ID_TO_LENGTH, covariates_names=["Y", "X"])
-    learner.fit(train_data=train_data, hyperparameters={"DeepAR": {"epochs": 1, "num_batches_per_epoch": 1}})
-    known_covariates = get_data_frame_with_variable_lengths(ITEM_ID_TO_LENGTH, covariates_names=["X", "Y"])
-    preds = learner.predict(train_data, known_covariates=known_covariates)
-    assert preds.item_ids.equals(train_data.item_ids)
 
 
 @pytest.mark.parametrize("pred_data_present", [True, False])

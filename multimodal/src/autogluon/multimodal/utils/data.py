@@ -147,7 +147,6 @@ def create_data_processor(
     elif data_type == TEXT:
         data_processor = TextProcessor(
             model=model,
-            tokenizer_name=model_config.tokenizer_name,
             max_len=model_config.max_text_len,
             insert_sep=model_config.insert_sep,
             text_segment_num=model_config.text_segment_num,
@@ -173,7 +172,7 @@ def create_data_processor(
         data_processor = NerProcessor(
             model=model,
             max_len=model_config.max_text_len,
-            config=config,
+            entity_map=config.entity_map,
         )
     elif data_type == ROIS:
         data_processor = MMDetProcessor(

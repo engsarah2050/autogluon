@@ -48,7 +48,7 @@ extras_require = {
         "xgboost>=1.6,<1.8",
     ],
     "fastai": [
-        "torch>=1.9,<1.14",
+        "torch",  # version range defined in `core/_setup_utils.py`
         "fastai>=2.3.1,<2.8",
     ],
     "tabpfn": [
@@ -69,13 +69,13 @@ extras_require = {
         "vowpalwabbit>=9,<9.9",
     ],
     "skl2onnx": [
-        "skl2onnx>=1.13.0,<1.14.0",
+        "skl2onnx>=1.15.0,<1.16.0",
         # For macOS, there isn't a onnxruntime-gpu package installed with skl2onnx.
         # Therefore, we install onnxruntime explicitly here just for macOS.
-        "onnxruntime>=1.13.0,<1.14.0",
+        "onnxruntime>=1.15.0,<1.16.0",
     ]
     if sys.platform == "darwin"
-    else ["skl2onnx>=1.13.0,<1.14.0", "onnxruntime-gpu>=1.13.0,<1.14.0"],
+    else ["skl2onnx>=1.15.0,<1.16.0", "onnxruntime-gpu>=1.15.0,<1.16.0"],
 }
 
 # TODO: v1.0: Rename `all` to `core`, make `all` contain everything.
@@ -92,6 +92,7 @@ for test_package in ["tabpfn", "imodels", "vowpalwabbit", "skl2onnx"]:
     test_requires += extras_require[test_package]
 extras_require["tests"] = test_requires
 install_requires = ag.get_dependency_version_ranges(install_requires)
+extras_require = {key: ag.get_dependency_version_ranges(value) for key, value in extras_require.items()}
 
 if __name__ == "__main__":
     ag.create_version_file(version=version, submodule=submodule)

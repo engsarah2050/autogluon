@@ -4,7 +4,7 @@ import copy
 import itertools
 import logging
 from collections.abc import Iterable
-from typing import Any, List, Optional, Tuple, Type
+from typing import Any, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -12,6 +12,7 @@ from joblib.parallel import Parallel, delayed
 from pandas.core.internals import ArrayManager, BlockManager
 
 from autogluon.common.loaders import load_pd
+from autogluon.common.utils.deprecated_utils import Deprecated
 
 logger = logging.getLogger(__name__)
 
@@ -99,8 +100,7 @@ class TimeSeriesDataFrame(pd.DataFrame):
 
     def __init__(self, data: Any, static_features: Optional[pd.DataFrame] = None, *args, **kwargs):
         if isinstance(data, (BlockManager, ArrayManager)):
-            # necessary for copy constructor to work. see _constructor
-            # and pandas.DataFrame
+            # necessary for copy constructor to work in pandas <= 2.0.x. In >= 2.1.x this is replaced by _constructor_from_mgr
             pass
         elif isinstance(data, pd.DataFrame):
             if isinstance(data.index, pd.MultiIndex):
@@ -127,6 +127,14 @@ class TimeSeriesDataFrame(pd.DataFrame):
     @property
     def _constructor(self) -> Type[TimeSeriesDataFrame]:
         return TimeSeriesDataFrame
+
+    def _constructor_from_mgr(self, mgr, axes):
+        # Use the default constructor when constructing from _mgr. Otherwise pandas enters an infinite recursion by
+        # repeatedly calling TimeSeriesDataFrame constructor
+        df = self._from_mgr(mgr, axes=axes)
+        df._static_features = self._static_features
+        df._cached_freq = self._cached_freq
+        return df
 
     @property
     def item_ids(self) -> pd.Index:
@@ -209,10 +217,8 @@ class TimeSeriesDataFrame(pd.DataFrame):
                 raise ValueError(f"{i}'th time-series in data must be a dict, got{type(ts)}")
             if not ("target" in ts and "start" in ts):
                 raise ValueError(f"{i}'th time-series in data must have 'target' and 'start', got{ts.keys()}")
-            if not isinstance(ts["start"], (pd.Timestamp, pd.Period)) or ts["start"].freq is None:
-                raise ValueError(
-                    f"{i}'th time-series must have timestamp as 'start' with freq specified, got {ts['start']}"
-                )
+            if not isinstance(ts["start"], pd.Period):
+                raise ValueError(f"{i}'th time-series must have a pandas Period as 'start', got {ts['start']}")
 
     @classmethod
     def _validate_data_frame(cls, df: pd.DataFrame):
@@ -226,11 +232,10 @@ class TimeSeriesDataFrame(pd.DataFrame):
             raise ValueError(f"`{ITEMID}` column can not have nan")
         if df[TIMESTAMP].isnull().any():
             raise ValueError(f"`{TIMESTAMP}` column can not have nan")
-        if not df[TIMESTAMP].dtype == "datetime64[ns]":
-            raise ValueError(f"for {TIMESTAMP}, the only pandas dtype allowed is `datetime64[ns]`.")
+        if not pd.api.types.is_datetime64_dtype(df[TIMESTAMP]):
+            raise ValueError(f"for {TIMESTAMP}, the only pandas dtype allowed is `datetime64`.")
         item_id_column = df[ITEMID]
-        # workaround for pd.api.types.is_string_dtype issue https://github.com/pandas-dev/pandas/issues/15585
-        item_id_is_string = (item_id_column == item_id_column.astype(str)).all()
+        item_id_is_string = pd.api.types.is_string_dtype(item_id_column)
         item_id_is_int = pd.api.types.is_integer_dtype(item_id_column)
         if not (item_id_is_string or item_id_is_int):
             raise ValueError(f"all entries in column `{ITEMID}` must be of integer or string dtype")
@@ -249,13 +254,12 @@ class TimeSeriesDataFrame(pd.DataFrame):
             raise ValueError(f"data must be a pd.DataFrame, got {type(data)}")
         if not isinstance(data.index, pd.MultiIndex):
             raise ValueError(f"data must have pd.MultiIndex, got {type(data.index)}")
-        if not data.index.dtypes.array[1] == "datetime64[ns]":
-            raise ValueError(f"for {TIMESTAMP}, the only pandas dtype allowed is `datetime64[ns]`.")
+        if not pd.api.types.is_datetime64_dtype(data.index.dtypes[TIMESTAMP]):
+            raise ValueError(f"for {TIMESTAMP}, the only pandas dtype allowed is `datetime64`.")
         if not data.index.names == (f"{ITEMID}", f"{TIMESTAMP}"):
             raise ValueError(f"data must have index names as ('{ITEMID}', '{TIMESTAMP}'), got {data.index.names}")
         item_id_index = data.index.get_level_values(level=ITEMID)
-        # workaround for pd.api.types.is_string_dtype issue https://github.com/pandas-dev/pandas/issues/15585
-        item_id_is_string = (item_id_index == item_id_index.astype(str)).all()
+        item_id_is_string = pd.api.types.is_string_dtype(item_id_index)
         item_id_is_int = pd.api.types.is_integer_dtype(item_id_index)
         if not (item_id_is_string or item_id_is_int):
             raise ValueError(f"all entries in index `{ITEMID}` must be of integer or string dtype")
@@ -292,13 +296,13 @@ class TimeSeriesDataFrame(pd.DataFrame):
         ----------
         iterable_dataset: Iterable
             An iterator over dictionaries, each with a ``target`` field specifying the value of the
-            (univariate) time series, and a ``start`` field that features a pandas Timestamp with features.
+            (univariate) time series, and a ``start`` field with the starting time as a pandas Period .
             Example::
 
                 iterable_dataset = [
-                    {"target": [0, 1, 2], "start": pd.Timestamp("01-01-2019", freq='D')},
-                    {"target": [3, 4, 5], "start": pd.Timestamp("01-01-2019", freq='D')},
-                    {"target": [6, 7, 8], "start": pd.Timestamp("01-01-2019", freq='D')}
+                    {"target": [0, 1, 2], "start": pd.Period("01-01-2019", freq='D')},
+                    {"target": [3, 4, 5], "start": pd.Period("01-01-2019", freq='D')},
+                    {"target": [6, 7, 8], "start": pd.Period("01-01-2019", freq='D')}
                 ]
         num_cpus : int, default = -1
             Number of CPU cores used to process the iterable dataset in parallel. Set to -1 to use all cores.
@@ -322,7 +326,6 @@ class TimeSeriesDataFrame(pd.DataFrame):
         id_column: Optional[str] = None,
         timestamp_column: Optional[str] = None,
     ) -> pd.DataFrame:
-
         df = df.copy()
         if id_column is not None:
             assert id_column in df.columns, f"Column '{id_column}' not found!"
@@ -497,7 +500,7 @@ class TimeSeriesDataFrame(pd.DataFrame):
 
         Examples
         --------
-        >>> print(ts_dataframe)
+        >>> ts_df
                             target
         item_id timestamp
         0       2019-01-01       0
@@ -582,7 +585,7 @@ class TimeSeriesDataFrame(pd.DataFrame):
 
         Returns
         -------
-        ts_df: TimeSeriesDataFrame
+        ts_df : TimeSeriesDataFrame
             A new time series dataframe containing entries of the original time series between start and end timestamps.
         """
 
@@ -596,7 +599,7 @@ class TimeSeriesDataFrame(pd.DataFrame):
         )
 
     @classmethod
-    def from_pickle(cls, filepath_or_buffer: Any) -> "TimeSeriesDataFrame":
+    def from_pickle(cls, filepath_or_buffer: Any) -> TimeSeriesDataFrame:
         """Convenience method to read pickled time series data frames. If the read pickle
         file refers to a plain pandas DataFrame, it will be cast to a TimeSeriesDataFrame.
 
@@ -607,7 +610,7 @@ class TimeSeriesDataFrame(pd.DataFrame):
 
         Returns
         -------
-        ts_df: TimeSeriesDataFrame
+        ts_df : TimeSeriesDataFrame
             The pickled time series data frame.
         """
         try:
@@ -616,6 +619,7 @@ class TimeSeriesDataFrame(pd.DataFrame):
         except Exception as err:  # noqa
             raise IOError(f"Could not load pickled data set due to error: {str(err)}")
 
+    @Deprecated(min_version_to_warn="0.9", min_version_to_error="1.0")
     def get_reindexed_view(self, freq: str = "S") -> TimeSeriesDataFrame:
         """Returns a new TimeSeriesDataFrame object with the same underlying data and
         static features as the current data frame, except the time index is replaced by
@@ -649,7 +653,8 @@ class TimeSeriesDataFrame(pd.DataFrame):
 
         return df_view
 
-    def to_regular_index(self, freq: str) -> "TimeSeriesDataFrame":
+    @Deprecated(min_version_to_warn="0.9", min_version_to_error="1.0", new="convert_frequency")
+    def to_regular_index(self, freq: str) -> TimeSeriesDataFrame:
         """Fill the gaps in an irregularly-sampled time series with NaNs.
 
         Parameters
@@ -659,7 +664,7 @@ class TimeSeriesDataFrame(pd.DataFrame):
 
         Examples
         --------
-        >>> print(ts_dataframe)
+        >>> ts_df
                             target
         item_id timestamp
         0       2019-01-01     NaN
@@ -669,7 +674,7 @@ class TimeSeriesDataFrame(pd.DataFrame):
         1       2019-02-04     3.0
                 2019-02-07     4.0
 
-        >>> print(ts_dataframe.to_regular_index(freq="D"))
+        >>> ts_df.to_regular_index(freq="D")
                             target
         item_id timestamp
         0       2019-01-01     NaN
@@ -685,30 +690,9 @@ class TimeSeriesDataFrame(pd.DataFrame):
                 2019-02-07     4.0
 
         """
-        if self.freq is not None:
-            if self.freq != freq:
-                raise ValueError(
-                    f"TimeSeriesDataFrame already has a regular index with freq '{self.freq}' "
-                    f"that cannot be converted to the given freq '{freq}'"
-                )
-            else:
-                return self
+        return self.convert_frequency(freq=freq)
 
-        filled_series = []
-        for item_id, time_series in self.groupby(level=ITEMID, sort=False):
-            time_series = time_series.droplevel(ITEMID)
-            timestamps = time_series.index
-            resampled_ts = time_series.resample(freq).asfreq()
-            if not timestamps.isin(resampled_ts.index).all():
-                raise ValueError(
-                    f"Irregularly-sampled timestamps in this TimeSeriesDataFrame are not compatible "
-                    f"with the given frequency '{freq}'"
-                )
-            filled_series.append(pd.concat({item_id: resampled_ts}, names=[ITEMID]))
-
-        return TimeSeriesDataFrame(pd.concat(filled_series), static_features=self.static_features)
-
-    def fill_missing_values(self, method: str = "auto", value: float = 0.0) -> "TimeSeriesDataFrame":
+    def fill_missing_values(self, method: str = "auto", value: float = 0.0) -> TimeSeriesDataFrame:
         """Fill missing values represented by NaN.
 
         Parameters
@@ -726,7 +710,7 @@ class TimeSeriesDataFrame(pd.DataFrame):
 
         Examples
         --------
-        >>> print(ts_dataframe)
+        >>> ts_df
                             target
         item_id timestamp
         0       2019-01-01     NaN
@@ -741,7 +725,7 @@ class TimeSeriesDataFrame(pd.DataFrame):
                 2019-02-06     NaN
                 2019-02-07     4.0
 
-        >>> print(ts_dataframe.fill_missing_values(method="auto"))
+        >>> ts_df.fill_missing_values(method="auto")
                             target
         item_id timestamp
         0       2019-01-01     1.0
@@ -765,11 +749,13 @@ class TimeSeriesDataFrame(pd.DataFrame):
 
         grouped_df = pd.DataFrame(self).groupby(level=ITEMID, sort=False, group_keys=False)
         if method == "auto":
-            filled_df = grouped_df.fillna(method="ffill").fillna(method="bfill")
+            filled_df = grouped_df.ffill()
+            # Fill missing values at the start of each time series with bfill
+            filled_df = filled_df.groupby(level=ITEMID, sort=False, group_keys=False).bfill()
         elif method in ["ffill", "pad"]:
-            filled_df = grouped_df.fillna(method="ffill")
+            filled_df = grouped_df.ffill()
         elif method in ["bfill", "backfill"]:
-            filled_df = grouped_df.fillna(method="bfill")
+            filled_df = grouped_df.bfill()
         elif method == "constant":
             filled_df = self.fillna(value=value)
         elif method == "interpolate":
@@ -782,13 +768,14 @@ class TimeSeriesDataFrame(pd.DataFrame):
             )
         return TimeSeriesDataFrame(filled_df, static_features=self.static_features)
 
-    def dropna(self, how: str = "any") -> "TimeSeriesDataFrame":
+    def dropna(self, how: str = "any") -> TimeSeriesDataFrame:
         """Drop rows containing NaNs.
 
         Parameters
         ----------
         how : {"any", "all"}, default = "any"
             Determine if row or column is removed from TimeSeriesDataFrame, when we have at least one NaN or all NaN.
+
             - "any" : If any NaN values are present, drop that row or column.
             - "all" : If all values are NaN, drop that row or column.
         """
@@ -864,3 +851,104 @@ class TimeSeriesDataFrame(pd.DataFrame):
                     data.static_features.index = data.static_features.index.astype(str)
                     data.static_features.index += suffix
         return train_data, test_data
+
+    def convert_frequency(
+        self,
+        freq: Union[str, pd.DateOffset],
+        agg_numeric: str = "mean",
+        agg_categorical: str = "first",
+        **kwargs,
+    ) -> TimeSeriesDataFrame:
+        """Convert each time series in the data frame to the given frequency.
+
+        This method is useful for two purposes:
+
+        1. Converting an irregularly-sampled time series to a regular time index.
+        2. Aggregating time series data by downsampling (e.g., convert daily sales into weekly sales)
+
+        Parameters
+        ----------
+        freq : Union[str, pd.DateOffset]
+            Frequency to which the data should be converted. See [pandas frequency aliases](https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases)
+            for supported values.
+        agg_numeric : {"max", "min", "sum", "mean", "median", "first", "last"}, default = "mean"
+            Aggregation method applied to numeric columns.
+        agg_categorical : {"first", "last"}, default = "first"
+            Aggregation method applied to categorical columns.
+        **kwargs
+            Additional keywords arguments that will be passed to ``pandas.DataFrameGroupBy.resample``.
+
+        Returns
+        -------
+        ts_df : TimeSeriesDataFrame
+            A new time series dataframe with time series resampled at the new frequency. Output may contain missing
+            values represented by ``NaN`` if original data does not have information for the given period.
+
+        Examples
+        --------
+        Convert irregularly-sampled time series data to a regular index
+
+        >>> ts_df
+                            target
+        item_id timestamp
+        0       2019-01-01     NaN
+                2019-01-03     1.0
+                2019-01-06     2.0
+                2019-01-07     NaN
+        1       2019-02-04     3.0
+                2019-02-07     4.0
+        >>> ts_df.convert_frequency(freq="D")
+                            target
+        item_id timestamp
+        0       2019-01-01     NaN
+                2019-01-02     NaN
+                2019-01-03     1.0
+                2019-01-04     NaN
+                2019-01-05     NaN
+                2019-01-06     2.0
+                2019-01-07     NaN
+        1       2019-02-04     3.0
+                2019-02-05     NaN
+                2019-02-06     NaN
+                2019-02-07     4.0
+
+        Downsample quarterly data to yearly frequency
+
+        >>> ts_df
+                            target
+        item_id timestamp
+        0       2020-03-31     1.0
+                2020-06-30     2.0
+                2020-09-30     3.0
+                2020-12-31     4.0
+                2021-03-31     5.0
+                2021-06-30     6.0
+                2021-09-30     7.0
+                2021-12-31     8.0
+        >>> ts_df.convert_frequency("Y")
+                            target
+        item_id timestamp
+        0       2020-12-31     2.5
+                2021-12-31     6.5
+        >>> ts_df.convert_frequency("Y", agg_numeric="sum")
+                            target
+        item_id timestamp
+        0       2020-12-31    10.0
+                2021-12-31    26.0
+        """
+        if self.freq == pd.tseries.frequencies.to_offset(freq).freqstr:
+            return self
+
+        # We need to aggregate categorical columns separately because .agg("mean") deletes all non-numeric columns
+        aggregation = {}
+        for col in self.columns:
+            if pd.api.types.is_numeric_dtype(self.dtypes[col]):
+                aggregation[col] = agg_numeric
+            else:
+                aggregation[col] = agg_categorical
+
+        resampled_df = TimeSeriesDataFrame(
+            self.groupby(level=ITEMID, sort=False).resample(freq, level=TIMESTAMP, **kwargs).agg(aggregation)
+        )
+        resampled_df.static_features = self.static_features
+        return resampled_df

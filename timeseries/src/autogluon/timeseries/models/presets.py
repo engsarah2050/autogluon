@@ -4,7 +4,6 @@ import re
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Type, Union
 
-import autogluon.timeseries as agts
 from autogluon.common import space
 from autogluon.core import constants
 
@@ -12,19 +11,21 @@ from . import (
     ARIMAModel,
     AutoARIMAModel,
     AutoETSModel,
+    AverageModel,
     DeepARModel,
     DirectTabularModel,
     DLinearModel,
     DynamicOptimizedThetaModel,
     ETSModel,
     NaiveModel,
+    NPTSModel,
     PatchTSTModel,
     RecursiveTabularModel,
+    SeasonalAverageModel,
     SeasonalNaiveModel,
     SimpleFeedForwardModel,
     TemporalFusionTransformerModel,
     ThetaModel,
-    ThetaStatsmodelsModel,
 )
 from .abstract import AbstractTimeSeriesModel
 from .multi_window.multi_window_model import MultiWindowBacktestingModel
@@ -42,42 +43,27 @@ MODEL_TYPES = dict(
     TemporalFusionTransformer=TemporalFusionTransformerModel,
     RecursiveTabular=RecursiveTabularModel,
     DirectTabular=DirectTabularModel,
+    Average=AverageModel,
+    SeasonalAverage=SeasonalAverageModel,
     Naive=NaiveModel,
     SeasonalNaive=SeasonalNaiveModel,
     AutoETS=AutoETSModel,
     AutoARIMA=AutoARIMAModel,
     DynamicOptimizedTheta=DynamicOptimizedThetaModel,
+    NPTS=NPTSModel,
     Theta=ThetaModel,
     ARIMA=ARIMAModel,
     ETS=ETSModel,
-    ThetaStatsmodels=ThetaStatsmodelsModel,
 )
-if agts.MXNET_INSTALLED:
-    from .gluonts.mx import (
-        DeepARMXNetModel,
-        MQCNNMXNetModel,
-        MQRNNMXNetModel,
-        SimpleFeedForwardMXNetModel,
-        TemporalFusionTransformerMXNetModel,
-        TransformerMXNetModel,
-    )
-
-    MODEL_TYPES.update(
-        dict(
-            DeepARMXNet=DeepARMXNetModel,
-            SimpleFeedForwardMXNet=SimpleFeedForwardMXNetModel,
-            MQCNNMXNet=MQCNNMXNetModel,
-            MQRNNMXNet=MQRNNMXNetModel,
-            TransformerMXNet=TransformerMXNetModel,
-            TemporalFusionTransformerMXNet=TemporalFusionTransformerMXNetModel,
-        )
-    )
 
 DEFAULT_MODEL_NAMES = {v: k for k, v in MODEL_TYPES.items()}
 DEFAULT_MODEL_PRIORITY = dict(
     Naive=100,
     SeasonalNaive=100,
+    Average=100,
+    SeasonalAverage=100,
     Theta=90,
+    NPTS=80,
     AutoETS=80,
     ETS=80,
     RecursiveTabular=70,
@@ -88,15 +74,8 @@ DEFAULT_MODEL_PRIORITY = dict(
     AutoARIMA=30,
     # Models below are not included in any presets
     ARIMA=30,
-    ThetaStatsmodels=90,
     SimpleFeedForward=30,
     DynamicOptimizedTheta=30,
-    DeepARMXNet=50,
-    SimpleFeedForwardMXNet=30,
-    TemporalFusionTransformerMXNet=50,
-    TransformerMXNet=30,
-    MQCNNMXNet=10,
-    MQRNNMXNet=10,
 )
 DEFAULT_CUSTOM_MODEL_PRIORITY = 0
 
@@ -218,9 +197,12 @@ def get_preset_models(
                 raise ValueError(f"Model {model} is not supported yet.")
             if model in excluded_models:
                 logger.info(
-                    f"\tFound '{model}' model in hyperparameters, but '{model}' "
+                    f"\tFound '{model}' model in `hyperparameters`, but '{model}' "
                     "is present in `excluded_model_types` and will be removed."
                 )
+                continue
+            if "mxnet" in model.lower():
+                logger.info(f"\tMXNet model '{model}' given in `hyperparameters` is deprecated and won't be trained. ")
                 continue
             model_type = MODEL_TYPES[model]
         elif isinstance(model, type):
@@ -327,9 +309,9 @@ def verify_contains_at_least_one_searchspace(hyperparameters: Dict[str, List[Mod
                 return
 
     raise ValueError(
-        f"Hyperparameter tuning specified, but no model contains a hyperparameter search space. "
-        f"Please disable hyperparameter tuning with `hyperparameter_tune_kwargs=None` or provide a search space "
-        f"for at least one model."
+        "Hyperparameter tuning specified, but no model contains a hyperparameter search space. "
+        "Please disable hyperparameter tuning with `hyperparameter_tune_kwargs=None` or provide a search space "
+        "for at least one model."
     )
 
 

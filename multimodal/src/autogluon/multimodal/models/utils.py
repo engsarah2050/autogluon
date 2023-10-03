@@ -1,16 +1,26 @@
 import logging
 import re
+import warnings
 from typing import Dict, List, Optional, Tuple
 
 import torch
+import torch._dynamo
 from torch import nn
 from torch.nn.modules.loss import _Loss
-from transformers import AutoConfig, AutoModel
+from transformers import AutoConfig, AutoModel, AutoTokenizer, BertTokenizer, CLIPTokenizer, ElectraTokenizer
 
 from ..constants import AUTOMM, COLUMN_FEATURES, FEATURES, LOGITS, MASKS, OCR, REGRESSION
 from .adaptation_layers import IA3Linear, IA3LoRALinear, LoRALinear
 
 logger = logging.getLogger(__name__)
+
+
+ALL_TOKENIZERS = {
+    "bert": BertTokenizer,
+    "clip": CLIPTokenizer,
+    "electra": ElectraTokenizer,
+    "hf_auto": AutoTokenizer,
+}
 
 
 class DummyLayer(nn.Module):
@@ -692,7 +702,11 @@ def run_model(model: nn.Module, batch: dict, trt_model: Optional[nn.Module] = No
         TFewModel,
         OnnxModule,
     )
-    pure_model = model.module if isinstance(model, nn.DataParallel) else model
+    pure_model = model
+    if isinstance(model, torch._dynamo.eval_frame.OptimizedModule):
+        pure_model = model._orig_mod
+    if isinstance(model, nn.DataParallel):
+        pure_model = model.module
     if isinstance(pure_model, OnnxModule):
         for k in batch:
             # HACK input data types in ONNX
@@ -749,3 +763,48 @@ def freeze_model_layers(model, frozen_layers):
     for n, p in model.named_parameters():
         if is_frozen_layer(n):
             p.requires_grad = False
+
+
+def get_pretrained_tokenizer(
+    tokenizer_name: str,
+    checkpoint_name: str,
+    use_fast: Optional[bool] = True,
+    add_prefix_space: Optional[bool] = None,
+):
+    """
+    Load the tokenizer for a pre-trained huggingface checkpoint.
+
+    Parameters
+    ----------
+    tokenizer_name
+        The tokenizer type, e.g., "bert", "clip", "electra", and "hf_auto".
+    checkpoint_name
+        Name of a pre-trained checkpoint.
+    use_fast
+        Use a fast Rust-based tokenizer if it is supported for a given model.
+        If a fast tokenizer is not available for a given model, a normal Python-based tokenizer is returned instead.
+        See: https://huggingface.co/docs/transformers/model_doc/auto#transformers.AutoTokenizer.from_pretrained.use_fast
+
+    Returns
+    -------
+    A tokenizer instance.
+    """
+    try:
+        tokenizer_class = ALL_TOKENIZERS[tokenizer_name]
+        if add_prefix_space is None:
+            return tokenizer_class.from_pretrained(checkpoint_name, use_fast=use_fast)
+        else:
+            return tokenizer_class.from_pretrained(
+                checkpoint_name, use_fast=use_fast, add_prefix_space=add_prefix_space
+            )
+    except TypeError as e:
+        try:
+            tokenizer = BertTokenizer.from_pretrained(checkpoint_name)
+            warnings.warn(
+                f"Current checkpoint {checkpoint_name} does not support AutoTokenizer. "
+                "Switch to BertTokenizer instead.",
+                UserWarning,
+            )
+            return tokenizer
+        except:
+            raise e

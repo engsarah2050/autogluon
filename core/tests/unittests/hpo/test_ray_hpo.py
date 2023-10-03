@@ -3,13 +3,7 @@ import tempfile
 import pytest
 from ray import tune
 
-from autogluon.core.hpo.ray_hpo import (
-    AutommRayTuneAdapter,
-    AutommRayTuneLightningAdapter,
-    RayTuneAdapter,
-    TabularRayTuneAdapter,
-    run,
-)
+from autogluon.core.hpo.ray_hpo import AutommRayTuneAdapter, RayTuneAdapter, TabularRayTuneAdapter, run
 from autogluon.core.hpo.ray_tune_constants import SCHEDULER_PRESETS, SEARCHER_PRESETS
 
 
@@ -123,6 +117,7 @@ def test_empty_search_space():
             )
 
 
+@pytest.mark.platform
 @pytest.mark.parametrize("searcher", list(SEARCHER_PRESETS.keys()))
 @pytest.mark.parametrize("scheduler", list(SCHEDULER_PRESETS.keys()))
 def test_run(searcher, scheduler):

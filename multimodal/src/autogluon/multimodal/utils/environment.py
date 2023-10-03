@@ -6,22 +6,29 @@ import warnings
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
-from pytorch_lightning.accelerators import find_usable_cuda_devices
+from lightning.pytorch.accelerators import find_usable_cuda_devices
 from torch import nn
 
 from autogluon.common.utils.resource_utils import ResourceManager
 
-from ..constants import AUTOMM, OBJECT_DETECTION, OCR
+from ..constants import DDP, OBJECT_DETECTION, OCR
 
 logger = logging.getLogger(__name__)
 
 
-def is_interactive():
+def is_interactive_env():
     """
     Return whether the current process is running under the interactive mode.
     Check also https://stackoverflow.com/a/64523765
     """
     return hasattr(sys, "ps1")
+
+
+def is_interactive_strategy(strategy: str):
+    if strategy:
+        return strategy.startswith(("ddp_fork", "ddp_notebook"))
+    else:
+        return False
 
 
 def compute_num_gpus(config_num_gpus: Union[int, float, List], strategy: str):
@@ -54,16 +61,6 @@ def compute_num_gpus(config_num_gpus: Union[int, float, List], strategy: str):
                 f"smaller than the GPU number {config_num_gpus} in the config.",
                 UserWarning,
             )
-
-    if is_interactive() and num_gpus > 1 and strategy in ["ddp", "ddp_spawn"]:
-        warnings.warn(
-            "Interactive environment is detected. Currently, MultiModalPredictor does not support multi-gpu "
-            "training under an interactive environment due to the limitation of ddp / ddp_spawn strategies "
-            "in PT Lightning. Thus, we switch to single gpu training. For multi-gpu training, you need to execute "
-            "MultiModalPredictor in a script.",
-            UserWarning,
-        )
-        num_gpus = 1
 
     return num_gpus
 
@@ -310,7 +307,7 @@ def check_if_packages_installed(problem_type: str = None, package_names: List[st
                 raise ValueError(f"package_name {package_name} is not required.")
 
 
-def get_available_devices(num_gpus: int, auto_select_gpus: bool, use_ray_lightning: Optional[bool] = False):
+def get_available_devices(num_gpus: int, auto_select_gpus: bool):
     """
     Get the available devices.
 
@@ -320,20 +317,18 @@ def get_available_devices(num_gpus: int, auto_select_gpus: bool, use_ray_lightni
         Number of GPUs.
     auto_select_gpus
         Whether to pick GPU indices that are "accessible". See here: https://github.com/Lightning-AI/lightning/blob/accd2b9e61063ba3c683764043030545ed87c71f/src/lightning/fabric/accelerators/cuda.py#L79
-    use_ray_lightning
-        Whether use ray lightning.
 
     Returns
     -------
     The available devices.
     """
-    if num_gpus > 0 and not use_ray_lightning:  # ray lightning requires not specifying gpus
+    if num_gpus > 0:
         if auto_select_gpus:
             devices = find_usable_cuda_devices(num_gpus)
         else:
             devices = num_gpus
     else:
-        devices = None
+        devices = "auto"
 
     return devices
 

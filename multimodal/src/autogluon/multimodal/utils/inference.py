@@ -2,26 +2,23 @@ import logging
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
-import pytorch_lightning as pl
 import torch
 from omegaconf import OmegaConf
 from scipy.special import softmax
 from torch import nn
 
 from ..constants import (
-    AUTOMM,
     BBOX,
     COLUMN_FEATURES,
+    DDP,
     FEATURES,
     IMAGE,
     IMAGE_META,
     LOGITS,
     MASKS,
-    NER,
     NER_ANNOTATION,
     NER_RET,
     OBJECT_DETECTION,
-    OPEN_VOCABULARY_OBJECT_DETECTION,
     OVD_RET,
     PROBABILITY,
     PROMPT,
@@ -40,9 +37,9 @@ from .environment import (
     compute_num_gpus,
     get_precision_context,
     infer_precision,
+    is_interactive_strategy,
     move_to_device,
 )
-from .log import LogFilter, apply_log_filter
 from .matcher import compute_matching_probability
 from .misc import tensor_to_ndarray
 
@@ -460,6 +457,7 @@ def predict(
     signature: Optional[str] = None,
     realtime: Optional[bool] = None,
     is_matching: Optional[bool] = False,
+    barebones: Optional[bool] = False,
 ) -> List[Dict]:
     """
     Perform inference for predictor or matcher.
@@ -481,8 +479,8 @@ def predict(
         Whether use realtime infernece.
     is_matching
         Whether is matching.
-    seed
-        random seed.
+    barebones
+        Whether to run in “barebones mode”, where all lightning's features that may impact raw speed are disabled.
 
     Returns
     -------
@@ -501,19 +499,19 @@ def predict(
             requires_label=requires_label,
         )
 
-    strategy = "dp"  # default used in inference.
+    strategy = predictor._config.env.strategy  # default used in inference.
 
     num_gpus = compute_num_gpus(config_num_gpus=predictor._config.env.num_gpus, strategy=strategy)
 
     if predictor._problem_type == OBJECT_DETECTION:
-        strategy = "ddp"
+        strategy = DDP
 
-    if strategy == "ddp" and predictor._fit_called and predictor._problem_type == OBJECT_DETECTION:
+    if strategy == DDP and predictor._fit_called and predictor._problem_type == OBJECT_DETECTION:
         num_gpus = 1  # While using DDP, we can only use single gpu after fit is called
 
     if num_gpus <= 1:
         # Force set strategy to be None if it's cpu-only or we have only one GPU.
-        strategy = None
+        strategy = "auto"
 
     precision = infer_precision(num_gpus=num_gpus, precision=predictor._config.env.precision, cpu_only_warning=False)
 
@@ -531,6 +529,12 @@ def predict(
 
     if predictor._problem_type == OBJECT_DETECTION:
         realtime = False
+
+    # TODO: support realtime inference for notebook with multi-gpus
+    if is_interactive_strategy(strategy) and realtime:
+        realtime = False
+        num_gpus = 1
+        barebones = True
 
     if realtime:
         if is_matching:
@@ -580,6 +584,7 @@ def predict(
                 precision=precision,
                 batch_size=batch_size,
                 strategy=strategy,
+                barebones=barebones,
             )
 
     return outputs

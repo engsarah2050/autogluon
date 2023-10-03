@@ -101,7 +101,6 @@ class AbstractTrainer:
         verbosity=2,
     ):
         self.path = path
-        self.path = PathConverter.to_relative(self.path)
         self.problem_type = problem_type
         self.feature_metadata = feature_metadata
         self.save_data = save_data
@@ -179,20 +178,20 @@ class AbstractTrainer:
     # path_root is the directory containing learner.pkl
     @property
     def path_root(self) -> str:
-        return self.path.rsplit(os.path.sep, maxsplit=2)[0] + os.path.sep
+        return os.path.dirname(self.path)
 
     @property
     def path_utils(self) -> str:
-        return self.path_root + "utils" + os.path.sep
+        return os.path.join(self.path_root, "utils")
 
     @property
     def _path_attr(self) -> str:
         """Path to cached model graph attributes"""
-        return f"{self.path_utils}attr{os.path.sep}"
+        return os.path.join(self.path_utils, "attr")
 
     @property
     def path_data(self) -> str:
-        return self.path_utils + "data" + os.path.sep
+        return os.path.join(self.path_utils, "data")
 
     @property
     def has_val(self) -> bool:
@@ -201,25 +200,25 @@ class AbstractTrainer:
 
     def load_X(self):
         if self._X_saved:
-            path = self.path_data + "X.pkl"
+            path = os.path.join(self.path_data, "X.pkl")
             return load_pkl.load(path=path)
         return None
 
     def load_X_val(self):
         if self._X_val_saved:
-            path = self.path_data + "X_val.pkl"
+            path = os.path.join(self.path_data, "X_val.pkl")
             return load_pkl.load(path=path)
         return None
 
     def load_y(self):
         if self._y_saved:
-            path = self.path_data + "y.pkl"
+            path = os.path.join(self.path_data, "y.pkl")
             return load_pkl.load(path=path)
         return None
 
     def load_y_val(self):
         if self._y_val_saved:
-            path = self.path_data + "y_val.pkl"
+            path = os.path.join(self.path_data, "y_val.pkl")
             return load_pkl.load(path=path)
         return None
 
@@ -232,22 +231,22 @@ class AbstractTrainer:
         return X, y, X_val, y_val
 
     def save_X(self, X, verbose=True):
-        path = self.path_data + "X.pkl"
+        path = os.path.join(self.path_data, "X.pkl")
         save_pkl.save(path=path, object=X, verbose=verbose)
         self._X_saved = True
 
     def save_X_val(self, X, verbose=True):
-        path = self.path_data + "X_val.pkl"
+        path = os.path.join(self.path_data, "X_val.pkl")
         save_pkl.save(path=path, object=X, verbose=verbose)
         self._X_val_saved = True
 
     def save_y(self, y, verbose=True):
-        path = self.path_data + "y.pkl"
+        path = os.path.join(self.path_data, "y.pkl")
         save_pkl.save(path=path, object=y, verbose=verbose)
         self._y_saved = True
 
     def save_y_val(self, y, verbose=True):
-        path = self.path_data + "y_val.pkl"
+        path = os.path.join(self.path_data, "y_val.pkl")
         save_pkl.save(path=path, object=y, verbose=verbose)
         self._y_val_saved = True
 
@@ -292,23 +291,12 @@ class AbstractTrainer:
         return self.get_model_attribute(model=model_name, attribute="level")
 
     def set_contexts(self, path_context):
-        self.path, model_paths = self.create_contexts(path_context)
-        for model, path in model_paths.items():
-            self.set_model_attribute(model=model, attribute="path", val=path)
+        self.path = self.create_contexts(path_context)
 
-    def create_contexts(self, path_context: str) -> (str, dict):
-        self.path = PathConverter.to_current(self.path)
+    def create_contexts(self, path_context: str) -> str:
         path = path_context
-        model_paths = self.get_models_attribute_dict(attribute="path")
-        model_paths = {model: PathConverter.to_current(model_path) for model, model_path in model_paths.items()}
-        for model, prev_path in model_paths.items():
-            prev_path = os.path.abspath(prev_path) + os.path.sep
-            abs_path = os.path.abspath(self.path) + os.path.sep
-            model_local_path = prev_path.split(abs_path, 1)[1]
-            new_path = path + model_local_path
-            model_paths[model] = new_path
 
-        return path, model_paths
+        return path
 
     def fit(self, X, y, hyperparameters: dict, X_val=None, y_val=None, **kwargs):
         raise NotImplementedError
@@ -409,7 +397,7 @@ class AbstractTrainer:
             )
             model_names_fit += base_model_names + aux_models
         if self.model_best is None and len(model_names_fit) != 0:
-            self.model_best = self.get_model_best(can_infer=True, infer_limit=infer_limit)
+            self.model_best = self.get_model_best(can_infer=True, infer_limit=infer_limit, infer_limit_as_child=True)
         self._time_limit = None
         self.save()
         return model_names_fit
@@ -1123,7 +1111,7 @@ class AbstractTrainer:
         model_type = self.get_model_attribute(model=model, attribute="type")
         if issubclass(model_type, BaggedEnsembleModel):
             model_path = self.get_model_attribute(model=model, attribute="path")
-            return model_type.load_oof(path=model_path)
+            return model_type.load_oof(path=os.path.join(self.path, model_path))
         else:
             raise AssertionError(f"Model {model} must be a BaggedEnsembleModel to return oof_pred_proba")
 
@@ -1263,8 +1251,9 @@ class AbstractTrainer:
                 if reuse_first_fold:
                     # Perform fallback black-box refit logic that doesn't retrain.
                     model_full = model.convert_to_refit_full_via_copy()
+                    # FIXME: validation time not correct for infer 1 batch time, needed to hack _is_refit=True to fix
                     logger.log(20, f"Fitting model: {model_full.name} | Skipping fit via cloning parent ...")
-                    self._add_model(model_full, stack_name=REFIT_FULL_NAME, level=level)
+                    self._add_model(model_full, stack_name=REFIT_FULL_NAME, level=level, _is_refit=True)
                     self.save_model(model_full)
                     models_trained = [model_full.name]
                 else:
@@ -1273,6 +1262,10 @@ class AbstractTrainer:
                     model_full._user_params_aux["max_memory_usage_ratio"] = model.params_aux["max_memory_usage_ratio"] * 1.15
                     # TODO: Do it for all models in the level at once to avoid repeated processing of data?
                     base_model_names = self.get_base_model_names(model_name)
+                    # FIXME: Logs for inference speed (1 row) are incorrect because
+                    #  parents are non-refit models in this sequence and later correct after logging.
+                    #  Avoiding fix at present to minimize hacks in the code.
+                    #  Return to this later when Trainer controls all stacking logic to map correct parent.
                     models_trained = self.stack_new_level_core(
                         X=X,
                         y=y,
@@ -1369,8 +1362,34 @@ class AbstractTrainer:
         """Get refit full model's parent. If model does not have a parent, return `model`."""
         return self.get_model_attribute(model=model, attribute="refit_full_parent", default=model)
 
-    # TODO: Take best performance model with lowest inference
-    def get_model_best(self, can_infer=None, allow_full=True, infer_limit=None):
+    def get_model_best(self, can_infer: bool = None, allow_full: bool = True, infer_limit: float = None, infer_limit_as_child: bool = False) -> str:
+        """
+        Returns the name of the model with the best validation score that satisfies all specified constraints.
+        If no model satisfies the constraints, an AssertionError will be raised.
+
+        Parameters
+        ----------
+        can_infer: bool, default = None
+            If True, only consider models that can infer.
+            If False, only consider models that can't infer.
+            If None, consider all models.
+        allow_full: bool, default = True
+            If True, consider all models.
+            If False, disallow refit_full models.
+        infer_limit: float, default = None
+            The maximum time in seconds per sample that a model is allowed to take during inference.
+            If None, consider all models.
+            If specified, consider only models that have a lower predict time per sample than `infer_limit`.
+        infer_limit_as_child: bool, default = False
+            If True, use the predict time per sample of the (theoretical) refit version of the model.
+                If the model is already refit, the predict time per sample is unchanged.
+            If False, use the predict time per sample of the model.
+
+        Returns
+        -------
+        model: str
+            The string name of the model with the best metric score that satisfies all constraints.
+        """
         models = self.get_model_names(can_infer=can_infer)
         if not models:
             raise AssertionError("Trainer has no fit models that can infer.")
@@ -1378,8 +1397,13 @@ class AbstractTrainer:
         if not allow_full:
             models = [model for model in models if model not in models_full]
 
+        predict_1_time_attribute = None
         if infer_limit is not None:
-            models_predict_1_time = self.get_models_attribute_full(models=models, attribute="predict_1_time")
+            if infer_limit_as_child:
+                predict_1_time_attribute = "predict_1_child_time"
+            else:
+                predict_1_time_attribute = "predict_1_time"
+            models_predict_1_time = self.get_models_attribute_full(models=models, attribute=predict_1_time_attribute)
             for model_key in models_predict_1_time:
                 if models_predict_1_time[model_key] > infer_limit:
                     models.remove(model_key)
@@ -1389,7 +1413,9 @@ class AbstractTrainer:
                 f"Trainer has no fit models that can infer while satisfying the constraints: (infer_limit={infer_limit}, allow_full={allow_full})."
             )
         model_performances = self.get_models_attribute_dict(models=models, attribute="val_score")
-        models_predict_time = self.get_models_attribute_full(models=models, attribute="predict_time")  # FIXME: Refit_full???
+
+        predict_time_attr = predict_1_time_attribute if predict_1_time_attribute is not None else "predict_time"
+        models_predict_time = self.get_models_attribute_full(models=models, attribute=predict_time_attr)
 
         perfs = [(m, model_performances[m], models_predict_time[m]) for m in models if model_performances[m] is not None]
         if not perfs:
@@ -1416,7 +1442,7 @@ class AbstractTrainer:
         models = self.models
         if self.low_memory:
             self.models = {}
-        save_pkl.save(path=self.path + self.trainer_file_name, object=self)
+        save_pkl.save(path=os.path.join(self.path, self.trainer_file_name), object=self)
         if self.low_memory:
             self.models = models
 
@@ -1568,10 +1594,10 @@ class AbstractTrainer:
             return self.models[model_name]
         else:
             if path is None:
-                path = self.get_model_attribute(model=model_name, attribute="path")
+                path = self.get_model_attribute(model=model_name, attribute="path")  # get relative location of the model to the trainer
             if model_type is None:
                 model_type = self.get_model_attribute(model=model_name, attribute="type")
-            return model_type.load(path=path, reset_paths=self.reset_paths)
+            return model_type.load(path=os.path.join(self.path, path), reset_paths=self.reset_paths)
 
     def unpersist_models(self, model_names="all") -> list:
         if model_names == "all":
@@ -1623,6 +1649,8 @@ class AbstractTrainer:
             else:
                 save_bag_folds = True
 
+        base_model_paths_dict = self.get_models_attribute_dict(attribute="path", models=base_model_names)
+        base_model_paths_dict = {key: os.path.join(self.path, val) for key, val in base_model_paths_dict.items()}
         weighted_ensemble_model, _ = get_models_func(
             hyperparameters={
                 "default": {
@@ -1632,7 +1660,7 @@ class AbstractTrainer:
             ensemble_type=WeightedEnsembleModel,
             ensemble_kwargs=dict(
                 base_model_names=base_model_names,
-                base_model_paths_dict=self.get_models_attribute_dict(attribute="path", models=base_model_names),
+                base_model_paths_dict=base_model_paths_dict,
                 base_model_types_dict=self.get_models_attribute_dict(attribute="type", models=base_model_names),
                 base_model_types_inner_dict=self.get_models_attribute_dict(attribute="type_inner", models=base_model_names),
                 base_model_performances_dict=self.get_models_attribute_dict(attribute="val_score", models=base_model_names),
@@ -1808,7 +1836,7 @@ class AbstractTrainer:
                 del model
         return model_names_trained
 
-    def _add_model(self, model: AbstractModel, stack_name: str = "core", level: int = 1, y_pred_proba_val=None) -> bool:
+    def _add_model(self, model: AbstractModel, stack_name: str = "core", level: int = 1, y_pred_proba_val=None, _is_refit=False) -> bool:
         """
         Registers the fit model in the Trainer object. Stores information such as model performance, save path, model type, and more.
         To use a model in Trainer, self._add_model must be called.
@@ -1859,7 +1887,7 @@ class AbstractTrainer:
             predict_child_time=predict_child_time,
             predict_1_child_time=predict_1_child_time,
             val_score=model.val_score,
-            path=model.path,
+            path=os.path.relpath(model.path, self.path).split(os.sep),  # model's relative path to trainer
             type=type(model),  # Outer type, can be BaggedEnsemble, StackEnsemble (Type that is able to load the model)
             type_inner=type_inner,  # Inner type, if Ensemble then it is the type of the inner model (May not be able to load with this type)
             can_infer=model.can_infer(),
@@ -1885,18 +1913,18 @@ class AbstractTrainer:
                         f"Model '{model.name}' depends on model '{base_model_name}', but '{base_model_name}' is not in a lower stack level. ('{model.name}' level: {level}, '{base_model_name}' level: {self.model_graph.nodes[base_model_name]['level']})"
                     )
                 self.model_graph.add_edge(base_model_name, model.name)
-        self._log_model_stats(model)
+        self._log_model_stats(model, _is_refit=_is_refit)
         if self.low_memory:
             del model
         return True
 
     def _path_attr_model(self, model: str):
         """Returns directory where attributes are cached"""
-        return f"{self._path_attr}{model}{os.path.sep}"
+        return os.path.join(self._path_attr, model)
 
     def _path_to_model_attr(self, model: str, attribute: str):
         """Returns pkl file path for a cached model attribute"""
-        return f"{self._path_attr_model(model)}{attribute}.pkl"
+        return os.path.join(self._path_attr_model(model), f"{attribute}.pkl")
 
     def _save_model_y_pred_proba_val(self, model: str, y_pred_proba_val):
         """Cache y_pred_proba_val for later reuse to avoid redundant predict calls"""
@@ -1915,7 +1943,7 @@ class AbstractTrainer:
             raise AssertionError(f'"{model}" is not a key in self.model_graph, cannot add attributes: {attributes}')
         self.model_graph.nodes[model].update(attributes)
 
-    def _log_model_stats(self, model):
+    def _log_model_stats(self, model, _is_refit=False):
         """Logs model fit time, val score, predict time, and predict_1_time"""
         model = self.load_model(model)
         if model.val_score is not None:
@@ -1934,13 +1962,33 @@ class AbstractTrainer:
             fit_metadata = model.get_fit_metadata()
             predict_1_batch_size = fit_metadata.get("predict_1_batch_size", None)
             assert predict_1_batch_size is not None, "predict_1_batch_size cannot be None if predict_1_time is not None"
-            predict_1_time = model.predict_1_time
+
+            if _is_refit:
+                predict_1_time = self.get_model_attribute(model=model.name, attribute="predict_1_child_time")
+                predict_1_time_full = self.get_model_attribute_full(model=model.name, attribute="predict_1_child_time")
+            else:
+                predict_1_time = model.predict_1_time
+                predict_1_time_full = self.get_model_attribute_full(model=model.name, attribute="predict_1_time")
+
             predict_1_time_log, time_unit = convert_time_in_s_to_log_friendly(time_in_sec=predict_1_time)
             logger.log(20, f"\t{round(predict_1_time_log, 3)}{time_unit}\t = Validation runtime (1 row | {predict_1_batch_size} batch size | MARGINAL)")
 
-            predict_1_time_full = self.get_model_attribute_full(model=model.name, attribute="predict_1_time")
             predict_1_time_full_log, time_unit = convert_time_in_s_to_log_friendly(time_in_sec=predict_1_time_full)
             logger.log(20, f"\t{round(predict_1_time_full_log, 3)}{time_unit}\t = Validation runtime (1 row | {predict_1_batch_size} batch size)")
+
+            if not _is_refit:
+                predict_1_time_child = self.get_model_attribute(model=model.name, attribute="predict_1_child_time")
+                predict_1_time_child_log, time_unit = convert_time_in_s_to_log_friendly(time_in_sec=predict_1_time_child)
+                logger.log(
+                    20,
+                    f"\t{round(predict_1_time_child_log, 3)}{time_unit}\t = Validation runtime (1 row | {predict_1_batch_size} batch size | REFIT | MARGINAL)",
+                )
+
+                predict_1_time_full_child = self.get_model_attribute_full(model=model.name, attribute="predict_1_child_time")
+                predict_1_time_full_child_log, time_unit = convert_time_in_s_to_log_friendly(time_in_sec=predict_1_time_full_child)
+                logger.log(
+                    20, f"\t{round(predict_1_time_full_child_log, 3)}{time_unit}\t = Validation runtime (1 row | {predict_1_batch_size} batch size | REFIT)"
+                )
 
     # TODO: Split this to avoid confusion, HPO should go elsewhere?
     def _train_single_full(
@@ -2037,7 +2085,7 @@ class AbstractTrainer:
                 model_names_trained = []
                 self._extra_banned_names.add(model.name)
                 for model_hpo_name, model_info in hpo_models.items():
-                    model_hpo = self.load_model(model_hpo_name, path=model_info["path"], model_type=type(model))
+                    model_hpo = self.load_model(model_hpo_name, path=os.path.relpath(model_info["path"], self.path), model_type=type(model))
                     logger.log(20, f"Fitted model: {model_hpo.name} ...")
                     if self._add_model(model=model_hpo, stack_name=stack_name, level=level):
                         model_names_trained.append(model_hpo.name)
@@ -2639,7 +2687,10 @@ class AbstractTrainer:
                 if not isinstance(model, str):
                     model = model.name
                 model_names.append(model)
-            models_attribute_dict = {key: val for key, val in models_attribute_dict.items() if key in model_names}
+            if attribute == "path":
+                models_attribute_dict = {key: os.path.join(*val) for key, val in models_attribute_dict.items() if key in model_names}
+            else:
+                models_attribute_dict = {key: val for key, val in models_attribute_dict.items() if key in model_names}
         return models_attribute_dict
 
     def get_model_attribute(self, model, attribute: str, **kwargs):
@@ -2657,6 +2708,8 @@ class AbstractTrainer:
                 return kwargs["default"]
             else:
                 raise ValueError(f"Model does not contain attribute: (model={model}, attribute={attribute})")
+        if attribute == "path":
+            return os.path.join(*self.model_graph.nodes[model][attribute])
         return self.model_graph.nodes[model][attribute]
 
     def set_model_attribute(self, model, attribute: str, val):
@@ -2916,7 +2969,7 @@ class AbstractTrainer:
             if isinstance(model, str):
                 model_type = self.get_model_attribute(model=model, attribute="type")
                 model_path = self.get_model_attribute(model=model, attribute="path")
-                model_info_dict[model] = model_type.load_info(path=model_path)
+                model_info_dict[model] = model_type.load_info(path=os.path.join(self.path, model_path))
             else:
                 model_info_dict[model.name] = model.get_info()
         return model_info_dict
@@ -2926,10 +2979,10 @@ class AbstractTrainer:
     ):
         if remove_data and self.is_data_saved:
             data_files = [
-                self.path_data + "X.pkl",
-                self.path_data + "X_val.pkl",
-                self.path_data + "y.pkl",
-                self.path_data + "y_val.pkl",
+                os.path.join(self.path_data, "X.pkl"),
+                os.path.join(self.path_data, "X_val.pkl"),
+                os.path.join(self.path_data, "y.pkl"),
+                os.path.join(self.path_data, "y_val.pkl"),
             ]
             for data_file in data_files:
                 try:
@@ -3031,7 +3084,7 @@ class AbstractTrainer:
 
     @classmethod
     def load(cls, path, reset_paths=False):
-        load_path = path + cls.trainer_file_name
+        load_path = os.path.join(path, cls.trainer_file_name)
         if not reset_paths:
             return load_pkl.load(path=load_path)
         else:
@@ -3042,7 +3095,7 @@ class AbstractTrainer:
 
     @classmethod
     def load_info(cls, path, reset_paths=False, load_model_if_required=True):
-        load_path = path + cls.trainer_info_name
+        load_path = os.path.join(path, cls.trainer_info_name)
         try:
             return load_pkl.load(path=load_path)
         except:
@@ -3055,8 +3108,8 @@ class AbstractTrainer:
     def save_info(self, include_model_info=False):
         info = self.get_info(include_model_info=include_model_info)
 
-        save_pkl.save(path=self.path + self.trainer_info_name, object=info)
-        save_json.save(path=self.path + self.trainer_info_json_name, obj=info)
+        save_pkl.save(path=os.path.join(self.path, self.trainer_info_name), object=info)
+        save_json.save(path=os.path.join(self.path, self.trainer_info_json_name), obj=info)
         return info
 
     def _process_hyperparameters(self, hyperparameters: dict) -> dict:
